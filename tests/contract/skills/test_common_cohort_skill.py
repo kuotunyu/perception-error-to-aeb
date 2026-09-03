@@ -286,3 +286,20 @@ def test_the_skill_says_what_it_is_not_for() -> None:
     text = SKILL_FILE.read_text(encoding="utf-8")
 
     assert "not for" in text.lower()
+
+
+def test_a_run_directory_with_no_context_is_refused(tmp_path: Path) -> None:
+    """A broken run must be refused, not skipped.
+
+    Silently ignoring a directory that has no run context is a false negative
+    in a gate whose whole job is to stop a plausible number: the remaining
+    configurations would agree with each other and pass.
+    """
+
+    runs, manifest = build(tmp_path)
+    (runs / "half-written").mkdir()
+
+    result = validate(runs, manifest)
+
+    assert result.returncode == 1
+    assert "half-written" in result.stderr

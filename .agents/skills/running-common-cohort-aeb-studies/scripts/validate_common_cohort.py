@@ -57,18 +57,39 @@ def load_runs(runs_dir: Path) -> dict[str, dict[str, Any]]:
     return runs
 
 
-def load_exclusions(runs_dir: Path) -> dict[str, set[str]]:
-    """Read each configuration's excluded tokens, defaulting to none."""
+def load_exclusions(runs_dir: Path, names: tuple[str, ...]) -> dict[str, set[str]]:
+    """Read each configuration's excluded tokens, defaulting to none.
+
+    Keyed by the configurations that actually have a run context, so a
+    half-written directory cannot appear here as a configuration that kept a
+    token it never ran.
+    """
 
     exclusions: dict[str, set[str]] = {}
-    for directory in sorted(p for p in runs_dir.iterdir() if p.is_dir()):
-        path = directory / "exclusions.json"
+    for name in names:
+        path = runs_dir / name / "exclusions.json"
         tokens: set[str] = set()
         if path.is_file():
             document = json.loads(path.read_text(encoding="utf-8"))
             tokens = {entry["scenario_token"] for entry in document.get("excluded", [])}
-        exclusions[directory.name] = tokens
+        exclusions[name] = tokens
     return exclusions
+
+
+def check_directories(runs_dir: Path, runs: dict[str, Any]) -> list[str]:
+    """A run directory with no context is a broken run, not an absent one.
+
+    Skipping it would be a false negative in a gate whose whole job is to stop
+    a plausible number: the remaining configurations would agree and pass.
+    """
+
+    return [
+        f"{directory.name} has no run_context.json. A directory under runs/ with no "
+        "context is a run that did not finish, and the configurations that did "
+        "would otherwise agree with each other and pass."
+        for directory in sorted(p for p in runs_dir.iterdir() if p.is_dir())
+        if directory.name not in runs
+    ]
 
 
 def check_setups(runs: dict[str, dict[str, Any]]) -> list[str]:
@@ -171,9 +192,10 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     problems = (
-        check_setups(runs)
+        check_directories(arguments.runs_dir, runs)
+        + check_setups(runs)
         + check_matrix(runs, expected)
-        + check_exclusions(load_exclusions(arguments.runs_dir))
+        + check_exclusions(load_exclusions(arguments.runs_dir, tuple(runs)))
     )
 
     if not problems:
