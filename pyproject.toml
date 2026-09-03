@@ -98,7 +98,11 @@ src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["B", "C4", "E", "F", "I", "RUF", "SIM", "UP", "W"]
-ignore = ["E501"]
+# UP007 and UP045 rewrite Optional[X] and Union[X, Y] into PEP 604 form.
+# Pydantic evaluates model annotations at runtime and CPython 3.9 cannot
+# evaluate `X | None`, so those rewrites break every model in this package.
+# The project is 3.9 because nuPlan at the pinned commit is.
+ignore = ["E501", "UP007", "UP045"]
 
 [tool.mypy]
 python_version = "3.9"

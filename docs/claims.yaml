@@ -1,0 +1,22 @@
+# Every public number this project states must appear here first, bound to the
+# artifact it came from. The registry is empty because no simulation has run.
+allowed_evidence_types:
+  - observed
+  - derived
+  - synthetic
+  - illustrative
+claim_required_fields:
+  - claim_id
+  - text
+  - evidence_type
+  - protocol_hash
+  - cohort_manifest_hash
+  - artifact_path
+  - metric_path
+  - status
+allowed_statuses:
+  - draft
+  - verified
+  - rejected
+  - superseded
+claims: []

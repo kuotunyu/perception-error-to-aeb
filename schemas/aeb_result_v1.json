@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "What one (scenario, configuration, replicate) simulation produced.",
+  "properties": {
+    "collision_energy": {
+      "minimum": 0.0,
+      "title": "Collision Energy",
+      "type": "number"
+    },
+    "collision_object": {
+      "minimum": 0,
+      "title": "Collision Object",
+      "type": "integer"
+    },
+    "collision_vehicle": {
+      "minimum": 0,
+      "title": "Collision Vehicle",
+      "type": "integer"
+    },
+    "collision_vru": {
+      "minimum": 0,
+      "title": "Collision Vru",
+      "type": "integer"
+    },
+    "configuration_id": {
+      "minLength": 1,
+      "title": "Configuration Id",
+      "type": "string"
+    },
+    "false_interventions": {
+      "minimum": 0,
+      "title": "False Interventions",
+      "type": "integer"
+    },
+    "family": {
+      "enum": [
+        "lead_or_stopping",
+        "cut_in_or_crossing",
+        "pedestrian_or_crosswalk",
+        "bicycle_or_vru"
+      ],
+      "title": "Family",
+      "type": "string"
+    },
+    "intervention_duration_s": {
+      "minimum": 0.0,
+      "title": "Intervention Duration S",
+      "type": "number"
+    },
+    "invalid_reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Invalid Reason"
+    },
+    "matched_delay_s": {
+      "default": [],
+      "items": {
+        "type": "number"
+      },
+      "title": "Matched Delay S",
+      "type": "array"
+    },
+    "max_abs_jerk_mps3": {
+      "minimum": 0.0,
+      "title": "Max Abs Jerk Mps3",
+      "type": "number"
+    },
+    "max_deceleration_mps2": {
+      "maximum": 6.0,
+      "minimum": 0.0,
+      "title": "Max Deceleration Mps2",
+      "type": "number"
+    },
+    "min_clearance_m": {
+      "minimum": 0.0,
+      "title": "Min Clearance M",
+      "type": "number"
+    },
+    "min_ttc_s": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Min Ttc S"
+    },
+    "missed_interventions": {
+      "minimum": 0,
+      "title": "Missed Interventions",
+      "type": "integer"
+    },
+    "replicate": {
+      "minimum": 0,
+      "title": "Replicate",
+      "type": "integer"
+    },
+    "scenario_token": {
+      "minLength": 1,
+      "title": "Scenario Token",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "aeb-scenario-result/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "stop_distance_m": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Stop Distance M"
+    },
+    "valid": {
+      "title": "Valid",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "schema_version",
+    "scenario_token",
+    "family",
+    "configuration_id",
+    "replicate",
+    "valid",
+    "collision_vru",
+    "collision_vehicle",
+    "collision_object",
+    "collision_energy",
+    "min_clearance_m",
+    "missed_interventions",
+    "false_interventions",
+    "max_deceleration_mps2",
+    "max_abs_jerk_mps3",
+    "intervention_duration_s"
+  ],
+  "title": "AEBScenarioResultV1",
+  "type": "object"
+}
