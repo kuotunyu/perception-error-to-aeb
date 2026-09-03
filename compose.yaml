@@ -1,0 +1,20 @@
+# Every P3 command runs inside this service. From the Windows host the prefix
+# is `docker compose run --rm dev`; inside CI the same service runs the gate.
+services:
+  dev:
+    build:
+      context: .
+    image: perception-error-to-aeb-dev:local
+    init: true
+    working_dir: /work
+    environment:
+      NUPLAN_DATA_ROOT: /data/nuplan
+      NUPLAN_MAPS_ROOT: /data/nuplan/maps
+      NUPLAN_DB_FILES: /data/nuplan/nuplan-v1.1/splits/mini
+      # NUPLAN_SENSOR_ROOT is deliberately absent: this project reads no sensor data.
+    volumes:
+      # The repository is the working tree; /work/artifacts is the only writable output root.
+      - .:/work
+      # Dataset mounts are read-only. The default is an empty ignored directory until
+      # P3-19 is unlocked and a human provides the real root.
+      - ${NUPLAN_DATA_ROOT:-./datasets/nuplan}:/data/nuplan:ro

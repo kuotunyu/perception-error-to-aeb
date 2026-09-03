@@ -1,0 +1,36 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.hypothesis/
+.coverage
+coverage.json
+htmlcov/
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# nuPlan is licensed to the account holder and is never committed. The frozen
+# scenario cohort manifest in artifacts/ records the exact tokens behind any
+# reported result; the databases, maps and logs stay out of the repository.
+/datasets/
+/data/
+# The container's only writable output root. Its contents are never
+# committed, but the directory must exist in a clean clone or the
+# bind mount hides the one the image created.
+/artifacts/*
+!/artifacts/.gitkeep
+/.tmp/
+*.db
+*.gpkg
+*.zip
+*.tar.gz
+*.tgz
+
+# Simulation outputs and rendered replays are rebuilt from committed JSON.
+reports/figures/
+reports/replay*.html
+runs/

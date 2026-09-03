@@ -1,0 +1,108 @@
+[build-system]
+requires = ["setuptools>=80", "wheel>=0.45"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "perception-error-to-aeb"
+version = "0.1.0"
+description = "How perception errors propagate through a deterministic AEB on a common nuPlan cohort"
+readme = "README.md"
+requires-python = ">=3.9,<3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Kuo Tun-Yu" }]
+keywords = [
+    "autonomous-driving",
+    "automatic-emergency-braking",
+    "perception-error",
+    "nuplan",
+    "simulation",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+# nuPlan is pinned to one commit by URL, never a branch or tag. Its setup.py
+# declares no install_requires, so the world-state, database and map
+# dependencies the adapter needs are declared here; torch, ray, bokeh and the
+# sensor-data stack are deliberately absent because this project trains no
+# model and reads no sensor blob.
+dependencies = [
+    "nuplan-devkit @ git+https://github.com/motional/nuplan-devkit@e9241677997dd86bfc0bcd44817ab04fe631405b",
+    "numpy==1.23.4",
+    "scipy>=1.10,<1.14",
+    "pandas>=1.5,<3",
+    "shapely>=2.0,<3",
+    "geopandas>=0.12.1,<1",
+    "pyogrio>=0.7,<1",
+    "rtree>=1,<2",
+    "SQLAlchemy==1.4.27",
+    "pyquaternion>=0.9.5,<1",
+    "cachetools>=5,<6",
+    "tqdm>=4.66,<5",
+    "pydantic>=2.5,<3",
+    "pyyaml>=6.0,<7",
+    "typer>=0.12,<1",
+]
+
+[dependency-groups]
+dev = [
+    "build>=1.2,<2",
+    "hypothesis>=6.100,<7",
+    "mypy>=1.10,<2",
+    "pytest>=8.3,<10",
+    "pytest-cov>=5,<8",
+    "ruff>=0.11,<1",
+    "types-pyyaml>=6.0,<7",
+]
+
+[project.scripts]
+aeb-risk = "aebrisk.cli.app:app"
+
+[project.urls]
+Homepage = "https://github.com/kuotunyu/perception-error-to-aeb"
+Issues = "https://github.com/kuotunyu/perception-error-to-aeb/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.uv]
+required-version = ">=0.11.18,<0.12"
+default-groups = ["dev"]
+# The project runs in its pinned Linux container only. Resolving for Linux
+# alone keeps the lock honest about that and makes a host sync refuse.
+environments = ["sys_platform == 'linux'"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = ["--strict-markers", "-ra"]
+filterwarnings = ["error::RuntimeWarning"]
+
+[tool.coverage.run]
+branch = true
+source = ["aebrisk"]
+
+[tool.coverage.report]
+fail_under = 100
+show_missing = true
+skip_covered = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["B", "C4", "E", "F", "I", "RUF", "SIM", "UP", "W"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.9"
+check_untyped_defs = true
+ignore_missing_imports = true
+no_implicit_optional = true
+warn_unused_configs = true
