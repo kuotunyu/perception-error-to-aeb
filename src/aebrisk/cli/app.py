@@ -15,6 +15,8 @@ from __future__ import annotations
 
 import typer
 
+from aebrisk.cli import data, evaluate, report, simulate
+
 app = typer.Typer(
     add_completion=False,
     help=(
@@ -23,6 +25,12 @@ app = typer.Typer(
     ),
     no_args_is_help=True,
 )
+
+
+app.add_typer(data.app, name="data")
+app.add_typer(simulate.app, name="simulate")
+app.add_typer(evaluate.app, name="evaluate")
+app.add_typer(report.app, name="report")
 
 
 @app.callback()

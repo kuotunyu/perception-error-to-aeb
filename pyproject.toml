@@ -46,6 +46,12 @@ dependencies = [
     "pydantic>=2.5,<3",
     "pyyaml>=6.0,<7",
     "typer>=0.12,<1",
+    # The report is a static site with one animated top-down replay. Plotly
+    # writes that animation as self-contained HTML from Python, which is why
+    # this project ships no first-party JavaScript: a hand-written player would
+    # be untested code between a result and the person reading it.
+    "plotly>=5.20,<6",
+    "jinja2>=3.1,<4",
 ]
 
 [dependency-groups]

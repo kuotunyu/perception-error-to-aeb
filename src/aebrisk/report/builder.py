@@ -1,0 +1,145 @@
+"""Building the static report from claims and artifacts.
+
+A report is a set of CLAIMS ABOUT ARTIFACTS. Every number on the page is there
+because a claim in a committed file says it should be, and every claim names the
+artifact it rests on. A page assembled from whatever happened to be on disk
+would be a page nobody had taken responsibility for.
+
+The page separates the configuration groups — no AEB, oracle AEB, single
+channel, factorial coalitions, and imported — because they answer different
+questions and mixing them invites a reader to compare a measured calibration
+error against a chosen severity as though they were the same kind of number.
+
+It always shows the GLOBAL INVALID RATE and its reasons. A study that reported
+only what succeeded would be reporting a cohort it chose after seeing results.
+"""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any
+
+import yaml
+from jinja2 import Environment, FileSystemLoader, select_autoescape
+
+TEMPLATE_DIR = Path(__file__).resolve().parent / "templates"
+
+#: The groups the report keeps apart, in the order it presents them.
+CONFIGURATION_GROUPS: tuple[str, ...] = (
+    "baseline",
+    "single_channel",
+    "coalition",
+    "imported",
+)
+
+
+def classify_configuration(configuration_id: str) -> str:
+    """Which section of the report a configuration belongs in."""
+
+    if configuration_id in ("no_aeb", "oracle_aeb"):
+        return "baseline"
+    if configuration_id.startswith("calibration_imported_"):
+        return "imported"
+    if configuration_id.startswith("coalition-"):
+        return "coalition"
+    return "single_channel"
+
+
+#: Used only when the registry does not declare its own. The registry is the
+#: authority: adding a required field there must be enough to enforce it.
+DEFAULT_REQUIRED_FIELDS: tuple[str, ...] = (
+    "claim_id",
+    "text",
+    "evidence_type",
+    "artifact_path",
+    "status",
+)
+
+
+def load_claims(path: Path) -> list[dict[str, Any]]:
+    """Read the claims this report is allowed to make, on the registry's own terms.
+
+    The required fields, the evidence types and the statuses all come from the
+    registry rather than from this loader. Hard-coding them here would create a
+    second vocabulary that could disagree with the committed one, and the
+    disagreement would be a claim the registry accepted and the report rejected.
+    """
+
+    document = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    claims = document.get("claims") or []
+    if not claims:
+        raise ValueError(
+            f"{str(path)!r} names no claims; a report with no claims is a page of "
+            "numbers nobody has taken responsibility for"
+        )
+
+    required = tuple(document.get("claim_required_fields") or DEFAULT_REQUIRED_FIELDS)
+    allowed_types = document.get("allowed_evidence_types")
+    allowed_statuses = document.get("allowed_statuses")
+
+    for claim in claims:
+        name = claim.get("claim_id", "<unnamed>")
+        for field in required:
+            if not claim.get(field):
+                raise ValueError(f"claim {name!r} is missing {field!r}")
+        if allowed_types and claim["evidence_type"] not in allowed_types:
+            raise ValueError(
+                f"claim {name!r} has evidence_type {claim['evidence_type']!r}, which the "
+                f"registry does not allow; the allowed types are {list(allowed_types)}"
+            )
+        if allowed_statuses and claim["status"] not in allowed_statuses:
+            raise ValueError(
+                f"claim {name!r} has status {claim['status']!r}, which the registry does "
+                f"not allow; the allowed statuses are {list(allowed_statuses)}"
+            )
+    return list(claims)
+
+
+def invalid_summary(artifacts_dir: Path) -> dict[str, Any]:
+    """How much of the cohort was excluded, and why.
+
+    Reported whether or not anything failed. A study that showed this section
+    only when it was non-empty would let a reader assume it was always empty.
+    """
+
+    path = artifacts_dir / "exclusions.json"
+    if not path.is_file():
+        return {"excluded": 0, "reasons": {}}
+
+    document = json.loads(path.read_text(encoding="utf-8"))
+    reasons: dict[str, int] = {}
+    for entry in document.get("excluded", []):
+        reasons[entry["phase"]] = reasons.get(entry["phase"], 0) + 1
+    return {"excluded": len(document.get("excluded", [])), "reasons": reasons}
+
+
+def build_site(claims_path: Path, artifacts_dir: Path, output_dir: Path) -> Path:
+    """Render the report and return the page it wrote."""
+
+    claims = load_claims(claims_path)
+
+    grouped: dict[str, list[dict[str, Any]]] = {group: [] for group in CONFIGURATION_GROUPS}
+    summary_path = artifacts_dir / "evaluation.json"
+    if summary_path.is_file():
+        document = json.loads(summary_path.read_text(encoding="utf-8"))
+        for row in document.get("configurations", []):
+            grouped[classify_configuration(row["configuration_id"])].append(row)
+
+    environment = Environment(
+        loader=FileSystemLoader(str(TEMPLATE_DIR)),
+        autoescape=select_autoescape(["html"]),
+        keep_trailing_newline=True,
+    )
+    rendered = environment.get_template("index.html.j2").render(
+        claims=claims,
+        groups=CONFIGURATION_GROUPS,
+        grouped=grouped,
+        invalid=invalid_summary(artifacts_dir),
+    )
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    page = output_dir / "index.html"
+    with page.open("w", encoding="utf-8", newline="\n") as handle:
+        handle.write(rendered)
+    return page

@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Perception error to AEB</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font: 16px/1.6 system-ui, sans-serif; margin: 0 auto; max-width: 60rem; padding: 2rem 1rem; }
+  h1, h2 { line-height: 1.25; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border-bottom: 1px solid #8884; padding: 0.4rem 0.6rem; text-align: left; }
+  .note { border-left: 3px solid #8888; padding-left: 0.8rem; color: #666; }
+  .empty { color: #888; font-style: italic; }
+</style>
+</head>
+<body>
+<h1>Perception error to AEB</h1>
+
+<p class="note">
+  Every number below is there because a committed claim says it should be, and
+  every claim names the artifact it rests on. The configuration groups are kept
+  apart because they answer different questions: an imported calibration
+  distribution is a measurement, and a single-channel severity is a choice.
+</p>
+
+<h2>Claims</h2>
+<table>
+  <thead>
+    <tr><th>Claim</th><th>Statement</th><th>Evidence</th><th>Status</th><th>Artifact</th></tr>
+  </thead>
+  <tbody>
+  {% for claim in claims %}
+    <tr>
+      <td>{{ claim.claim_id }}</td>
+      <td>{{ claim.text }}</td>
+      <td>{{ claim.evidence_type }}</td>
+      <td>{{ claim.status }}</td>
+      <td>{{ claim.artifact_path }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<h2>Cohort exclusions</h2>
+<p>
+  {{ invalid.excluded }} scenario(s) were excluded from every configuration.
+  A scenario that failed anywhere is used nowhere, so that all configurations
+  are averaged over one set of roads.
+</p>
+{% if invalid.reasons %}
+<table>
+  <thead><tr><th>Phase</th><th>Count</th></tr></thead>
+  <tbody>
+  {% for phase, count in invalid.reasons | dictsort %}
+    <tr><td>{{ phase }}</td><td>{{ count }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% for group in groups %}
+<h2>{{ group | replace("_", " ") | title }}</h2>
+{% if grouped[group] %}
+<table>
+  <thead><tr><th>Configuration</th><th>Scenarios</th><th>Collisions</th></tr></thead>
+  <tbody>
+  {% for row in grouped[group] %}
+    <tr>
+      <td>{{ row.configuration_id }}</td>
+      <td>{{ row.scenarios }}</td>
+      <td>{{ row.collisions }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="empty">No results in this group.</p>
+{% endif %}
+{% endfor %}
+
+</body>
+</html>
