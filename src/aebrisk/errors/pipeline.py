@@ -161,6 +161,31 @@ def generator_for(key: ErrorKey) -> np.random.Generator:
     return np.random.Generator(np.random.PCG64(keyed_seed(key)))
 
 
+def track_field_generator(
+    key: ErrorKey,
+    track_id: str,
+    step: int,
+    field: str,
+) -> np.random.Generator:
+    """Build the generator for one track's one field at one step.
+
+    Every channel draws this way rather than from a shared sequential stream.
+    A sequential stream would make one track's corruption depend on how many
+    tracks and fields happened to be processed first, so adding an unrelated
+    object at the edge of the scene would change the error applied to the one in
+    front. That is a simulator artefact, not a perception error, and it would
+    not appear in any result.
+    """
+
+    payload = json.dumps(
+        {"seed": keyed_seed(key), "track_id": track_id, "step": step, "field": field},
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    seed = int.from_bytes(hashlib.sha256(payload).digest()[:8], "big")
+    return np.random.Generator(np.random.PCG64(seed))
+
+
 def load_error_config(path: Optional[Path] = None) -> dict[str, Any]:
     """Read the committed error configuration."""
 

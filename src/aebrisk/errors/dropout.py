@@ -18,16 +18,12 @@ intervention explainable after the fact.
 
 from __future__ import annotations
 
-import hashlib
-import json
 import math
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Optional
 
-import numpy as np
-
-from aebrisk.errors.pipeline import ErrorKey, keyed_seed
+from aebrisk.errors.pipeline import ErrorKey, track_field_generator
 from aebrisk.observation.models import TrackState
 
 
@@ -46,13 +42,7 @@ def dropout_draw(key: ErrorKey, track_id: str, step: int) -> float:
     number, and no other track's presence can change it.
     """
 
-    payload = json.dumps(
-        {"seed": keyed_seed(key), "track_id": track_id, "step": step},
-        sort_keys=True,
-        separators=(",", ":"),
-    ).encode("utf-8")
-    seed = int.from_bytes(hashlib.sha256(payload).digest()[:8], "big")
-    return float(np.random.Generator(np.random.PCG64(seed)).random())
+    return float(track_field_generator(key, track_id, step, "dropout").random())
 
 
 def apply_dropout(

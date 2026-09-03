@@ -137,7 +137,7 @@ def test_the_draw_is_the_documented_function_of_the_key_track_and_step() -> None
     dropout = load_dropout_module()
     key = make_key()
     payload = json.dumps(
-        {"seed": keyed_seed(key), "track_id": "t-0000", "step": 3},
+        {"seed": keyed_seed(key), "track_id": "t-0000", "step": 3, "field": "dropout"},
         sort_keys=True,
         separators=(",", ":"),
     ).encode("utf-8")
