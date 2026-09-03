@@ -9,18 +9,23 @@ bug would otherwise reach a published figure looking like a measurement.
 from __future__ import annotations
 
 import math
-from typing import Literal, Optional
+from typing import Literal, Optional, get_args
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 #: The four scenario families the protocol freezes. Adding one is a new study,
 #: not a new option, because the cohort is stratified across exactly these.
-SCENARIO_FAMILIES: tuple[str, ...] = (
+#:
+#: The type and the tuple are one declaration rather than two: written twice
+#: they could disagree, and the disagreement would be a family the validator
+#: accepted and the type system did not, or the reverse.
+ScenarioFamily = Literal[
     "lead_or_stopping",
     "cut_in_or_crossing",
     "pedestrian_or_crosswalk",
     "bicycle_or_vru",
-)
+]
+SCENARIO_FAMILIES: tuple[str, ...] = get_args(ScenarioFamily)
 
 #: Shared with the other two repositories. Three projects labelling evidence
 #: differently could not be read side by side.
@@ -46,12 +51,7 @@ class AEBScenarioResultV1(BaseModel):
 
     schema_version: Literal["aeb-scenario-result/v1"]
     scenario_token: str = Field(min_length=1)
-    family: Literal[
-        "lead_or_stopping",
-        "cut_in_or_crossing",
-        "pedestrian_or_crosswalk",
-        "bicycle_or_vru",
-    ]
+    family: ScenarioFamily
     configuration_id: str = Field(min_length=1)
     replicate: int = Field(ge=0)
 

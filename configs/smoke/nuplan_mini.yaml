@@ -1,0 +1,40 @@
+# The smoke configuration: a handful of real scenarios, run end to end.
+#
+# THIS FILE IS COMMITTED BUT NOT YET RUNNABLE. The portfolio order gate forbids
+# reading any real nuPlan database, map or log until `bev-calibration-lab` tags
+# v1.0.0, which itself waits on `driving-risk-metrics`. It is committed now so
+# that what the smoke run will do is fixed BEFORE anyone has seen a real result,
+# which is the only point at which choosing it is honest.
+#
+# The smoke run is not a result and never will be. Its whole job is to answer
+# one question — does the pipeline complete on real data — before the formal run
+# spends hours discovering that it does not. Ten scenarios cannot support any
+# claim about perception error, and none may be reported.
+schema_version: aeb-smoke/v1
+split: mini
+
+# Two per family, so a failure that only affects one kind of scenario is visible
+# here rather than at the end of the formal run.
+scenarios_per_family: 2
+families:
+  - lead_or_stopping
+  - cut_in_or_crossing
+  - pedestrian_or_crosswalk
+  - bicycle_or_vru
+
+# Four cells, the smallest set that exercises every code path the formal run
+# uses: no braking, braking on perfect observation, braking through the error
+# pipeline at zero severity, and braking through it at a real severity.
+configurations:
+  - no_aeb
+  - oracle_aeb
+  - corrupted_zero
+  - dropout_medium
+
+replicate_count: 1
+frequency_hz: 10.0
+termination_s: 15.0
+
+# Refused rather than defaulted. A smoke run that quietly mounted sensor data
+# would be reading something the study does not read.
+require_sensor_root_absent: true
