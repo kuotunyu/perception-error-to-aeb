@@ -1,0 +1,83 @@
+# The frozen protocol for this study. Everything a published number depends on
+# is here, and changing any of it is a new protocol version rather than an edit:
+# results produced under different values are not comparable, and the protocol
+# hash is what says so.
+schema_version: nuplan-aeb-protocol/v1
+
+dataset:
+  name: nuplan
+  version: nuplan-v1.1
+  split: mini
+
+simulation:
+  frequency_hz: 10
+  prediction_horizon_s: 4.0
+  # Non-reactive logged agents: the recording plays out as it happened and only
+  # the ego responds. A reactive background would change what the AEB is being
+  # measured against between one configuration and the next.
+  agents: non_reactive_logged
+
+# The corridor used to decide whether a scenario is worth simulating at all.
+# It is the ego footprint swept along the expert route over the horizon, widened
+# laterally, and it exists ONLY for the prefilter: it selects scenarios, it never
+# scores one. Using it to score would make the cohort a function of the outcome.
+prefilter:
+  corridor_lateral_margin_m: 0.5
+  corridor_horizon_s: 4.0
+  minimum_initial_ego_speed_mps: 2.0
+  maximum_oracle_min_ttc_s: 6.0
+
+cohort:
+  development_per_family: 50
+  evaluation_per_family: 100
+  # Development and evaluation never share a log. Scenarios cut from one log are
+  # the same road, the same traffic and often the same agents minutes apart, so a
+  # split that shares logs would report a tuned result as a held-out one.
+  log_disjoint: true
+
+# The four families the cohort is stratified across, and the nuPlan scenario
+# types that belong to each. A type appears in exactly one family.
+#
+# The pinned devkit ships NO canonical list of scenario types: they live in each
+# log database's scenario_tag table, so the mapping below cannot be validated
+# against the library. It is validated for internal consistency here, and
+# checked against the tags actually present in the data at P3-19, when the
+# portfolio order gate opens.
+scenario_families:
+  lead_or_stopping:
+    - following_lane_with_lead
+    - following_lane_with_slow_lead
+    - stopping_with_lead
+    - stopping_at_stop_sign_with_lead
+    - stopping_at_traffic_light_with_lead
+  cut_in_or_crossing:
+    - crossed_by_vehicle
+    - changing_lane_with_lead
+    - changing_lane_with_trail
+  pedestrian_or_crosswalk:
+    - waiting_for_pedestrian_to_cross
+    - near_pedestrian_on_crosswalk
+    - near_pedestrian_on_crosswalk_with_ego
+    - behind_pedestrian_on_driveable
+  bicycle_or_vru:
+    - behind_bike
+    - crossed_by_bike
+    - near_multiple_bikes
+
+aeb:
+  warning:
+    ttc_lt_s: 3.0
+    required_decel_gt_mps2: 2.0
+    consecutive_steps: 2
+  partial:
+    ttc_lt_s: 2.5
+    target_accel_mps2: -3.0
+  full:
+    ttc_lt_s: 1.5
+    required_decel_gt_mps2: 5.0
+    target_accel_mps2: -6.0
+  release:
+    no_qualifying_ttc_lt_s: 4.0
+    consecutive_steps: 5
+  acceleration_bounds_mps2: [-6.0, 2.0]
+  jerk_limit_mps3: 5.0
