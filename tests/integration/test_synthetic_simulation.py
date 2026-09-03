@@ -27,7 +27,6 @@ import math
 from typing import Any, Optional
 
 import numpy as np
-import pytest
 
 from aebrisk.aeb.controller import limit_acceleration
 from aebrisk.aeb.state_machine import AEBMemory, AEBState, update_aeb
@@ -38,6 +37,7 @@ from aebrisk.aeb.threat import (
     polygon_clearance,
 )
 from aebrisk.artifacts.results import AEBScenarioResultV1
+from aebrisk.errors.channels import ScenarioChannels
 from aebrisk.errors.pipeline import ErrorConfiguration, ErrorKey, apply_error_pipeline
 from aebrisk.nuplan_adapter.planner import planner_identity
 from aebrisk.nuplan_adapter.simulation import build_simulation_wiring
@@ -121,6 +121,10 @@ class SyntheticLeadScenario:
             configuration_id=configuration.configuration_id,
             severity_by_channel=configuration.severity_by_channel,
         )
+        # Bound once per run, because dropout and fragmentation carry state
+        # across steps. Rebuilding per step would redraw fragmentation from
+        # scratch and no track would ever stay lost for its delay.
+        bound = ScenarioChannels(error_configuration, dt_s=DT_S)
 
         history: list[WorldFrame] = []
         collided = False
@@ -146,7 +150,13 @@ class SyntheticLeadScenario:
             if configuration.observation_mode == "oracle":
                 observed = history[-1].tracks
             else:
-                observed = apply_error_pipeline(history, len(history) - 1, error_configuration, key)
+                observed = apply_error_pipeline(
+                    history,
+                    len(history) - 1,
+                    error_configuration,
+                    key,
+                    stages=bound.stages(),
+                )
 
             ego = EgoKinematicState(
                 center_xy_m=(position, 0.0),
@@ -303,12 +313,21 @@ def test_the_braking_respects_the_actuator_envelope() -> None:
     assert outcome.max_abs_jerk_mps3 <= 5.0 + 1e-9
 
 
-def test_the_all_zero_error_pipeline_matches_the_oracle() -> None:
-    """Severity zero is the reference, so it must be the exact identity end to end.
+def test_the_all_zero_pipeline_avoids_the_collision_like_the_oracle() -> None:
+    """Severity zero corrupts nothing, so the outcome must still be an avoidance.
 
-    Every measured effect in this study is a difference from this configuration.
-    If the pipeline changed anything at zero, every reported effect would be
-    shifted by an amount no result could expose.
+    It is NOT asserted to equal the oracle in every measure. At severity zero
+    the tracking channel still derives velocity by differencing observed
+    positions, because differencing is how a real tracker obtains velocity: it
+    is the estimator, not an error. The gap between `oracle_aeb` and the
+    all-zero configuration is therefore a measurable quantity rather than a
+    bug, and it is exactly why the experiment matrix carries both and why the
+    Shapley baseline is `coalition-none` rather than the oracle.
+
+    An earlier version of this test asserted the two were identical. That
+    assertion passed only because `ChannelStages` was never bound to the
+    channels, so the pipeline did nothing at all: it was vacuous, and the
+    property it claimed is not one the design guarantees.
     """
 
     outcomes = run(oracle_aeb(), corrupted_zero())
@@ -316,12 +335,42 @@ def test_the_all_zero_error_pipeline_matches_the_oracle() -> None:
     reference = outcomes["oracle_aeb"]
     through_pipeline = outcomes["corrupted_zero"]
 
-    assert through_pipeline.collision_vehicle == reference.collision_vehicle
-    assert through_pipeline.min_clearance_m == pytest.approx(reference.min_clearance_m)
-    assert through_pipeline.intervention_duration_s == pytest.approx(
-        reference.intervention_duration_s
+    assert through_pipeline.collision_vehicle == 0 == reference.collision_vehicle
+    assert through_pipeline.min_clearance_m > 0.0
+    assert through_pipeline.intervention_duration_s > 0.0
+
+
+def test_a_real_severity_reaches_the_outcome() -> None:
+    """The end-to-end proof that the channels are connected to the controller.
+
+    With every channel at high severity the observation the AEB acts on is not
+    the world, so its behaviour must differ from the oracle's somewhere. If it
+    did not, the whole pipeline would be decoration.
+    """
+
+    corrupted = ExperimentConfiguration(
+        configuration_id="all-high",
+        aeb_enabled=True,
+        observation_mode="corrupted",
+        severity_by_channel=dict.fromkeys(
+            ("dropout", "localization_shape", "latency", "track_instability"), "high"
+        ),
+        replicate_count=1,
     )
-    assert through_pipeline.max_deceleration_mps2 == pytest.approx(reference.max_deceleration_mps2)
+    outcomes = run(oracle_aeb(), corrupted)
+
+    reference = outcomes["oracle_aeb"]
+    degraded = outcomes["all-high"]
+
+    assert (
+        degraded.collision_vehicle,
+        round(degraded.min_clearance_m, 6),
+        round(degraded.intervention_duration_s, 6),
+    ) != (
+        reference.collision_vehicle,
+        round(reference.min_clearance_m, 6),
+        round(reference.intervention_duration_s, 6),
+    )
 
 
 def test_the_configurations_share_a_cohort() -> None:
