@@ -194,7 +194,7 @@ def test_an_envelope_of_the_wrong_artifact_type_is_refused(tmp_path: Path) -> No
     path = write_envelope(tmp_path / "envelope.json", canonical_values())
 
     with pytest.raises(ValueError, match="artifact type"):
-        envelope.verify_envelope(path, "bev-calibration-result/v1")
+        envelope.verify_envelope(path, "calibration-error-distribution/v1")
 
 
 def test_a_payload_that_does_not_match_its_hash_is_refused(tmp_path: Path) -> None:

@@ -22,10 +22,16 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-#: The one artifact this project may read from another, at P3-16. P3 runs
-#: identically whether or not it is present, so consuming one is always an
-#: explicit request and never a side effect of opening a file.
-CALIBRATION_ARTIFACT_TYPE = "bev-calibration-result/v1"
+#: The one artifact this project may read from another. P3 runs identically
+#: whether or not it is present, so consuming one is always an explicit request
+#: and never a side effect of opening a file.
+#:
+#: It is the aggregated error DISTRIBUTION, not `bev-calibration-result/v1`,
+#: which is that project's PER-SAMPLE record. Reading per-sample results would
+#: mean re-deriving here the distribution the producer already computed, and the
+#: two projects could then disagree about the same measurements. This corrects
+#: the value used before P3-16; no artifact of either type exists yet.
+CALIBRATION_ARTIFACT_TYPE = "calibration-error-distribution/v1"
 CALIBRATION_PRODUCER = "bev-calibration-lab"
 
 

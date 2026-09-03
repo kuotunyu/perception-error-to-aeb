@@ -22,7 +22,7 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[2]
 FIXTURE = REPO_ROOT / "tests" / "fixtures" / "portfolio_artifact_envelope_v1.json"
 SCHEMA_DIR = REPO_ROOT / "schemas"
-CALIBRATION_ARTIFACT_TYPE = "bev-calibration-result/v1"
+CALIBRATION_ARTIFACT_TYPE = "calibration-error-distribution/v1"
 
 
 def load_envelope_module() -> ModuleType:
