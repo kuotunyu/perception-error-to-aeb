@@ -97,7 +97,7 @@ def test_a_malformed_field_is_refused(field: str, invalid_value: str) -> None:
 
     run_record = load_run_record_module()
 
-    with pytest.raises(ValidationError):
+    with pytest.raises(ValidationError, match=rf"\n{field}\n"):
         run_record.RunRecordV1.model_validate(valid_values(**{field: invalid_value}))
 
 

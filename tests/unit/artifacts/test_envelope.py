@@ -130,7 +130,7 @@ def test_a_malformed_field_is_refused(field: str, invalid_value: str) -> None:
 
     envelope = load_envelope_module()
 
-    with pytest.raises(ValidationError):
+    with pytest.raises(ValidationError, match=rf"\n{field}\n"):
         envelope.PortfolioArtifactEnvelopeV1.model_validate(
             canonical_values(**{field: invalid_value})
         )

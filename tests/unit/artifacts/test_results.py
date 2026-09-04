@@ -129,7 +129,7 @@ def test_a_negative_count_is_refused(field: str) -> None:
 
     results = load_results_module()
 
-    with pytest.raises(ValidationError):
+    with pytest.raises(ValidationError, match=rf"\n{field}\n"):
         results.AEBScenarioResultV1.model_validate(valid_values(**{field: -1}))
 
 
@@ -142,7 +142,7 @@ def test_a_negative_magnitude_is_refused(field: str) -> None:
 
     results = load_results_module()
 
-    with pytest.raises(ValidationError):
+    with pytest.raises(ValidationError, match=rf"\n{field}\n"):
         results.AEBScenarioResultV1.model_validate(valid_values(**{field: -0.1}))
 
 
@@ -164,7 +164,7 @@ def test_a_non_finite_measurement_is_refused(field: str, bad_value: float) -> No
 
     results = load_results_module()
 
-    with pytest.raises(ValidationError):
+    with pytest.raises(ValidationError, match=rf"\n{field}\n"):
         results.AEBScenarioResultV1.model_validate(valid_values(**{field: bad_value}))
 
 
