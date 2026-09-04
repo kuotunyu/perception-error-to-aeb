@@ -132,7 +132,7 @@ def test_a_non_finite_measurement_is_refused(bad_value: float) -> None:
 
     models = load_models_module()
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"^center_xy_m components must be finite$"):
         make_track(models, center_xy_m=(bad_value, 0.0))
 
 

@@ -81,7 +81,7 @@ def test_a_candidate_refuses_a_simulated_outcome_field() -> None:
 
     filters = load_filters_module()
 
-    with pytest.raises(TypeError):
+    with pytest.raises(TypeError, match=r"unexpected keyword argument 'collided'$"):
         filters.CorridorCandidate(**candidate_values(), collided=True)
 
 
@@ -232,7 +232,7 @@ def test_an_unknown_type_fails_closed_rather_than_defaulting() -> None:
 
     filters = load_filters_module()
 
-    with pytest.raises(KeyError):
+    with pytest.raises(KeyError, match=r"^'merging_onto_highway'$"):
         filters.family_of("merging_onto_highway")
 
 

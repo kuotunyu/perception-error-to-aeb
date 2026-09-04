@@ -224,7 +224,7 @@ def test_malformed_provenance_fails_closed(monkeypatch: pytest.MonkeyPatch) -> N
     run_record = load_run_record_module()
     monkeypatch.setenv(run_record.PROVENANCE_ENV_VAR, "{not json")
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"^AEBRISK_RUN_PROVENANCE is not valid JSON$"):
         run_record.load_run_provenance()
 
 
@@ -239,7 +239,7 @@ def test_provenance_requires_every_measured_field(monkeypatch: pytest.MonkeyPatc
         json.dumps({"commit": "a" * 40, "lock_sha256": "b" * 64}),
     )
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"^AEBRISK_RUN_PROVENANCE is incomplete or malformed: "):
         run_record.load_run_provenance()
 
 

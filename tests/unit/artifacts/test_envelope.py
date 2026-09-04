@@ -175,7 +175,7 @@ def test_canonical_bytes_refuse_non_finite_numbers() -> None:
 
     envelope = load_envelope_module()
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"^Out of range float values are not JSON compliant$"):
         envelope.canonical_json_bytes({"value": float("nan")})
 
 

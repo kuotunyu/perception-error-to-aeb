@@ -172,7 +172,7 @@ def test_the_stored_path_cannot_be_written_through() -> None:
 
     plan = route_follower.build_nominal_plan(straight_route(), 8.0, 8.0, 13.0)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"^assignment destination is read-only$"):
         plan.lateral_path_xy[0, 0] = 1.0
 
 
