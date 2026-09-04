@@ -196,7 +196,7 @@ def test_an_empty_identifier_is_refused(field: str) -> None:
 
     filters = load_filters_module()
 
-    with pytest.raises(ValueError, match=field):
+    with pytest.raises(ValueError, match=rf"^{field} must not be empty$"):
         make_candidate(filters, **{field: ""})
 
 

@@ -110,7 +110,7 @@ def test_a_two_component_field_must_have_two_components(field: str) -> None:
 
     models = load_models_module()
 
-    with pytest.raises(ValueError, match=field):
+    with pytest.raises(ValueError, match=rf"^{field} must have exactly two components$"):
         make_track(models, **{field: (1.0, 2.0, 3.0)})
 
 

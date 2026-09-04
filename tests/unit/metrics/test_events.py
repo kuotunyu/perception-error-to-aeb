@@ -507,7 +507,7 @@ def test_a_matching_threshold_that_is_not_a_number_is_refused(
 
     events = load_events_module()
 
-    with pytest.raises(ValueError, match=f"{field} must be a number"):
+    with pytest.raises(ValueError, match=rf"^{field} must be a number$"):
         events.match_interventions((), (), **{field: bad_value})
 
 

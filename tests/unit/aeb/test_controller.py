@@ -156,7 +156,7 @@ def test_a_non_finite_acceleration_is_refused(field: str) -> None:
     arguments = {"previous_mps2": 0.0, "target_mps2": -1.0}
     arguments[field] = math.nan
 
-    with pytest.raises(ValueError, match=field):
+    with pytest.raises(ValueError, match=rf"^{field} must be finite, got "):
         controller.limit_acceleration(**arguments)
 
 
@@ -172,7 +172,7 @@ def test_an_acceleration_that_is_not_a_number_is_refused(
     arguments: dict[str, object] = {"previous_mps2": 0.0, "target_mps2": -1.0}
     arguments[field] = bad_value
 
-    with pytest.raises(ValueError, match=f"{field} must be a number"):
+    with pytest.raises(ValueError, match=rf"^{field} must be a number$"):
         controller.limit_acceleration(**arguments)  # type: ignore[arg-type]
 
 
@@ -188,5 +188,5 @@ def test_a_positive_limit_that_is_not_a_number_is_refused(
     arguments: dict[str, object] = {"previous_mps2": 0.0, "target_mps2": -1.0}
     arguments[field] = bad_value
 
-    with pytest.raises(ValueError, match=f"{field} must be a number"):
+    with pytest.raises(ValueError, match=rf"^{field} must be a number$"):
         controller.limit_acceleration(**arguments)  # type: ignore[arg-type]

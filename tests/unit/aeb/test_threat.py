@@ -604,7 +604,9 @@ def test_a_non_finite_ego_pair_is_refused(field: str) -> None:
 
     threat = load_threat_module()
 
-    with pytest.raises(ValueError, match=field):
+    with pytest.raises(
+        ValueError, match=rf"^{field} (components must be finite|must have exactly two components)$"
+    ):
         threat.EgoKinematicState(
             **{
                 **{
@@ -658,7 +660,7 @@ def test_a_non_finite_ego_scalar_is_refused(field: str) -> None:
 
     threat = load_threat_module()
 
-    with pytest.raises(ValueError, match=field):
+    with pytest.raises(ValueError, match=rf"^{field} must be finite$"):
         threat.EgoKinematicState(
             **{
                 **{

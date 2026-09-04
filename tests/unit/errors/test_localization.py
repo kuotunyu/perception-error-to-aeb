@@ -323,7 +323,9 @@ def test_an_impossible_deviation_is_refused(field: str, bad_value: float) -> Non
 
     localization = load_localization_module()
 
-    with pytest.raises(ValueError, match=field):
+    with pytest.raises(
+        ValueError, match=rf"^{field} must be (a number|a finite, non-negative magnitude, got )"
+    ):
         perturb(localization, make_tracks(1), **{field: bad_value})
 
 
@@ -380,5 +382,7 @@ def test_a_non_numeric_deviation_is_refused(field: str) -> None:
 
     localization = load_localization_module()
 
-    with pytest.raises(ValueError, match=field):
+    with pytest.raises(
+        ValueError, match=rf"^{field} must be (a number|a finite, non-negative magnitude, got )"
+    ):
         perturb(localization, make_tracks(1), **{field: "0.5"})
