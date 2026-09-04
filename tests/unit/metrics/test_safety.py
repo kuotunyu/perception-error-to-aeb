@@ -319,7 +319,9 @@ def test_results_from_two_configurations_are_refused() -> None:
 
     safety = load_safety_module()
 
-    with pytest.raises(ValueError, match="configuration_id"):
+    with pytest.raises(
+        ValueError, match=r"^results span several configuration_id values .*; a summary describes"
+    ):
         safety.summarize_configuration(
             (result("s-1"), result("s-2", configuration_id="no_aeb")),
             cohort=("s-1", "s-2"),

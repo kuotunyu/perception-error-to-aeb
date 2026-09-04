@@ -481,7 +481,7 @@ def test_an_empty_scenario_token_is_refused() -> None:
 
     pipeline = load_pipeline_module()
 
-    with pytest.raises(ValueError, match="scenario_token"):
+    with pytest.raises(ValueError, match=r"^scenario_token must not be empty$"):
         make_key(pipeline, scenario_token="")
 
 
@@ -499,7 +499,7 @@ def test_an_empty_configuration_identifier_is_refused() -> None:
 
     pipeline = load_pipeline_module()
 
-    with pytest.raises(ValueError, match="configuration_id"):
+    with pytest.raises(ValueError, match=r"^configuration_id must not be empty$"):
         pipeline.ErrorConfiguration(
             configuration_id="",
             severity_by_channel=dict.fromkeys(pipeline.ERROR_CHANNELS, "zero"),

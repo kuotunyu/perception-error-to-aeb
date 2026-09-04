@@ -197,7 +197,7 @@ def test_duplicate_track_ids_are_refused() -> None:
     models = load_models_module()
     tracks = (make_track(models, track_id="t-0001"), make_track(models, track_id="t-0001"))
 
-    with pytest.raises(ValueError, match="duplicate"):
+    with pytest.raises(ValueError, match=r"^tracks contain a duplicate track_id$"):
         models.WorldFrame(**frame_values(models, tracks=tracks))
 
 
@@ -261,7 +261,7 @@ def test_an_empty_scenario_token_is_refused() -> None:
 
     models = load_models_module()
 
-    with pytest.raises(ValueError, match="scenario_token"):
+    with pytest.raises(ValueError, match=r"^scenario_token must not be empty$"):
         models.WorldFrame(**frame_values(models, scenario_token=""))
 
 

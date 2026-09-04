@@ -96,7 +96,7 @@ def test_a_token_appearing_in_two_families_is_refused() -> None:
     values = manifest_values()
     values["families"]["cut_in_or_crossing"] = ["s-0001"]
 
-    with pytest.raises(ValidationError, match="duplicate"):
+    with pytest.raises(ValidationError, match=r"duplicate scenario token in the cohort"):
         manifest.CohortManifestV1.model_validate(values)
 
 
@@ -107,7 +107,7 @@ def test_a_duplicate_token_within_one_family_is_refused() -> None:
     values = manifest_values()
     values["families"]["lead_or_stopping"] = ["s-0001", "s-0001"]
 
-    with pytest.raises(ValidationError, match="duplicate"):
+    with pytest.raises(ValidationError, match=r"duplicate scenario token in the cohort"):
         manifest.CohortManifestV1.model_validate(values)
 
 

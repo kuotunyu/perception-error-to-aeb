@@ -167,7 +167,10 @@ def test_a_result_filed_under_the_wrong_configuration_is_refused() -> None:
 
     common_cohort = load_common_cohort_module()
 
-    with pytest.raises(ValueError, match="configuration_id"):
+    with pytest.raises(
+        ValueError,
+        match=r"^result for 's-0001' is filed under 'no_aeb' but names configuration_id ",
+    ):
         common_cohort.common_valid_scenarios({"no_aeb": (result("s-0001", "oracle_aeb"),)})
 
 
@@ -308,7 +311,7 @@ def test_an_empty_configuration_id_is_refused() -> None:
 
     load_common_cohort_module()
 
-    with pytest.raises(ValueError, match="configuration_id"):
+    with pytest.raises(ValueError, match=r"^configuration_id must not be empty$"):
         configuration(configuration_id="")
 
 

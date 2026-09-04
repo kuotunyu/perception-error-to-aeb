@@ -257,7 +257,7 @@ def test_duplicate_channels_are_refused() -> None:
 
     shapley = load_shapley_module()
 
-    with pytest.raises(ValueError, match="duplicate"):
+    with pytest.raises(ValueError, match=r"^duplicate channels in .*; each is attributed once$"):
         shapley.exact_shapley({}, channels=("dropout", "dropout"))
 
 

@@ -331,7 +331,7 @@ def test_a_result_for_the_wrong_token_is_refused() -> None:
         def simulate(self, setup: Any, configuration: Any, replicate: int) -> Any:
             return make_result("s-9999", configuration.configuration_id, replicate)
 
-    with pytest.raises(ValueError, match="scenario_token"):
+    with pytest.raises(ValueError, match=r"^simulator returned scenario_token 's-9999' for token "):
         runner.run_common_scenario(Confused(), two_configurations(), protocol=object())
 
 
@@ -344,7 +344,10 @@ def test_a_result_for_the_wrong_configuration_is_refused() -> None:
         def simulate(self, setup: Any, configuration: Any, replicate: int) -> Any:
             return make_result(self.token, "somewhere-else", replicate)
 
-    with pytest.raises(ValueError, match="configuration_id"):
+    with pytest.raises(
+        ValueError,
+        match=r"^simulator returned configuration_id 'somewhere-else' for configuration ",
+    ):
         runner.run_common_scenario(Confused(), two_configurations(), protocol=object())
 
 
@@ -399,7 +402,7 @@ def test_a_setup_without_a_token_is_refused() -> None:
 
     runner = load_runner_module()
 
-    with pytest.raises(ValueError, match="scenario_token"):
+    with pytest.raises(ValueError, match=r"^scenario_token must not be empty$"):
         runner.ScenarioSetup(**setup_fields(scenario_token=""))
 
 

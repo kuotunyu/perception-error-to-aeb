@@ -141,7 +141,7 @@ def test_an_empty_scenario_token_is_refused() -> None:
 
     validity = load_validity_module()
 
-    with pytest.raises(ValueError, match="scenario_token"):
+    with pytest.raises(ValueError, match=r"^scenario_token must not be empty$"):
         validity.invalid_from_exception("", "control", raised())
 
 

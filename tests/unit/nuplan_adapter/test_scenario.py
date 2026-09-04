@@ -304,7 +304,7 @@ def test_duplicate_track_tokens_are_refused() -> None:
     scenario = load_scenario_module()
     fake = FakeScenario(objects=[agent(track_token="a-1"), agent(track_token="a-1")])
 
-    with pytest.raises(ValueError, match="duplicate"):
+    with pytest.raises(ValueError, match=r"^duplicate track token in scenario: "):
         scenario.oracle_world_frame(fake, 0)
 
 
