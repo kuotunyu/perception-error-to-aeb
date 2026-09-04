@@ -74,7 +74,10 @@ def test_every_declared_family_must_appear() -> None:
     values = manifest_values()
     del values["families"]["bicycle_or_vru"]
 
-    with pytest.raises(ValidationError, match=r"Value error, missing scenario families: "):
+    with pytest.raises(
+        ValidationError,
+        match=r"^1 validation error for CohortManifestV1\nfamilies\n  Value error, missing scenario families: \['bicycle_or_vru'\]",
+    ):
         manifest.CohortManifestV1.model_validate(values)
 
 
@@ -85,7 +88,10 @@ def test_an_unknown_family_is_refused() -> None:
     values = manifest_values()
     values["families"]["highway_merge"] = ["s-0009"]
 
-    with pytest.raises(ValidationError, match=r"Value error, unknown scenario families: "):
+    with pytest.raises(
+        ValidationError,
+        match=r"^1 validation error for CohortManifestV1\nfamilies\n  Value error, unknown scenario families: \['highway_merge'\]",
+    ):
         manifest.CohortManifestV1.model_validate(values)
 
 
@@ -96,7 +102,10 @@ def test_a_token_appearing_in_two_families_is_refused() -> None:
     values = manifest_values()
     values["families"]["cut_in_or_crossing"] = ["s-0001"]
 
-    with pytest.raises(ValidationError, match=r"duplicate scenario token in the cohort"):
+    with pytest.raises(
+        ValidationError,
+        match=r"^1 validation error for CohortManifestV1\n  Value error, duplicate scenario token in the cohort",
+    ):
         manifest.CohortManifestV1.model_validate(values)
 
 
@@ -107,7 +116,10 @@ def test_a_duplicate_token_within_one_family_is_refused() -> None:
     values = manifest_values()
     values["families"]["lead_or_stopping"] = ["s-0001", "s-0001"]
 
-    with pytest.raises(ValidationError, match=r"duplicate scenario token in the cohort"):
+    with pytest.raises(
+        ValidationError,
+        match=r"^1 validation error for CohortManifestV1\n  Value error, duplicate scenario token in the cohort",
+    ):
         manifest.CohortManifestV1.model_validate(values)
 
 
@@ -242,7 +254,10 @@ def test_the_model_is_frozen() -> None:
     manifest = load_manifest_module()
     document = manifest.CohortManifestV1.model_validate(manifest_values())
 
-    with pytest.raises(ValidationError, match=r"Instance is frozen"):
+    with pytest.raises(
+        ValidationError,
+        match=r"^1 validation error for CohortManifestV1\nsplit\n  Instance is frozen",
+    ):
         document.split = "evaluation"  # type: ignore[misc]
 
 
@@ -255,6 +270,6 @@ def test_an_empty_cohort_is_refused() -> None:
 
     with pytest.raises(
         ValidationError,
-        match=r"the\ cohort\ is\ empty;\ a\ freeze\ that\ captured\ nothing\ is\ not\ a\ cohort",
+        match=r"^1 validation error for CohortManifestV1\n  Value error, the cohort is empty; a freeze that captured nothing is not a cohort",
     ):
         manifest.CohortManifestV1.model_validate(values)

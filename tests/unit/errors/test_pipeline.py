@@ -299,7 +299,8 @@ def test_the_zero_severity_must_be_exactly_zero() -> None:
     config["channels"]["localization_shape"]["position_std_m"] = [0.001, 0.25, 0.50, 1.00]
 
     with pytest.raises(
-        ValueError, match=r"at severity zero must be exactly 0; zero is the reference"
+        ValueError,
+        match=r"^position_std_m at severity zero must be exactly 0; zero is the reference every other severity is measured against$",
     ):
         pipeline.validate_error_config(config)
 
@@ -564,7 +565,7 @@ def test_a_missing_parameter_in_a_channel_is_refused() -> None:
     config = pipeline.load_error_config()
     del config["channels"]["localization_shape"]["yaw_std_deg"]
 
-    with pytest.raises(ValueError, match=r"is missing parameters: "):
+    with pytest.raises(ValueError, match=r"^channel \'\w+\' is missing parameters: "):
         pipeline.validate_error_config(config)
 
 

@@ -106,7 +106,10 @@ def test_the_model_is_frozen() -> None:
     results = load_results_module()
     record = results.AEBScenarioResultV1.model_validate(valid_values())
 
-    with pytest.raises(ValidationError, match=r"Instance is frozen"):
+    with pytest.raises(
+        ValidationError,
+        match=r"^1 validation error for AEBScenarioResultV1\ncollision_vru\n  Instance is frozen",
+    ):
         record.collision_vru = 1  # type: ignore[misc]
 
 
@@ -192,7 +195,7 @@ def test_a_valid_result_may_not_carry_an_invalid_reason() -> None:
 
     with pytest.raises(
         ValidationError,
-        match=r"(a\ valid\ result\ must\ not\ carry\ an\ invalid_reason|an\ invalid\ result\ must\ record\ its\ invalid_reason)",
+        match=r"^1 validation error for AEBScenarioResultV1\n  Value error, a valid result must not carry an invalid_reason",
     ):
         results.AEBScenarioResultV1.model_validate(
             valid_values(valid=True, invalid_reason="ego left the route")
@@ -206,7 +209,7 @@ def test_an_invalid_result_must_say_why() -> None:
 
     with pytest.raises(
         ValidationError,
-        match=r"(a\ valid\ result\ must\ not\ carry\ an\ invalid_reason|an\ invalid\ result\ must\ record\ its\ invalid_reason)",
+        match=r"^1 validation error for AEBScenarioResultV1\n  Value error, an invalid result must record its invalid_reason",
     ):
         results.AEBScenarioResultV1.model_validate(valid_values(valid=False, invalid_reason=None))
 

@@ -155,7 +155,10 @@ def test_the_model_is_frozen() -> None:
     envelope = load_envelope_module()
     document = envelope.PortfolioArtifactEnvelopeV1.model_validate(canonical_values())
 
-    with pytest.raises(ValidationError, match=r"Instance is frozen"):
+    with pytest.raises(
+        ValidationError,
+        match=r"^1 validation error for PortfolioArtifactEnvelopeV1\nproducer_release\n  Instance is frozen",
+    ):
         document.producer_release = "v9.9.9"  # type: ignore[misc]
 
 
