@@ -297,7 +297,9 @@ def test_an_imported_configuration_is_refused() -> None:
         imported=True,
     )
 
-    with pytest.raises(ValueError, match="imported"):
+    with pytest.raises(
+        ValueError, match=r"^'calibration_imported_\w+' is an imported configuration; "
+    ):
         channels.ScenarioChannels(imported)
 
 

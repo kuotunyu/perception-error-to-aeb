@@ -613,7 +613,7 @@ def test_a_rate_that_is_not_a_number_is_refused(bad_value: object) -> None:
 
     fragmentation = load_fragmentation_module()
 
-    with pytest.raises(ValueError, match="rate_per_s must be a number"):
+    with pytest.raises(ValueError, match=r"^rate_per_s must be a number$"):
         fragmentation.update_fragmentation(
             (make_track(),),
             {},
@@ -647,7 +647,7 @@ def test_a_reacquisition_delay_that_is_not_a_number_is_refused(bad_value: object
 
     fragmentation = load_fragmentation_module()
 
-    with pytest.raises(ValueError, match="reacquisition_delay_s must be a number"):
+    with pytest.raises(ValueError, match=r"^reacquisition_delay_s must be a number$"):
         fragmentation.update_fragmentation(
             (make_track(),),
             {},

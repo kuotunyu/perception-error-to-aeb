@@ -203,7 +203,9 @@ def test_a_configuration_names_a_severity_for_every_channel() -> None:
 
     load_common_cohort_module()
 
-    with pytest.raises(ValueError, match="latency"):
+    with pytest.raises(
+        ValueError, match=r"^configuration does not name a severity for every channel: "
+    ):
         configuration(
             severity_by_channel={
                 "dropout": "medium",
@@ -218,7 +220,7 @@ def test_a_configuration_may_not_name_an_unknown_channel() -> None:
 
     load_common_cohort_module()
 
-    with pytest.raises(ValueError, match="blur"):
+    with pytest.raises(ValueError, match=r"^unknown error channels in configuration: "):
         configuration(
             severity_by_channel={
                 "dropout": "medium",

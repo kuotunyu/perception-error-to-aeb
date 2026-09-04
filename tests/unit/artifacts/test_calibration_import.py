@@ -232,7 +232,7 @@ def test_an_empty_distribution_is_refused(tmp_path: Path) -> None:
         payload=payload(rotation_samples_rpy_deg=[], translation_samples_xyz_m=[]),
     )
 
-    with pytest.raises(ValueError, match="empty"):
+    with pytest.raises(ValueError, match=r"^'rotation_samples_rpy_deg' is empty; "):
         calibration_import.import_calibration_distribution(path, PROTOCOL_HASH)
 
 
@@ -267,7 +267,7 @@ def test_a_non_finite_sample_is_refused() -> None:
 
     calibration_import = load_import_module()
 
-    with pytest.raises(ValueError, match="finite"):
+    with pytest.raises(ValueError, match=r"^rotation components must be finite; "):
         calibration_import.parse_distribution_payload(
             payload(rotation_samples_rpy_deg=[[0.1, 0.2, float("nan")]])
         )
@@ -278,7 +278,7 @@ def test_a_sample_component_that_is_not_a_number_is_refused() -> None:
 
     calibration_import = load_import_module()
 
-    with pytest.raises(ValueError, match="must be numbers"):
+    with pytest.raises(ValueError, match=r"^rotation components must be numbers$"):
         calibration_import.parse_distribution_payload(
             payload(rotation_samples_rpy_deg=[[0.1, 0.2, "0.3"]])
         )
@@ -349,7 +349,9 @@ def test_a_payload_missing_its_samples_is_refused(tmp_path: Path) -> None:
     del body["rotation_samples_rpy_deg"]
     path = write_envelope(tmp_path, payload=body)
 
-    with pytest.raises(ValueError, match="rotation_samples_rpy_deg"):
+    with pytest.raises(
+        ValueError, match=r"^the payload does not carry 'rotation_samples_rpy_deg'$"
+    ):
         calibration_import.import_calibration_distribution(path, PROTOCOL_HASH)
 
 

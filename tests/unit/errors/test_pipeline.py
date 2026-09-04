@@ -190,7 +190,7 @@ def test_an_unknown_channel_is_refused() -> None:
 
     pipeline = load_pipeline_module()
 
-    with pytest.raises(ValueError, match="channel"):
+    with pytest.raises(ValueError, match=r"^channel must be one of "):
         make_key(pipeline, channel="weather")
 
 
@@ -199,7 +199,7 @@ def test_an_unknown_severity_is_refused() -> None:
 
     pipeline = load_pipeline_module()
 
-    with pytest.raises(ValueError, match="severity"):
+    with pytest.raises(ValueError, match=r"^severity must be one of "):
         make_key(pipeline, severity="extreme")
 
 
@@ -261,7 +261,7 @@ def test_every_channel_must_be_configured() -> None:
     config = pipeline.load_error_config()
     del config["channels"]["latency"]
 
-    with pytest.raises(ValueError, match="latency"):
+    with pytest.raises(ValueError, match=r"^missing error channels in configuration: "):
         pipeline.validate_error_config(config)
 
 
@@ -272,7 +272,7 @@ def test_an_unknown_channel_in_the_config_is_refused() -> None:
     config = pipeline.load_error_config()
     config["channels"]["weather"] = {"rain_mm": [0.0, 1.0, 2.0, 3.0]}
 
-    with pytest.raises(ValueError, match="weather"):
+    with pytest.raises(ValueError, match=r"^unknown error channels in configuration: "):
         pipeline.validate_error_config(config)
 
 
@@ -283,7 +283,7 @@ def test_every_parameter_needs_one_value_per_severity() -> None:
     config = pipeline.load_error_config()
     config["channels"]["dropout"]["dropout_probability"] = [0.0, 0.05, 0.10]
 
-    with pytest.raises(ValueError, match="dropout_probability"):
+    with pytest.raises(ValueError, match=r"^dropout_probability must give one value per severity "):
         pipeline.validate_error_config(config)
 
 
@@ -312,7 +312,7 @@ def test_an_impossible_parameter_value_is_refused(bad_value: float) -> None:
     config = pipeline.load_error_config()
     config["channels"]["latency"]["latency_s"] = [0.0, 0.10, bad_value, 0.40]
 
-    with pytest.raises(ValueError, match="latency_s"):
+    with pytest.raises(ValueError, match=r"^latency_s values must be finite and non-negative$"):
         pipeline.validate_error_config(config)
 
 
@@ -427,7 +427,9 @@ def test_a_configuration_must_name_a_severity_for_every_channel() -> None:
     )
     history = (make_frame(0),)
 
-    with pytest.raises(ValueError, match="channel"):
+    with pytest.raises(
+        ValueError, match=r"^configuration does not name a severity for every channel: "
+    ):
         pipeline.apply_error_pipeline(history, 0, configuration, make_key(pipeline))
 
 
@@ -529,7 +531,7 @@ def test_a_configuration_naming_an_unknown_channel_is_refused() -> None:
     severities = dict.fromkeys(pipeline.ERROR_CHANNELS, "zero")
     severities["weather"] = "high"
 
-    with pytest.raises(ValueError, match="weather"):
+    with pytest.raises(ValueError, match=r"^unknown channels in configuration: "):
         pipeline.ErrorConfiguration(configuration_id="odd", severity_by_channel=severities)
 
 
@@ -540,7 +542,7 @@ def test_a_configuration_naming_an_unknown_severity_is_refused() -> None:
     severities = dict.fromkeys(pipeline.ERROR_CHANNELS, "zero")
     severities["dropout"] = "extreme"
 
-    with pytest.raises(ValueError, match="extreme"):
+    with pytest.raises(ValueError, match=r"^channel .* has an unknown severity "):
         pipeline.ErrorConfiguration(configuration_id="odd", severity_by_channel=severities)
 
 
@@ -551,7 +553,7 @@ def test_an_unknown_parameter_in_a_channel_is_refused() -> None:
     config = pipeline.load_error_config()
     config["channels"]["dropout"]["rain_mm"] = [0.0, 1.0, 2.0, 3.0]
 
-    with pytest.raises(ValueError, match="rain_mm"):
+    with pytest.raises(ValueError, match=r"^channel .* has unknown parameters: "):
         pipeline.validate_error_config(config)
 
 
@@ -573,7 +575,7 @@ def test_a_non_numeric_parameter_value_is_refused() -> None:
     config = pipeline.load_error_config()
     config["channels"]["latency"]["latency_s"] = [0.0, "0.10", 0.20, 0.40]
 
-    with pytest.raises(ValueError, match="latency_s"):
+    with pytest.raises(ValueError, match=r"^latency_s values must be numbers$"):
         pipeline.validate_error_config(config)
 
 
@@ -584,7 +586,7 @@ def test_a_boolean_parameter_value_is_refused() -> None:
     config = pipeline.load_error_config()
     config["channels"]["latency"]["latency_s"] = [0.0, True, 0.20, 0.40]
 
-    with pytest.raises(ValueError, match="latency_s"):
+    with pytest.raises(ValueError, match=r"^latency_s values must be numbers$"):
         pipeline.validate_error_config(config)
 
 
@@ -593,7 +595,7 @@ def test_a_configuration_identifier_refuses_an_unknown_channel() -> None:
 
     pipeline = load_pipeline_module()
 
-    with pytest.raises(ValueError, match="channel"):
+    with pytest.raises(ValueError, match=r"^unknown channel: "):
         pipeline.configuration_id("weather", "high")
 
 
@@ -602,7 +604,7 @@ def test_a_configuration_identifier_refuses_an_unknown_severity() -> None:
 
     pipeline = load_pipeline_module()
 
-    with pytest.raises(ValueError, match="severity"):
+    with pytest.raises(ValueError, match=r"^unknown severity: |^severity must be one of "):
         pipeline.configuration_id("dropout", "extreme")
 
 

@@ -514,7 +514,7 @@ def test_a_braking_target_that_is_not_a_deceleration_is_refused() -> None:
     policy = state_machine.load_policy()
     policy["full"]["target_accel_mps2"] = 1.0
 
-    with pytest.raises(ValueError, match="target_accel_mps2"):
+    with pytest.raises(ValueError, match=r"^\w+ target_accel_mps2 must be a deceleration, got "):
         state_machine.validate_policy(policy)
 
 
@@ -538,7 +538,7 @@ def test_a_policy_missing_a_stage_is_refused() -> None:
     policy = state_machine.load_policy()
     del policy["partial"]
 
-    with pytest.raises(ValueError, match="partial"):
+    with pytest.raises(ValueError, match=r"^policy is missing the '\w+' stage$"):
         state_machine.validate_policy(policy)
 
 
@@ -549,7 +549,9 @@ def test_a_non_positive_counter_is_refused() -> None:
     policy = state_machine.load_policy()
     policy["warning"]["consecutive_steps"] = 0
 
-    with pytest.raises(ValueError, match="consecutive_steps"):
+    with pytest.raises(
+        ValueError, match=r"^\w+ consecutive_steps must be a positive integer, got "
+    ):
         state_machine.validate_policy(policy)
 
 

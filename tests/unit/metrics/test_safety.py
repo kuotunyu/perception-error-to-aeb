@@ -387,7 +387,7 @@ def test_a_simulated_duration_that_is_not_a_number_is_refused(bad_value: object)
 
     safety = load_safety_module()
 
-    with pytest.raises(ValueError, match="simulated_seconds must be a number"):
+    with pytest.raises(ValueError, match=r"^simulated_seconds must be a number$"):
         safety.summarize_configuration(
             (result("s-1"),),
             cohort=("s-1",),

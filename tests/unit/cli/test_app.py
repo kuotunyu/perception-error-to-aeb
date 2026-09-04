@@ -192,7 +192,7 @@ def test_the_run_context_refuses_an_unnamed_input() -> None:
 
     from aebrisk.cli.simulate import RunContext
 
-    with pytest.raises(ValueError, match="protocol_sha256"):
+    with pytest.raises(ValueError, match=r"^protocol_sha256 must not be empty; "):
         RunContext(
             configuration_id="oracle_aeb",
             protocol_sha256="",
@@ -226,7 +226,7 @@ def test_an_empty_cohort_has_no_hash() -> None:
 
     from aebrisk.cli.simulate import cohort_sha256
 
-    with pytest.raises(ValueError, match="cohort"):
+    with pytest.raises(ValueError, match=r"^the cohort is empty; "):
         cohort_sha256(())
 
 

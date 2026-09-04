@@ -132,7 +132,7 @@ def test_a_configured_sensor_root_is_refused(tmp_path: Path) -> None:
     database = load_database_module()
     root = build_installation(tmp_path / "nuplan")
 
-    with pytest.raises(ValueError, match="sensor"):
+    with pytest.raises(ValueError, match=r"^NUPLAN_SENSOR_ROOT is set\. "):
         database.resolve_installation(root, environment={"NUPLAN_SENSOR_ROOT": "/data/sensors"})
 
 
@@ -169,5 +169,5 @@ def test_the_environment_defaults_to_the_process_environment(
     root = build_installation(tmp_path / "nuplan")
     monkeypatch.setenv("NUPLAN_SENSOR_ROOT", "/data/sensors")
 
-    with pytest.raises(ValueError, match="sensor"):
+    with pytest.raises(ValueError, match=r"^NUPLAN_SENSOR_ROOT is set\. "):
         database.resolve_installation(root)

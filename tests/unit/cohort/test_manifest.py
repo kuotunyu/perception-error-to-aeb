@@ -74,7 +74,7 @@ def test_every_declared_family_must_appear() -> None:
     values = manifest_values()
     del values["families"]["bicycle_or_vru"]
 
-    with pytest.raises(ValidationError, match="bicycle_or_vru"):
+    with pytest.raises(ValidationError, match=r"Value error, missing scenario families: "):
         manifest.CohortManifestV1.model_validate(values)
 
 
@@ -85,7 +85,7 @@ def test_an_unknown_family_is_refused() -> None:
     values = manifest_values()
     values["families"]["highway_merge"] = ["s-0009"]
 
-    with pytest.raises(ValidationError, match="highway_merge"):
+    with pytest.raises(ValidationError, match=r"Value error, unknown scenario families: "):
         manifest.CohortManifestV1.model_validate(values)
 
 

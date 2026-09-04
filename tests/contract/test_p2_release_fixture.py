@@ -67,7 +67,9 @@ def test_the_fixture_is_stored_canonically() -> None:
 def test_the_fixture_is_rejected_under_another_protocol() -> None:
     """The same bytes describe another study if the protocol differs."""
 
-    with pytest.raises(ValueError, match="protocol"):
+    with pytest.raises(
+        ValueError, match=r"^protocol hash mismatch: the artifact was measured under "
+    ):
         import_calibration_distribution(FIXTURE, "9" * 64)
 
 
