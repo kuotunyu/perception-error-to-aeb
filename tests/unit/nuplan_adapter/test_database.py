@@ -66,7 +66,7 @@ def test_a_missing_data_root_is_refused(tmp_path: Path) -> None:
 
     database = load_database_module()
 
-    with pytest.raises(FileNotFoundError, match="data root"):
+    with pytest.raises(FileNotFoundError, match=r"^nuPlan\ data\ root\ does\ not\ exist:\ "):
         database.resolve_installation(tmp_path / "absent")
 
 
@@ -89,7 +89,7 @@ def test_a_split_with_no_databases_is_refused(tmp_path: Path) -> None:
     (root / "nuplan-v1.1" / "splits" / "mini").mkdir(parents=True)
     (root / "maps").mkdir()
 
-    with pytest.raises(FileNotFoundError, match="no log database"):
+    with pytest.raises(FileNotFoundError, match=r"^no\ log\ database\ in\ the\ "):
         database.resolve_installation(root)
 
 
@@ -99,7 +99,7 @@ def test_a_missing_maps_root_is_refused(tmp_path: Path) -> None:
     database = load_database_module()
     root = build_installation(tmp_path / "nuplan", maps=False)
 
-    with pytest.raises(FileNotFoundError, match="maps"):
+    with pytest.raises(FileNotFoundError, match=r"^nuPlan\ maps\ root\ does\ not\ exist:\ "):
         database.resolve_installation(root)
 
 

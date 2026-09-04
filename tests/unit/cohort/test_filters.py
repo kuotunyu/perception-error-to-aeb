@@ -171,7 +171,9 @@ def test_an_impossible_speed_is_refused(bad_value: float) -> None:
 
     filters = load_filters_module()
 
-    with pytest.raises(ValueError, match="initial_ego_speed_mps"):
+    with pytest.raises(
+        ValueError, match=r"^initial_ego_speed_mps\ must\ be\ a\ finite,\ non\-negative\ speed"
+    ):
         make_candidate(filters, initial_ego_speed_mps=bad_value)
 
 
@@ -181,7 +183,10 @@ def test_an_impossible_time_to_collision_is_refused(bad_value: float) -> None:
 
     filters = load_filters_module()
 
-    with pytest.raises(ValueError, match="oracle_min_ttc_within_4s"):
+    with pytest.raises(
+        ValueError,
+        match=r"^oracle_min_ttc_within_4s\ must\ be\ a\ finite,\ non\-negative\ time\ or\ None",
+    ):
         make_candidate(filters, oracle_min_ttc_within_4s=bad_value)
 
 
@@ -209,7 +214,7 @@ def test_an_unknown_official_split_is_refused() -> None:
 
     filters = load_filters_module()
 
-    with pytest.raises(ValueError, match="official_split"):
+    with pytest.raises(ValueError, match=r"^official_split\ must\ be\ one\ of\ "):
         make_candidate(filters, official_split="test")
 
 

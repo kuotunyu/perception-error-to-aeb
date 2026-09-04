@@ -106,7 +106,7 @@ def test_a_run_that_finished_before_it_started_is_refused() -> None:
 
     run_record = load_run_record_module()
 
-    with pytest.raises(ValidationError, match="finished_at_utc"):
+    with pytest.raises(ValidationError, match=r"finished_at_utc must not precede started_at_utc"):
         run_record.RunRecordV1.model_validate(
             valid_values(
                 started_at_utc="2026-09-03T01:00:00Z",
@@ -144,7 +144,9 @@ def test_a_succeeded_run_must_have_produced_something() -> None:
 
     run_record = load_run_record_module()
 
-    with pytest.raises(ValidationError, match="artifacts"):
+    with pytest.raises(
+        ValidationError, match=r"a succeeded run must record the artifacts it produced"
+    ):
         run_record.RunRecordV1.model_validate(valid_values(status="succeeded", artifacts={}))
 
 
@@ -173,7 +175,7 @@ def test_the_model_is_frozen() -> None:
     run_record = load_run_record_module()
     record = run_record.RunRecordV1.model_validate(valid_values())
 
-    with pytest.raises(ValidationError, match="frozen"):
+    with pytest.raises(ValidationError, match=r"Instance is frozen"):
         record.status = "failed"  # type: ignore[misc]
 
 

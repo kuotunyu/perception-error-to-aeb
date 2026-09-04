@@ -93,7 +93,9 @@ def test_an_impossible_initial_speed_is_refused(bad_value: float) -> None:
 
     route_follower = load_route_follower_module()
 
-    with pytest.raises(ValueError, match="initial_speed_mps"):
+    with pytest.raises(
+        ValueError, match=r"^initial_speed_mps\ must\ be\ finite\ and\ non\-negative"
+    ):
         route_follower.target_speed(bad_value, 13.0)
 
 
@@ -123,7 +125,7 @@ def test_a_map_speed_limit_that_is_not_a_number_is_refused(bad_value: object) ->
 
     route_follower = load_route_follower_module()
 
-    with pytest.raises(ValueError, match="map_speed_limit_mps must be a number"):
+    with pytest.raises(ValueError, match=r"^map_speed_limit_mps\ must\ be\ a\ number"):
         route_follower.target_speed(8.0, bad_value)  # type: ignore[arg-type]
 
 

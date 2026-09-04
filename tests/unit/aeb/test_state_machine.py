@@ -477,7 +477,7 @@ def test_a_step_duration_that_is_not_a_number_is_refused(bad_value: object) -> N
 
     state_machine = load_state_machine_module()
 
-    with pytest.raises(ValueError, match="dt_s must be a number"):
+    with pytest.raises(ValueError, match=r"^dt_s\ must\ be\ a\ number"):
         state_machine.update_aeb(monitoring(), (), dt_s=bad_value)  # type: ignore[arg-type]
 
 
@@ -525,7 +525,9 @@ def test_a_policy_whose_stages_are_out_of_order_is_refused() -> None:
     policy = state_machine.load_policy()
     policy["full"]["ttc_lt_s"] = 4.0
 
-    with pytest.raises(ValueError, match="ttc_lt_s"):
+    with pytest.raises(
+        ValueError, match=r"^stage\ ttc_lt_s\ thresholds\ must\ decrease\ with\ urgency,\ got\ "
+    ):
         state_machine.validate_policy(policy)
 
 
@@ -558,7 +560,7 @@ def test_a_policy_missing_its_release_rule_is_refused() -> None:
     policy = state_machine.load_policy()
     del policy["release"]
 
-    with pytest.raises(ValueError, match="release"):
+    with pytest.raises(ValueError, match=r"^policy\ is\ missing\ the\ 'release'\ stage"):
         state_machine.validate_policy(policy)
 
 

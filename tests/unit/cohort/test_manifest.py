@@ -242,7 +242,7 @@ def test_the_model_is_frozen() -> None:
     manifest = load_manifest_module()
     document = manifest.CohortManifestV1.model_validate(manifest_values())
 
-    with pytest.raises(ValidationError, match="frozen"):
+    with pytest.raises(ValidationError, match=r"Instance is frozen"):
         document.split = "evaluation"  # type: ignore[misc]
 
 

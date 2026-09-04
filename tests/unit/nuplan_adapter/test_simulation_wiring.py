@@ -89,7 +89,7 @@ def test_a_reactive_agent_policy_is_refused() -> None:
 
     simulation = load_wiring_module()
 
-    with pytest.raises(ValueError, match="agent_policy"):
+    with pytest.raises(ValueError, match=r"^agent_policy\ must\ be\ "):
         simulation.build_simulation_wiring(agent_policy="idm_agents")
 
 
@@ -98,7 +98,7 @@ def test_an_open_loop_ego_is_refused() -> None:
 
     simulation = load_wiring_module()
 
-    with pytest.raises(ValueError, match="ego_control"):
+    with pytest.raises(ValueError, match=r"^ego_control\ must\ be\ "):
         simulation.build_simulation_wiring(ego_control="log_playback")
 
 
@@ -107,7 +107,10 @@ def test_expert_braking_cannot_be_switched_on() -> None:
 
     simulation = load_wiring_module()
 
-    with pytest.raises(ValueError, match="expert_longitudinal_braking"):
+    with pytest.raises(
+        ValueError,
+        match=r"^expert_longitudinal_braking\ must\ stay\ off;\ the\ logged\ driver\ already\ ",
+    ):
         simulation.build_simulation_wiring(expert_longitudinal_braking=True)
 
 
@@ -191,7 +194,7 @@ def test_a_planner_configured_for_sensors_is_refused() -> None:
 
     planner = load_planner_module()
 
-    with pytest.raises(ValueError, match="sensor"):
+    with pytest.raises(ValueError, match=r"^this\ planner\ reads\ "):
         planner.validate_planner_scope(("CAM_F0",))
 
 

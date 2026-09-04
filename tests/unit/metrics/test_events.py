@@ -399,7 +399,9 @@ def test_an_impossible_tolerance_is_refused(bad_value: float) -> None:
 
     events = load_events_module()
 
-    with pytest.raises(ValueError, match="tolerance_s"):
+    with pytest.raises(
+        ValueError, match=r"^tolerance_s must (be a number|be finite and non-negative, got )"
+    ):
         events.match_interventions((), (), tolerance_s=bad_value)
 
 
@@ -439,7 +441,7 @@ def test_an_event_that_ends_before_it_starts_is_refused() -> None:
 
     events = load_events_module()
 
-    with pytest.raises(ValueError, match="offset_s"):
+    with pytest.raises(ValueError, match=r"^offset_s\ "):
         events.InterventionEvent(
             onset_s=2.0,
             offset_s=1.0,
@@ -452,7 +454,7 @@ def test_an_event_that_never_braked_is_refused() -> None:
 
     events = load_events_module()
 
-    with pytest.raises(ValueError, match="max_state"):
+    with pytest.raises(ValueError, match=r"^max_state\ must\ be\ one\ of\ "):
         events.InterventionEvent(
             onset_s=1.0,
             offset_s=2.0,
@@ -491,7 +493,7 @@ def test_a_step_duration_that_is_not_a_number_is_refused(bad_value: object) -> N
 
     events = load_events_module()
 
-    with pytest.raises(ValueError, match="dt_s must be a number"):
+    with pytest.raises(ValueError, match=r"^dt_s\ must\ be\ a\ number"):
         events.extract_interventions(trace("full_brake"), dt_s=bad_value)  # type: ignore[arg-type]
 
 

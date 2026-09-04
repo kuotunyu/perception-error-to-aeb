@@ -252,7 +252,10 @@ def test_a_history_that_goes_backwards_in_time_is_refused() -> None:
         make_frame(2, BASE_US + 100_000),
     )
 
-    with pytest.raises(ValueError, match="monotonic"):
+    with pytest.raises(
+        ValueError,
+        match=r"^history\ timestamps\ must\ be\ monotonic;\ a\ history\ that\ goes\ backwards\ ",
+    ):
         latency.select_latency_frame(history, 2, 0.1)
 
 
@@ -270,7 +273,7 @@ def test_an_index_outside_the_history_is_refused() -> None:
 
     latency = load_latency_module()
 
-    with pytest.raises(IndexError, match="current_index"):
+    with pytest.raises(IndexError, match=r"^current_index\ "):
         latency.select_latency_frame(regular_history(4), 4, 0.0)
 
 
@@ -304,7 +307,7 @@ def test_a_latency_that_is_not_a_number_is_refused(bad_value: object) -> None:
 
     latency = load_latency_module()
 
-    with pytest.raises(ValueError, match="requested_latency_s must be a number"):
+    with pytest.raises(ValueError, match=r"^requested_latency_s\ must\ be\ a\ number"):
         latency.select_latency_frame(regular_history(), 3, bad_value)  # type: ignore[arg-type]
 
 

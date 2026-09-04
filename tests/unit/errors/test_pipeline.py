@@ -292,7 +292,9 @@ def test_the_zero_severity_must_be_exactly_zero() -> None:
     config = pipeline.load_error_config()
     config["channels"]["localization_shape"]["position_std_m"] = [0.001, 0.25, 0.50, 1.00]
 
-    with pytest.raises(ValueError, match="zero"):
+    with pytest.raises(
+        ValueError, match=r"at severity zero must be exactly 0; zero is the reference"
+    ):
         pipeline.validate_error_config(config)
 
 
@@ -315,7 +317,7 @@ def test_the_severity_list_is_the_declared_one() -> None:
     config = pipeline.load_error_config()
     config["severities"] = ["zero", "medium", "low", "high"]
 
-    with pytest.raises(ValueError, match="severities"):
+    with pytest.raises(ValueError, match=r"^severities\ must\ be\ exactly\ "):
         pipeline.validate_error_config(config)
 
 
@@ -394,7 +396,7 @@ def test_the_pipeline_refuses_an_index_outside_the_history() -> None:
     pipeline = load_pipeline_module()
     history = tuple(make_frame(index) for index in range(2))
 
-    with pytest.raises(IndexError, match="current_index"):
+    with pytest.raises(IndexError, match=r"^current_index\ "):
         pipeline.apply_error_pipeline(history, 2, zero_configuration(pipeline), make_key(pipeline))
 
 

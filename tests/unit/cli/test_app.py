@@ -302,7 +302,9 @@ def test_an_empty_container_digest_is_refused() -> None:
 
     from aebrisk.cli.simulate import RunContext
 
-    with pytest.raises(ValueError, match="container_digest"):
+    with pytest.raises(
+        ValueError, match=r"^container_digest\ must\ not\ be\ empty;\ use\ 'unknown'\ instead"
+    ):
         RunContext(
             configuration_id="oracle_aeb",
             protocol_sha256="a" * 64,

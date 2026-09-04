@@ -106,7 +106,7 @@ def test_the_model_is_frozen() -> None:
     results = load_results_module()
     record = results.AEBScenarioResultV1.model_validate(valid_values())
 
-    with pytest.raises(ValidationError, match="frozen"):
+    with pytest.raises(ValidationError, match=r"Instance is frozen"):
         record.collision_vru = 1  # type: ignore[misc]
 
 

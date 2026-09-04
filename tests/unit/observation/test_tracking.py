@@ -160,7 +160,7 @@ def test_an_elapsed_time_that_is_not_a_number_is_refused(bad_value: object) -> N
 
     tracking = load_tracking_module()
 
-    with pytest.raises(ValueError, match="dt_s must be a number"):
+    with pytest.raises(ValueError, match=r"^dt_s\ must\ be\ a\ number"):
         tracking.finite_difference_velocity((0.0, 0.0), (1.0, 0.0), bad_value)  # type: ignore[arg-type]
 
 

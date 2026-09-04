@@ -289,7 +289,7 @@ def test_an_impossible_resample_count_is_refused(bad_value: object) -> None:
 
     bootstrap = load_bootstrap_module()
 
-    with pytest.raises(ValueError, match="resamples"):
+    with pytest.raises(ValueError, match=r"^resamples\ must\ be\ a\ positive\ integer,\ got\ "):
         bootstrap.paired_scenario_bootstrap(paired_metric(4), resamples=bad_value)  # type: ignore[arg-type]
 
 
@@ -329,7 +329,7 @@ def test_an_interval_whose_bounds_are_inverted_is_refused() -> None:
 
     bootstrap = load_bootstrap_module()
 
-    with pytest.raises(ValueError, match="low"):
+    with pytest.raises(ValueError, match=r"^low\ "):
         bootstrap.BootstrapInterval(
             estimate=1.0, low=2.0, high=0.5, confidence=0.95, resamples=100, seed=1
         )
@@ -353,7 +353,7 @@ def test_a_confidence_that_is_not_a_number_is_refused(bad_value: object) -> None
 
     bootstrap = load_bootstrap_module()
 
-    with pytest.raises(ValueError, match="confidence must be a number"):
+    with pytest.raises(ValueError, match=r"^confidence\ must\ be\ a\ number"):
         bootstrap.paired_scenario_bootstrap(
             paired_metric(4),
             resamples=50,

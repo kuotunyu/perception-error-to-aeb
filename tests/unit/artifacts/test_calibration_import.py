@@ -168,7 +168,9 @@ def test_an_artifact_from_the_wrong_producer_is_refused(tmp_path: Path) -> None:
     calibration_import = load_import_module()
     path = write_envelope(tmp_path, producer_repository="driving-risk-metrics")
 
-    with pytest.raises(ValueError, match="producer"):
+    with pytest.raises(
+        ValueError, match=r"^unexpected\ producer\ for\ a\ calibration\ artifact:\ "
+    ):
         calibration_import.import_calibration_distribution(path, PROTOCOL_HASH)
 
 
@@ -245,7 +247,10 @@ def test_unequal_sample_counts_are_refused(tmp_path: Path) -> None:
         payload=payload(translation_samples_xyz_m=[[0.01, 0.0, 0.0]]),
     )
 
-    with pytest.raises(ValueError, match="same number"):
+    with pytest.raises(
+        ValueError,
+        match=r"^rotation\ and\ translation\ must\ carry\ the\ same\ number\ of\ samples,\ got\ ",
+    ):
         calibration_import.import_calibration_distribution(path, PROTOCOL_HASH)
 
 
@@ -290,7 +295,7 @@ def test_an_out_of_bounds_rotation_is_refused(tmp_path: Path) -> None:
         payload=payload(rotation_samples_rpy_deg=[[90.0, 0.0, 0.0], [0.1, 0.2, 0.3]]),
     )
 
-    with pytest.raises(ValueError, match="rotation"):
+    with pytest.raises(ValueError, match=(r"^rotation component .* exceeds the plausible bound ")):
         calibration_import.import_calibration_distribution(path, PROTOCOL_HASH)
 
 
@@ -303,7 +308,9 @@ def test_an_out_of_bounds_translation_is_refused(tmp_path: Path) -> None:
         payload=payload(translation_samples_xyz_m=[[5.0, 0.0, 0.0], [0.01, 0.0, 0.0]]),
     )
 
-    with pytest.raises(ValueError, match="translation"):
+    with pytest.raises(
+        ValueError, match=(r"^translation component .* exceeds the plausible bound ")
+    ):
         calibration_import.import_calibration_distribution(path, PROTOCOL_HASH)
 
 
@@ -316,7 +323,7 @@ def test_a_sample_that_is_not_a_triple_is_refused(tmp_path: Path) -> None:
         payload=payload(rotation_samples_rpy_deg=[[0.1, 0.2], [0.1, 0.2, 0.3]]),
     )
 
-    with pytest.raises(ValueError, match="three"):
+    with pytest.raises(ValueError, match=r"^each\ "):
         calibration_import.import_calibration_distribution(path, PROTOCOL_HASH)
 
 
@@ -328,7 +335,7 @@ def test_a_payload_with_the_wrong_schema_version_is_refused(tmp_path: Path) -> N
         tmp_path, payload=payload(schema_version="calibration-error-distribution/v2")
     )
 
-    with pytest.raises(ValueError, match="schema_version"):
+    with pytest.raises(ValueError, match=r"^payload\ schema_version\ must\ be\ "):
         calibration_import.import_calibration_distribution(path, PROTOCOL_HASH)
 
 

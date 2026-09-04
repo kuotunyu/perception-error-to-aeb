@@ -139,7 +139,7 @@ def test_a_non_positive_box_dimension_is_refused(dimension: float) -> None:
 
     models = load_models_module()
 
-    with pytest.raises(ValueError, match="size_lw_m"):
+    with pytest.raises(ValueError, match=r"^size_lw_m\ components\ must\ be\ positive"):
         make_track(models, size_lw_m=(dimension, 1.9))
 
 
@@ -252,7 +252,7 @@ def test_a_negative_track_timestamp_is_refused() -> None:
 
     models = load_models_module()
 
-    with pytest.raises(ValueError, match="source_timestamp_us"):
+    with pytest.raises(ValueError, match=r"^source_timestamp_us\ must\ not\ be\ negative"):
         make_track(models, source_timestamp_us=-1)
 
 
@@ -270,5 +270,5 @@ def test_a_non_finite_ego_yaw_is_refused() -> None:
 
     models = load_models_module()
 
-    with pytest.raises(ValueError, match="ego_yaw_rad"):
+    with pytest.raises(ValueError, match=r"^ego_yaw_rad\ must\ be\ finite"):
         models.WorldFrame(**frame_values(models, ego_yaw_rad=float("nan")))

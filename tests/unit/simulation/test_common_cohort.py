@@ -287,7 +287,7 @@ def test_an_unknown_observation_mode_is_refused() -> None:
 
     load_common_cohort_module()
 
-    with pytest.raises(ValueError, match="observation_mode"):
+    with pytest.raises(ValueError, match=r"^observation_mode\ must\ be\ one\ of\ "):
         configuration(observation_mode="approximate")
 
 
@@ -297,7 +297,9 @@ def test_an_impossible_replicate_count_is_refused(bad_value: object) -> None:
 
     load_common_cohort_module()
 
-    with pytest.raises(ValueError, match="replicate_count"):
+    with pytest.raises(
+        ValueError, match=r"^replicate_count\ must\ be\ a\ positive\ integer,\ got\ "
+    ):
         configuration(replicate_count=bad_value)
 
 

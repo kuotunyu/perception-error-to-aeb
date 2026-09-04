@@ -123,7 +123,7 @@ def test_an_unknown_phase_is_refused() -> None:
 
     validity = load_validity_module()
 
-    with pytest.raises(ValueError, match="phase"):
+    with pytest.raises(ValueError, match=r"^phase\ must\ be\ one\ of\ "):
         validity.invalid_from_exception("s-0001", "whenever", raised())
 
 

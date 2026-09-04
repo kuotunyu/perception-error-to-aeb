@@ -625,7 +625,7 @@ def test_a_zero_area_ego_is_refused() -> None:
 
     threat = load_threat_module()
 
-    with pytest.raises(ValueError, match="size_lw_m"):
+    with pytest.raises(ValueError, match=r"^size_lw_m\ components\ must\ be\ positive"):
         threat.EgoKinematicState(
             center_xy_m=(0.0, 0.0),
             yaw_rad=0.0,
@@ -680,7 +680,9 @@ def test_an_impossible_horizon_is_refused(bad_value: float) -> None:
 
     threat = load_threat_module()
 
-    with pytest.raises(ValueError, match="horizon_s"):
+    with pytest.raises(
+        ValueError, match=r"^horizon_s must (be a number|be finite and positive, got )"
+    ):
         threat.assess_threat(make_ego(), make_track(), horizon_s=bad_value)
 
 
@@ -752,7 +754,7 @@ def test_a_corridor_margin_that_is_not_a_number_is_refused(bad_value: object) ->
 
     threat = load_threat_module()
 
-    with pytest.raises(ValueError, match="corridor_margin_m must be a number"):
+    with pytest.raises(ValueError, match=r"^corridor_margin_m\ must\ be\ a\ number"):
         threat.assess_threat(
             make_ego(),
             make_track(),

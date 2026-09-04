@@ -128,7 +128,7 @@ def test_a_frame_at_a_negative_time_is_refused() -> None:
 
     replay = load_replay_module()
 
-    with pytest.raises(ValueError, match="time_s"):
+    with pytest.raises(ValueError, match=r"^time_s\ must\ be\ finite\ and\ non\-negative"):
         replay.ReplayFrame(
             time_s=-0.1,
             ego_center_xy_m=(0.0, 0.0),
@@ -278,7 +278,7 @@ def test_an_empty_timeline_is_refused() -> None:
 
     replay = load_replay_module()
 
-    with pytest.raises(ValueError, match="frames"):
+    with pytest.raises(ValueError, match=r"^there\ are\ no\ frames\ to\ replay"):
         replay.build_replay_figure((), title="t")
 
 
@@ -287,7 +287,9 @@ def test_an_untitled_replay_is_refused() -> None:
 
     replay = load_replay_module()
 
-    with pytest.raises(ValueError, match="title"):
+    with pytest.raises(
+        ValueError, match=r"^title\ must\ name\ the\ scenario\ and\ configuration\ shown"
+    ):
         replay.build_replay_figure(timeline(), title="")
 
 

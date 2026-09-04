@@ -245,7 +245,7 @@ def test_candidates_that_fail_the_prefilter_are_refused() -> None:
         ),
     )
 
-    with pytest.raises(ValueError, match="prefilter"):
+    with pytest.raises(ValueError, match=r"^candidate\ "):
         splits.freeze_family_cohort(candidates, "development", protocol_hash=PROTOCOL_HASH)
 
 

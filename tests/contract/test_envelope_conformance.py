@@ -88,7 +88,9 @@ def test_the_calibration_consumer_refuses_another_producer(tmp_path: Path) -> No
         artifact_type=CALIBRATION_ARTIFACT_TYPE,
     )
 
-    with pytest.raises(ValueError, match="producer"):
+    with pytest.raises(
+        ValueError, match=r"^unexpected\ producer\ for\ a\ calibration\ artifact:\ "
+    ):
         envelope.read_optional_calibration_artifact(path)
 
 

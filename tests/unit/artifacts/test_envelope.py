@@ -155,7 +155,7 @@ def test_the_model_is_frozen() -> None:
     envelope = load_envelope_module()
     document = envelope.PortfolioArtifactEnvelopeV1.model_validate(canonical_values())
 
-    with pytest.raises(ValidationError, match="frozen"):
+    with pytest.raises(ValidationError, match=r"Instance is frozen"):
         document.producer_release = "v9.9.9"  # type: ignore[misc]
 
 
@@ -193,7 +193,7 @@ def test_an_envelope_of_the_wrong_artifact_type_is_refused(tmp_path: Path) -> No
     envelope = load_envelope_module()
     path = write_envelope(tmp_path / "envelope.json", canonical_values())
 
-    with pytest.raises(ValueError, match="artifact type"):
+    with pytest.raises(ValueError, match=r"^unexpected\ artifact\ type:\ "):
         envelope.verify_envelope(path, "calibration-error-distribution/v1")
 
 

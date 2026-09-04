@@ -306,7 +306,9 @@ def test_no_configurations_is_refused() -> None:
 
     runner = load_runner_module()
 
-    with pytest.raises(ValueError, match="configurations"):
+    with pytest.raises(
+        ValueError, match=r"^configurations\ must\ not\ be\ empty;\ a\ token\ run\ against\ nothing"
+    ):
         runner.run_common_scenario(SpyScenario(), (), protocol=object())
 
 
@@ -407,7 +409,9 @@ def test_a_setup_with_an_impossible_initial_speed_is_refused(bad_value: float) -
 
     runner = load_runner_module()
 
-    with pytest.raises(ValueError, match="initial_speed_mps"):
+    with pytest.raises(
+        ValueError, match=r"^initial_speed_mps\ must\ be\ finite\ and\ non\-negative"
+    ):
         runner.ScenarioSetup(**setup_fields(initial_speed_mps=bad_value))
 
 
@@ -420,7 +424,7 @@ def test_a_setup_without_a_route_signature_is_refused() -> None:
 
     runner = load_runner_module()
 
-    with pytest.raises(ValueError, match="route_signature"):
+    with pytest.raises(ValueError, match=r"^route_signature\ must\ not\ be\ empty"):
         runner.ScenarioSetup(**setup_fields(route_signature=""))
 
 
@@ -430,7 +434,9 @@ def test_a_setup_that_does_not_name_its_controller_is_refused(field: str) -> Non
 
     runner = load_runner_module()
 
-    with pytest.raises(ValueError, match="planner_id"):
+    with pytest.raises(
+        ValueError, match=r"^planner_id\ and\ controller_id\ must\ both\ name\ something"
+    ):
         runner.ScenarioSetup(**setup_fields(**{field: ""}))
 
 
@@ -457,7 +463,9 @@ def test_a_setup_that_never_terminates_is_refused() -> None:
 
     runner = load_runner_module()
 
-    with pytest.raises(ValueError, match="termination_s"):
+    with pytest.raises(
+        ValueError, match=r"^termination_s\ must\ be\ finite\ and\ positive,\ got\ "
+    ):
         runner.ScenarioSetup(
             scenario_token="s-0001",
             family="lead_or_stopping",

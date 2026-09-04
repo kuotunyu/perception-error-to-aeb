@@ -682,7 +682,7 @@ def test_a_step_duration_that_is_not_a_number_is_refused(bad_value: object) -> N
 
     fragmentation = load_fragmentation_module()
 
-    with pytest.raises(ValueError, match="dt_s must be a number"):
+    with pytest.raises(ValueError, match=r"^dt_s\ must\ be\ a\ number"):
         fragmentation.update_fragmentation(
             (make_track(),),
             {},

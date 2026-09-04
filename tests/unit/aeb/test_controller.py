@@ -144,7 +144,7 @@ def test_inverted_bounds_are_refused() -> None:
 
     controller = load_controller_module()
 
-    with pytest.raises(ValueError, match="min_mps2"):
+    with pytest.raises(ValueError, match=r"^min_mps2\ "):
         controller.limit_acceleration(0.0, -1.0, min_mps2=2.0, max_mps2=-6.0)
 
 
