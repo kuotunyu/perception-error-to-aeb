@@ -276,7 +276,7 @@ def test_an_unknown_channel_in_a_coalition_is_refused() -> None:
 
     factorial = load_factorial_module()
 
-    with pytest.raises(ValueError, match="unknown"):
+    with pytest.raises(ValueError, match=r"^unknown\ channels\ in\ coalition:\ "):
         factorial.coalition_configuration_id(frozenset({"blur"}))
 
 

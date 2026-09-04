@@ -334,7 +334,7 @@ def test_a_negative_step_is_refused() -> None:
 
     localization = load_localization_module()
 
-    with pytest.raises(ValueError, match="step"):
+    with pytest.raises(ValueError, match=r"^step\ must\ be\ a\ non\-negative\ integer$"):
         perturb(localization, make_tracks(1), step=-1)
 
 

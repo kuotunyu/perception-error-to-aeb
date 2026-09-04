@@ -253,5 +253,8 @@ def test_an_empty_cohort_is_refused() -> None:
     values = manifest_values()
     values["families"] = {family: [] for family in values["families"]}
 
-    with pytest.raises(ValidationError, match="empty"):
+    with pytest.raises(
+        ValidationError,
+        match=r"the\ cohort\ is\ empty;\ a\ freeze\ that\ captured\ nothing\ is\ not\ a\ cohort",
+    ):
         manifest.CohortManifestV1.model_validate(values)

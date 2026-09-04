@@ -483,7 +483,9 @@ def test_an_event_at_an_impossible_time_is_refused(bad_value: float) -> None:
 
     events = load_events_module()
 
-    with pytest.raises(ValueError, match="onset_s"):
+    with pytest.raises(
+        ValueError, match=r"^(offset_s\ |onset_s\ must\ be\ finite\ and\ non\-negative)"
+    ):
         events.InterventionEvent(onset_s=bad_value, offset_s=5.0, max_state=events.AEBState.FULL)
 
 

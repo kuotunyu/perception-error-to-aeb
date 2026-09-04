@@ -205,5 +205,5 @@ def test_a_payload_that_does_not_match_its_hash_is_refused(tmp_path: Path) -> No
     values["payload"] = {"fixture": "tampered", "values": [0, 1]}
     path = write_envelope(tmp_path / "envelope.json", values)
 
-    with pytest.raises(ValueError, match="SHA-256"):
+    with pytest.raises(ValueError, match=r"^payload SHA-256 mismatch$"):
         envelope.verify_envelope(path, "portfolio-contract-fixture/v1")

@@ -237,7 +237,7 @@ def test_a_scenario_with_no_family_is_refused() -> None:
     incomplete = dict(families())
     del incomplete["s-000"]
 
-    with pytest.raises(ValueError, match="family"):
+    with pytest.raises(ValueError, match=r"^no\ family\ for\ scenarios\ "):
         bootstrap.paired_scenario_bootstrap(
             paired_metric(), resamples=50, family_by_scenario=incomplete
         )
@@ -253,7 +253,10 @@ def test_an_empty_cohort_is_refused() -> None:
 
     bootstrap = load_bootstrap_module()
 
-    with pytest.raises(ValueError, match="scenario"):
+    with pytest.raises(
+        ValueError,
+        match=r"^(no\ family\ for\ scenarios\ |scenario\ |there\ are\ no\ scenarios\ to\ resample)",
+    ):
         bootstrap.paired_scenario_bootstrap({}, resamples=100)
 
 
@@ -268,7 +271,7 @@ def test_a_scenario_missing_a_configuration_is_refused() -> None:
     data = paired_metric(4)
     del data["s-002"]["oracle_aeb"]
 
-    with pytest.raises(ValueError, match="configuration"):
+    with pytest.raises(ValueError, match=r"^scenario\ "):
         bootstrap.paired_scenario_bootstrap(data, resamples=50)
 
 
@@ -279,7 +282,7 @@ def test_a_non_finite_metric_is_refused() -> None:
     data = paired_metric(4)
     data["s-001"]["corrupted"] = float("nan")
 
-    with pytest.raises(ValueError, match="finite"):
+    with pytest.raises(ValueError, match=r"^metric\ for\ "):
         bootstrap.paired_scenario_bootstrap(data, resamples=50)
 
 
@@ -299,7 +302,10 @@ def test_an_impossible_confidence_is_refused(bad_value: float) -> None:
 
     bootstrap = load_bootstrap_module()
 
-    with pytest.raises(ValueError, match="confidence"):
+    with pytest.raises(
+        ValueError,
+        match=r"^(confidence\ must\ be\ a\ number|confidence\ must\ lie\ strictly\ between\ 0\ and\ 1,\ got\ )",
+    ):
         bootstrap.paired_scenario_bootstrap(paired_metric(4), resamples=50, confidence=bad_value)
 
 
@@ -343,7 +349,7 @@ def test_a_metric_that_is_not_a_number_is_refused(bad_value: object) -> None:
     data: dict = paired_metric(4)
     data["s-001"]["corrupted"] = bad_value
 
-    with pytest.raises(ValueError, match="must be a number"):
+    with pytest.raises(ValueError, match=r" must be a number$"):
         bootstrap.paired_scenario_bootstrap(data, resamples=50)
 
 

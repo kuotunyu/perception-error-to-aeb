@@ -190,7 +190,10 @@ def test_a_valid_result_may_not_carry_an_invalid_reason() -> None:
 
     results = load_results_module()
 
-    with pytest.raises(ValidationError, match="invalid_reason"):
+    with pytest.raises(
+        ValidationError,
+        match=r"(a\ valid\ result\ must\ not\ carry\ an\ invalid_reason|an\ invalid\ result\ must\ record\ its\ invalid_reason)",
+    ):
         results.AEBScenarioResultV1.model_validate(
             valid_values(valid=True, invalid_reason="ego left the route")
         )
@@ -201,7 +204,10 @@ def test_an_invalid_result_must_say_why() -> None:
 
     results = load_results_module()
 
-    with pytest.raises(ValidationError, match="invalid_reason"):
+    with pytest.raises(
+        ValidationError,
+        match=r"(a\ valid\ result\ must\ not\ carry\ an\ invalid_reason|an\ invalid\ result\ must\ record\ its\ invalid_reason)",
+    ):
         results.AEBScenarioResultV1.model_validate(valid_values(valid=False, invalid_reason=None))
 
 

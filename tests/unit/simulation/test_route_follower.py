@@ -105,7 +105,10 @@ def test_an_impossible_map_speed_limit_is_refused(bad_value: float) -> None:
 
     route_follower = load_route_follower_module()
 
-    with pytest.raises(ValueError, match="map_speed_limit_mps"):
+    with pytest.raises(
+        ValueError,
+        match=r"^(map_speed_limit_mps\ must\ be\ a\ number|map_speed_limit_mps\ must\ be\ finite\ and\ positive,\ got\ )",
+    ):
         route_follower.target_speed(8.0, bad_value)
 
 
@@ -115,7 +118,7 @@ def test_a_speed_that_is_not_a_number_is_refused(bad_value: object) -> None:
 
     route_follower = load_route_follower_module()
 
-    with pytest.raises(ValueError, match="initial_speed_mps must be a number"):
+    with pytest.raises(ValueError, match=r"^initial_speed_mps must be a number$"):
         route_follower.target_speed(bad_value, None)  # type: ignore[arg-type]
 
 
@@ -341,7 +344,10 @@ def test_a_route_of_one_point_is_refused() -> None:
 
     route_follower = load_route_follower_module()
 
-    with pytest.raises(ValueError, match="expert_route_xy"):
+    with pytest.raises(
+        ValueError,
+        match=r"^expert_route_xy (must be an \(N, 2\) array|needs at least two waypoints|components must all be finite)",
+    ):
         route_follower.build_nominal_plan(np.array([[0.0, 0.0]], dtype=np.float64), 8.0, 8.0, 13.0)
 
 
@@ -350,7 +356,10 @@ def test_an_empty_route_is_refused() -> None:
 
     route_follower = load_route_follower_module()
 
-    with pytest.raises(ValueError, match="expert_route_xy"):
+    with pytest.raises(
+        ValueError,
+        match=r"^expert_route_xy (must be an \(N, 2\) array|needs at least two waypoints|components must all be finite)",
+    ):
         route_follower.build_nominal_plan(np.zeros((0, 2), dtype=np.float64), 8.0, 8.0, 13.0)
 
 
@@ -359,7 +368,10 @@ def test_a_route_that_is_not_two_dimensional_points_is_refused() -> None:
 
     route_follower = load_route_follower_module()
 
-    with pytest.raises(ValueError, match="expert_route_xy"):
+    with pytest.raises(
+        ValueError,
+        match=r"^expert_route_xy (must be an \(N, 2\) array|needs at least two waypoints|components must all be finite)",
+    ):
         route_follower.build_nominal_plan(np.zeros((4, 3), dtype=np.float64), 8.0, 8.0, 13.0)
 
 
@@ -370,7 +382,10 @@ def test_a_route_containing_a_non_finite_point_is_refused() -> None:
     route = straight_route()
     route[3, 1] = math.nan
 
-    with pytest.raises(ValueError, match="expert_route_xy"):
+    with pytest.raises(
+        ValueError,
+        match=r"^expert_route_xy (must be an \(N, 2\) array|needs at least two waypoints|components must all be finite)",
+    ):
         route_follower.build_nominal_plan(route, 8.0, 8.0, 13.0)
 
 

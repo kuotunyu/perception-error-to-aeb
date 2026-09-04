@@ -100,7 +100,7 @@ def test_an_unknown_category_is_refused() -> None:
 
     models = load_models_module()
 
-    with pytest.raises(ValueError, match="category"):
+    with pytest.raises(ValueError, match=r"^category\ must\ be\ one\ of\ "):
         make_track(models, category="animal")
 
 
@@ -119,7 +119,10 @@ def test_the_covariance_must_have_four_components() -> None:
 
     models = load_models_module()
 
-    with pytest.raises(ValueError, match="covariance_xy"):
+    with pytest.raises(
+        ValueError,
+        match=r"^covariance_xy (must have exactly four components|components must be finite)$",
+    ):
         make_track(models, covariance_xy=(0.1, 0.1))
 
 
@@ -148,7 +151,10 @@ def test_an_empty_track_id_is_refused() -> None:
 
     models = load_models_module()
 
-    with pytest.raises(ValueError, match="track_id"):
+    with pytest.raises(
+        ValueError,
+        match=r"^(track_id\ must\ not\ be\ empty|tracks\ contain\ a\ duplicate\ track_id)$",
+    ):
         make_track(models, track_id="")
 
 
@@ -216,7 +222,9 @@ def test_a_negative_ego_speed_is_refused() -> None:
 
     models = load_models_module()
 
-    with pytest.raises(ValueError, match="ego_speed_mps"):
+    with pytest.raises(
+        ValueError, match=r"^ego_speed_mps\ must\ be\ a\ finite,\ non\-negative\ magnitude$"
+    ):
         models.WorldFrame(**frame_values(models, ego_speed_mps=-1.0))
 
 
@@ -225,7 +233,10 @@ def test_a_negative_timestamp_is_refused() -> None:
 
     models = load_models_module()
 
-    with pytest.raises(ValueError, match="timestamp_us"):
+    with pytest.raises(
+        ValueError,
+        match=r"^(source_timestamp_us\ must\ not\ be\ negative|timestamp_us\ must\ not\ be\ negative)$",
+    ):
         models.WorldFrame(**frame_values(models, timestamp_us=-1))
 
 
@@ -234,7 +245,9 @@ def test_a_non_finite_yaw_is_refused() -> None:
 
     models = load_models_module()
 
-    with pytest.raises(ValueError, match="yaw_rad"):
+    with pytest.raises(
+        ValueError, match=r"^(ego_yaw_rad\ must\ be\ finite|yaw_rad\ must\ be\ finite)$"
+    ):
         make_track(models, yaw_rad=float("nan"))
 
 
@@ -243,7 +256,10 @@ def test_a_non_finite_covariance_is_refused() -> None:
 
     models = load_models_module()
 
-    with pytest.raises(ValueError, match="covariance_xy"):
+    with pytest.raises(
+        ValueError,
+        match=r"^covariance_xy (must have exactly four components|components must be finite)$",
+    ):
         make_track(models, covariance_xy=(float("inf"), 0.0, 0.0, 0.1))
 
 

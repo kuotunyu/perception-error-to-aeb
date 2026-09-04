@@ -74,7 +74,7 @@ def test_the_calibration_consumer_refuses_another_artifact_type(tmp_path: Path) 
         artifact_type="bev-cohort-manifest/v1",
     )
 
-    with pytest.raises(ValueError, match="artifact type"):
+    with pytest.raises(ValueError, match=r"^unexpected artifact type: "):
         envelope.read_optional_calibration_artifact(path)
 
 
@@ -108,7 +108,7 @@ def test_consuming_a_p2_artifact_is_never_implicit(tmp_path: Path) -> None:
         artifact_type=CALIBRATION_ARTIFACT_TYPE,
     )
 
-    with pytest.raises(ValueError, match="artifact type"):
+    with pytest.raises(ValueError, match=r"^unexpected artifact type: "):
         envelope.verify_envelope(path, "portfolio-contract-fixture/v1")
 
 

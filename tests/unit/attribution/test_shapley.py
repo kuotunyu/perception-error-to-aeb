@@ -205,7 +205,7 @@ def test_a_missing_coalition_is_refused() -> None:
     game = additive_game(dict.fromkeys(CHANNELS, 1.0))
     del game[frozenset({"latency"})]
 
-    with pytest.raises(ValueError, match="missing"):
+    with pytest.raises(ValueError, match=r"^coalition\ values\ are\ missing:\ "):
         shapley.exact_shapley(game)
 
 
@@ -216,7 +216,10 @@ def test_an_extra_coalition_is_refused() -> None:
     game = additive_game(dict.fromkeys(CHANNELS, 1.0))
     game[frozenset({"blur"})] = 1.0
 
-    with pytest.raises(ValueError, match="unknown"):
+    with pytest.raises(
+        ValueError,
+        match=r"^(coalition\ values\ name\ unknown\ coalitions:\ |unknown\ metric\ to\ attribute:\ )",
+    ):
         shapley.exact_shapley(game)
 
 
@@ -228,7 +231,7 @@ def test_a_coalition_value_that_is_not_a_number_is_refused(bad_value: object) ->
     game: dict = dict(additive_game(dict.fromkeys(CHANNELS, 1.0)))
     game[frozenset({"latency"})] = bad_value
 
-    with pytest.raises(ValueError, match="must be a number"):
+    with pytest.raises(ValueError, match=r" must be a number$"):
         shapley.exact_shapley(game)
 
 
@@ -239,7 +242,7 @@ def test_a_non_finite_coalition_value_is_refused() -> None:
     game = additive_game(dict.fromkeys(CHANNELS, 1.0))
     game[frozenset({"latency"})] = float("nan")
 
-    with pytest.raises(ValueError, match="finite"):
+    with pytest.raises(ValueError, match=r"^coalition\ value\ for\ "):
         shapley.exact_shapley(game)
 
 
@@ -248,7 +251,10 @@ def test_no_channels_is_refused() -> None:
 
     shapley = load_shapley_module()
 
-    with pytest.raises(ValueError, match="channels"):
+    with pytest.raises(
+        ValueError,
+        match=r"^(channels\ must\ not\ be\ empty;\ there\ is\ nothing\ to\ attribute|duplicate\ channels\ in\ )",
+    ):
         shapley.exact_shapley({frozenset(): 0.0}, channels=())
 
 
@@ -303,7 +309,7 @@ def test_an_unknown_metric_is_refused() -> None:
 
     shapley = load_shapley_module()
 
-    with pytest.raises(ValueError, match="metric"):
+    with pytest.raises(ValueError, match=r"^unknown\ metric\ to\ attribute:\ "):
         shapley.shapley_by_metric({"comfort": {frozenset(): 0.0}})
 
 

@@ -318,7 +318,7 @@ def test_duplicate_configuration_ids_are_refused() -> None:
     runner = load_runner_module()
     configurations = (make_configuration("oracle_aeb"), make_configuration("oracle_aeb"))
 
-    with pytest.raises(ValueError, match="duplicate"):
+    with pytest.raises(ValueError, match=r"^duplicate\ configuration_id\ in\ "):
         runner.run_common_scenario(SpyScenario(), configurations, protocol=object())
 
 
@@ -448,7 +448,7 @@ def test_a_setup_with_an_unknown_family_is_refused() -> None:
 
     runner = load_runner_module()
 
-    with pytest.raises(ValueError, match="family"):
+    with pytest.raises(ValueError, match=r"^family\ must\ be\ one\ of\ "):
         runner.ScenarioSetup(
             scenario_token="s-0001",
             family="roundabout",  # type: ignore[arg-type]

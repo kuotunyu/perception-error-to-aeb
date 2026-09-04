@@ -235,7 +235,10 @@ def test_an_unknown_severity_is_refused() -> None:
 
     load_common_cohort_module()
 
-    with pytest.raises(ValueError, match="severity"):
+    with pytest.raises(
+        ValueError,
+        match=r"^(an\ oracle\ configuration\ must\ carry\ severity\ 'zero'\ on\ every\ channel|configuration\ does\ not\ name\ a\ severity\ for\ every\ channel:\ |unknown\ severity\ )",
+    ):
         configuration(
             severity_by_channel={
                 "dropout": "extreme",
@@ -256,7 +259,10 @@ def test_the_oracle_observation_mode_must_be_error_free() -> None:
 
     load_common_cohort_module()
 
-    with pytest.raises(ValueError, match="oracle"):
+    with pytest.raises(
+        ValueError,
+        match=r"^an\ oracle\ configuration\ must\ carry\ severity\ 'zero'\ on\ every\ channel$",
+    ):
         configuration(
             observation_mode="oracle",
             severity_by_channel={

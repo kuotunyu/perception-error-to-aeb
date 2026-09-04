@@ -180,7 +180,7 @@ def test_an_artifact_of_the_wrong_type_is_refused(tmp_path: Path) -> None:
     calibration_import = load_import_module()
     path = write_envelope(tmp_path, artifact_type="bev-calibration-result/v1")
 
-    with pytest.raises(ValueError, match="artifact type"):
+    with pytest.raises(ValueError, match=r"^unexpected artifact type: "):
         calibration_import.import_calibration_distribution(path, PROTOCOL_HASH)
 
 
@@ -198,7 +198,7 @@ def test_the_project_one_envelope_fixture_is_refused(tmp_path: Path) -> None:
     copied = tmp_path / "copied.json"
     copied.write_bytes(fixture.read_bytes())
 
-    with pytest.raises(ValueError, match="artifact type"):
+    with pytest.raises(ValueError, match=r"^unexpected artifact type: "):
         calibration_import.import_calibration_distribution(copied, PROTOCOL_HASH)
 
 
@@ -207,7 +207,9 @@ def test_a_protocol_hash_mismatch_is_refused(tmp_path: Path) -> None:
 
     calibration_import = load_import_module()
 
-    with pytest.raises(ValueError, match="protocol"):
+    with pytest.raises(
+        ValueError, match=r"^protocol\ hash\ mismatch:\ the\ artifact\ was\ measured\ under\ "
+    ):
         calibration_import.import_calibration_distribution(write_envelope(tmp_path), "a" * 64)
 
 
@@ -217,7 +219,7 @@ def test_a_tampered_payload_is_refused(tmp_path: Path) -> None:
     calibration_import = load_import_module()
     path = write_envelope(tmp_path, payload_sha256="e" * 64)
 
-    with pytest.raises(ValueError, match="SHA-256"):
+    with pytest.raises(ValueError, match=r"^payload SHA-256 mismatch$"):
         calibration_import.import_calibration_distribution(path, PROTOCOL_HASH)
 
 

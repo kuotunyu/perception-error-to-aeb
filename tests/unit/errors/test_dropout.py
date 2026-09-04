@@ -242,7 +242,7 @@ def test_a_step_that_goes_backwards_is_refused() -> None:
     key = make_key()
     _, state = dropout.apply_dropout(make_tracks(), 0.5, key, 5, None)
 
-    with pytest.raises(ValueError, match="step"):
+    with pytest.raises(ValueError, match=r"^(step\ |step\ must\ be\ a\ non\-negative\ integer)"):
         dropout.apply_dropout(make_tracks(), 0.5, key, 4, state)
 
 
@@ -277,7 +277,10 @@ def test_a_probability_outside_the_unit_interval_is_refused(probability: float) 
 
     dropout = load_dropout_module()
 
-    with pytest.raises(ValueError, match="probability"):
+    with pytest.raises(
+        ValueError,
+        match=r"^(probability\ must\ be\ a\ number|probability\ must\ lie\ in\ \[0,\ 1\],\ got\ )",
+    ):
         dropout.apply_dropout(make_tracks(), probability, make_key(), 0, None)
 
 
@@ -286,7 +289,7 @@ def test_a_negative_step_is_refused() -> None:
 
     dropout = load_dropout_module()
 
-    with pytest.raises(ValueError, match="step"):
+    with pytest.raises(ValueError, match=r"^(step\ |step\ must\ be\ a\ non\-negative\ integer)"):
         dropout.apply_dropout(make_tracks(), 0.5, make_key(), -1, None)
 
 
@@ -314,7 +317,10 @@ def test_a_non_numeric_probability_is_refused() -> None:
 
     dropout = load_dropout_module()
 
-    with pytest.raises(ValueError, match="probability"):
+    with pytest.raises(
+        ValueError,
+        match=r"^(probability\ must\ be\ a\ number|probability\ must\ lie\ in\ \[0,\ 1\],\ got\ )",
+    ):
         dropout.apply_dropout(make_tracks(), "0.5", make_key(), 0, None)
 
 
@@ -323,5 +329,8 @@ def test_a_boolean_probability_is_refused() -> None:
 
     dropout = load_dropout_module()
 
-    with pytest.raises(ValueError, match="probability"):
+    with pytest.raises(
+        ValueError,
+        match=r"^(probability\ must\ be\ a\ number|probability\ must\ lie\ in\ \[0,\ 1\],\ got\ )",
+    ):
         dropout.apply_dropout(make_tracks(), True, make_key(), 0, None)

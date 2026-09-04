@@ -198,7 +198,9 @@ def test_the_ego_category_is_refused() -> None:
 
     scenario = load_scenario_module()
 
-    with pytest.raises(ValueError, match="EGO"):
+    with pytest.raises(
+        ValueError, match=r"^EGO\ is\ the\ observer,\ not\ one\ of\ its\ own\ observations$"
+    ):
         scenario.category_to_group("EGO")
 
 
@@ -207,7 +209,7 @@ def test_an_unknown_category_is_refused_rather_than_grouped_as_an_object() -> No
 
     scenario = load_scenario_module()
 
-    with pytest.raises(ValueError, match="unknown"):
+    with pytest.raises(ValueError, match=r"^unknown\ nuPlan\ category:\ "):
         scenario.category_to_group("SPACESHIP")
 
 
@@ -314,7 +316,7 @@ def test_an_iteration_past_the_end_is_refused() -> None:
     scenario = load_scenario_module()
     fake = FakeScenario(objects=[agent()], iterations=3)
 
-    with pytest.raises(IndexError, match="iteration"):
+    with pytest.raises(IndexError, match=r"^iteration\ "):
         scenario.oracle_world_frame(fake, 3)
 
 
@@ -324,7 +326,7 @@ def test_a_negative_iteration_is_refused() -> None:
     scenario = load_scenario_module()
     fake = FakeScenario(objects=[agent()])
 
-    with pytest.raises(IndexError, match="iteration"):
+    with pytest.raises(IndexError, match=r"^iteration\ "):
         scenario.oracle_world_frame(fake, -1)
 
 

@@ -212,7 +212,7 @@ def test_candidates_from_several_families_are_refused() -> None:
         10, family="bicycle_or_vru", scenario_type="behind_bike"
     )
 
-    with pytest.raises(ValueError, match="family"):
+    with pytest.raises(ValueError, match=r"^candidates\ span\ more\ than\ one\ family:\ "):
         splits.freeze_family_cohort(candidates, "development", protocol_hash=PROTOCOL_HASH)
 
 
@@ -221,7 +221,7 @@ def test_an_unknown_split_name_is_refused() -> None:
 
     splits = load_splits_module()
 
-    with pytest.raises(ValueError, match="split"):
+    with pytest.raises(ValueError, match=r"^split\ must\ be\ one\ of\ "):
         splits.freeze_family_cohort(make_candidates(10), "test", protocol_hash=PROTOCOL_HASH)
 
 
@@ -274,7 +274,7 @@ def test_duplicate_scenario_tokens_are_refused() -> None:
     splits = load_splits_module()
     candidates = make_candidates(4)
 
-    with pytest.raises(ValueError, match="duplicate"):
+    with pytest.raises(ValueError, match=r"^duplicate\ scenario\ token\ in\ candidates:\ "):
         splits.freeze_family_cohort(
             candidates + candidates[:1], "development", protocol_hash=PROTOCOL_HASH
         )

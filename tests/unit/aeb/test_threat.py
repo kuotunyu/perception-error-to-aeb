@@ -152,7 +152,10 @@ def test_an_impossible_margin_is_refused(bad_value: float) -> None:
 
     threat = load_threat_module()
 
-    with pytest.raises(ValueError, match="margin_m"):
+    with pytest.raises(
+        ValueError,
+        match=r"^(corridor_margin_m\ must\ be\ a\ number|margin_m\ must\ be\ a\ number|margin_m\ must\ be\ finite\ and\ non\-negative,\ got\ )",
+    ):
         threat.oriented_box_polygon((0.0, 0.0), 0.0, (4.0, 2.0), margin_m=bad_value)
 
 
@@ -643,7 +646,7 @@ def test_a_negative_ego_speed_is_refused() -> None:
 
     threat = load_threat_module()
 
-    with pytest.raises(ValueError, match="speed_mps"):
+    with pytest.raises(ValueError, match=r"^speed_mps\ must\ be\ finite\ and\ non\-negative$"):
         threat.EgoKinematicState(
             center_xy_m=(0.0, 0.0),
             yaw_rad=0.0,
@@ -726,7 +729,7 @@ def test_a_non_finite_yaw_is_refused() -> None:
 
     threat = load_threat_module()
 
-    with pytest.raises(ValueError, match="yaw_rad"):
+    with pytest.raises(ValueError, match=r"^yaw_rad\ must\ be\ finite$"):
         threat.oriented_box_polygon((0.0, 0.0), float("nan"), (4.0, 2.0))
 
 
@@ -736,7 +739,10 @@ def test_a_margin_that_is_not_a_number_is_refused(bad_value: object) -> None:
 
     threat = load_threat_module()
 
-    with pytest.raises(ValueError, match="margin_m must be a number"):
+    with pytest.raises(
+        ValueError,
+        match=r"^(corridor_margin_m\ must\ be\ a\ number|margin_m\ must\ be\ a\ number)$",
+    ):
         threat.oriented_box_polygon((0.0, 0.0), 0.0, (4.0, 2.0), margin_m=bad_value)  # type: ignore[arg-type]
 
 
@@ -746,7 +752,7 @@ def test_a_horizon_that_is_not_a_number_is_refused(bad_value: object) -> None:
 
     threat = load_threat_module()
 
-    with pytest.raises(ValueError, match="horizon_s must be a number"):
+    with pytest.raises(ValueError, match=r"^horizon_s must be a number$"):
         threat.assess_threat(make_ego(), make_track(), horizon_s=bad_value)  # type: ignore[arg-type]
 
 

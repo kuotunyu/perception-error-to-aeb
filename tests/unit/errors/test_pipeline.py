@@ -168,7 +168,9 @@ def test_a_missing_protocol_hash_is_refused() -> None:
 
     pipeline = load_pipeline_module()
 
-    with pytest.raises(ValueError, match="protocol_hash"):
+    with pytest.raises(
+        ValueError, match=r"^protocol_hash\ must\ be\ a\ 64\-character\ SHA\-256\ digest$"
+    ):
         make_key(pipeline, protocol_hash="")
 
 
@@ -177,7 +179,9 @@ def test_a_malformed_protocol_hash_is_refused() -> None:
 
     pipeline = load_pipeline_module()
 
-    with pytest.raises(ValueError, match="protocol_hash"):
+    with pytest.raises(
+        ValueError, match=r"^protocol_hash\ must\ be\ a\ 64\-character\ SHA\-256\ digest$"
+    ):
         make_key(pipeline, protocol_hash="a" * 63)
 
 
@@ -204,7 +208,9 @@ def test_a_negative_replicate_is_refused() -> None:
 
     pipeline = load_pipeline_module()
 
-    with pytest.raises(ValueError, match="replicate"):
+    with pytest.raises(
+        ValueError, match=r"^(replicate\ must\ be\ an\ integer|replicate\ must\ not\ be\ negative)$"
+    ):
         make_key(pipeline, replicate=-1)
 
 
@@ -405,7 +411,9 @@ def test_the_pipeline_refuses_an_empty_history() -> None:
 
     pipeline = load_pipeline_module()
 
-    with pytest.raises(ValueError, match="history"):
+    with pytest.raises(
+        ValueError, match=r"^(current_index\ |history\ must\ contain\ at\ least\ one\ frame)"
+    ):
         pipeline.apply_error_pipeline((), 0, zero_configuration(pipeline), make_key(pipeline))
 
 
@@ -455,7 +463,10 @@ def test_an_imported_configuration_may_not_claim_a_standard_name() -> None:
 
     pipeline = load_pipeline_module()
 
-    with pytest.raises(ValueError, match="namespace"):
+    with pytest.raises(
+        ValueError,
+        match=r"^configuration_id\ namespace\ disagrees\ with\ `imported`:\ an\ imported\ ",
+    ):
         pipeline.ErrorConfiguration(
             configuration_id="calibration_imported_x",
             severity_by_channel=dict.fromkeys(pipeline.ERROR_CHANNELS, "zero"),
@@ -468,7 +479,10 @@ def test_an_imported_configuration_must_carry_the_prefix() -> None:
 
     pipeline = load_pipeline_module()
 
-    with pytest.raises(ValueError, match="namespace"):
+    with pytest.raises(
+        ValueError,
+        match=r"^configuration_id\ namespace\ disagrees\ with\ `imported`:\ an\ imported\ ",
+    ):
         pipeline.ErrorConfiguration(
             configuration_id="dropout-medium",
             severity_by_channel=dict.fromkeys(pipeline.ERROR_CHANNELS, "zero"),
@@ -490,7 +504,9 @@ def test_a_non_integer_replicate_is_refused() -> None:
 
     pipeline = load_pipeline_module()
 
-    with pytest.raises(ValueError, match="replicate"):
+    with pytest.raises(
+        ValueError, match=r"^(replicate\ must\ be\ an\ integer|replicate\ must\ not\ be\ negative)$"
+    ):
         make_key(pipeline, replicate=True)
 
 
@@ -595,5 +611,5 @@ def test_an_imported_configuration_must_name_its_source() -> None:
 
     pipeline = load_pipeline_module()
 
-    with pytest.raises(ValueError, match="source"):
+    with pytest.raises(ValueError, match=r"^an\ imported\ configuration\ must\ name\ its\ source$"):
         pipeline.imported_configuration_id("")

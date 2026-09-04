@@ -700,7 +700,7 @@ def test_an_impossible_step_index_is_refused(bad_value: object) -> None:
 
     fragmentation = load_fragmentation_module()
 
-    with pytest.raises(ValueError, match="step"):
+    with pytest.raises(ValueError, match=r"^step\ must\ be\ a\ non\-negative\ integer$"):
         fragmentation.update_fragmentation(
             (make_track(),),
             {},

@@ -77,7 +77,10 @@ def test_a_missing_split_directory_is_refused(tmp_path: Path) -> None:
     root = tmp_path / "nuplan"
     root.mkdir()
 
-    with pytest.raises(FileNotFoundError, match="split"):
+    with pytest.raises(
+        FileNotFoundError,
+        match=r"^(no\ log\ database\ in\ the\ |nuPlan\ split\ directory\ does\ not\ exist:\ )",
+    ):
         database.resolve_installation(root)
 
 

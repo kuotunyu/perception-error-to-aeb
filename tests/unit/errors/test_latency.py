@@ -264,7 +264,10 @@ def test_an_empty_history_is_refused() -> None:
 
     latency = load_latency_module()
 
-    with pytest.raises(ValueError, match="history"):
+    with pytest.raises(
+        ValueError,
+        match=r"^(current_index\ |history\ must\ contain\ at\ least\ one\ frame|history\ timestamps\ must\ be\ monotonic;\ a\ history\ that\ goes\ backwards\ )",
+    ):
         latency.select_latency_frame((), 0, 0.0)
 
 
@@ -283,7 +286,10 @@ def test_an_impossible_latency_is_refused(bad_value: float) -> None:
 
     latency = load_latency_module()
 
-    with pytest.raises(ValueError, match="requested_latency_s"):
+    with pytest.raises(
+        ValueError,
+        match=r"^(requested_latency_s\ must\ be\ a\ number|requested_latency_s\ must\ be\ finite\ and\ non\-negative,\ got\ )",
+    ):
         latency.select_latency_frame(regular_history(), 3, bad_value)
 
 
@@ -317,7 +323,7 @@ def test_a_frequency_that_is_not_a_number_is_refused(bad_value: object) -> None:
 
     latency = load_latency_module()
 
-    with pytest.raises(ValueError, match="frequency_hz must be a number"):
+    with pytest.raises(ValueError, match=r"^frequency_hz must be a number$"):
         latency.select_latency_frame(regular_history(), 3, 0.1, frequency_hz=bad_value)  # type: ignore[arg-type]
 
 
