@@ -231,7 +231,7 @@ def test_a_coalition_value_that_is_not_a_number_is_refused(bad_value: object) ->
     game: dict = dict(additive_game(dict.fromkeys(CHANNELS, 1.0)))
     game[frozenset({"latency"})] = bad_value
 
-    with pytest.raises(ValueError, match=r" must be a number$"):
+    with pytest.raises(ValueError, match=r"^coalition value for \['latency'\] must be a number$"):
         shapley.exact_shapley(game)
 
 

@@ -349,7 +349,7 @@ def test_a_metric_that_is_not_a_number_is_refused(bad_value: object) -> None:
     data: dict = paired_metric(4)
     data["s-001"]["corrupted"] = bad_value
 
-    with pytest.raises(ValueError, match=r" must be a number$"):
+    with pytest.raises(ValueError, match=r"^metric for 's-001'/'corrupted' must be a number$"):
         bootstrap.paired_scenario_bootstrap(data, resamples=50)
 
 
