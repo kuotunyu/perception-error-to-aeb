@@ -119,7 +119,7 @@ def test_another_rate_is_refused() -> None:
 
     simulation = load_wiring_module()
 
-    with pytest.raises(ValueError, match="frequency_hz"):
+    with pytest.raises(ValueError, match=r"^frequency_hz must "):
         simulation.build_simulation_wiring(frequency_hz=20.0)
 
 

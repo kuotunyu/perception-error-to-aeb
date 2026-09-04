@@ -180,7 +180,7 @@ def test_an_impossible_step_duration_is_refused(bad_value: float) -> None:
 
     events = load_events_module()
 
-    with pytest.raises(ValueError, match="dt_s"):
+    with pytest.raises(ValueError, match=r"^dt_s must "):
         events.extract_interventions(trace("full_brake"), dt_s=bad_value)
 
 
@@ -411,7 +411,7 @@ def test_an_impossible_lateness_threshold_is_refused(bad_value: float) -> None:
 
     events = load_events_module()
 
-    with pytest.raises(ValueError, match="missed_delay_s"):
+    with pytest.raises(ValueError, match=r"^missed_delay_s must "):
         events.match_interventions((), (), missed_delay_s=bad_value)
 
 
@@ -420,7 +420,7 @@ def test_a_lateness_threshold_beyond_the_tolerance_is_refused() -> None:
 
     events = load_events_module()
 
-    with pytest.raises(ValueError, match="missed_delay_s"):
+    with pytest.raises(ValueError, match=r"^missed_delay_s 1\.0 exceeds tolerance_s 0\.5;"):
         events.match_interventions((), (), tolerance_s=0.5, missed_delay_s=1.0)
 
 

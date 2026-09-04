@@ -333,7 +333,7 @@ def test_an_impossible_simulated_duration_is_refused(bad_value: float) -> None:
 
     safety = load_safety_module()
 
-    with pytest.raises(ValueError, match="simulated_seconds"):
+    with pytest.raises(ValueError, match=r"^simulated_seconds must "):
         safety.summarize_configuration(
             (result("s-1"),), cohort=("s-1",), simulated_seconds=bad_value
         )

@@ -293,7 +293,7 @@ def test_an_impossible_frequency_is_refused(bad_value: float) -> None:
 
     latency = load_latency_module()
 
-    with pytest.raises(ValueError, match="frequency_hz"):
+    with pytest.raises(ValueError, match=r"^frequency_hz must "):
         latency.select_latency_frame(regular_history(), 3, 0.1, frequency_hz=bad_value)
 
 

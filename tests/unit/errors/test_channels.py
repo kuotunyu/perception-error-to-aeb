@@ -307,7 +307,7 @@ def test_an_impossible_step_duration_is_refused(bad_value: float) -> None:
 
     channels = load_channels_module()
 
-    with pytest.raises(ValueError, match="dt_s"):
+    with pytest.raises(ValueError, match=r"^dt_s must "):
         channels.ScenarioChannels(configuration("zero"), dt_s=bad_value)
 
 

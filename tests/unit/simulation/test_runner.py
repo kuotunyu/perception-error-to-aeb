@@ -366,7 +366,7 @@ def test_a_setup_at_the_wrong_rate_is_refused() -> None:
 
     runner = load_runner_module()
 
-    with pytest.raises(ValueError, match="frequency_hz"):
+    with pytest.raises(ValueError, match=r"^frequency_hz must "):
         runner.ScenarioSetup(
             scenario_token="s-0001",
             family="lead_or_stopping",

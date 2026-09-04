@@ -467,7 +467,7 @@ def test_an_impossible_step_duration_is_refused(bad_value: float) -> None:
 
     state_machine = load_state_machine_module()
 
-    with pytest.raises(ValueError, match="dt_s"):
+    with pytest.raises(ValueError, match=r"^dt_s must "):
         state_machine.update_aeb(monitoring(), (), dt_s=bad_value)
 
 

@@ -162,7 +162,7 @@ def test_an_impossible_size_is_refused(bad_size: tuple[float, float]) -> None:
 
     threat = load_threat_module()
 
-    with pytest.raises(ValueError, match="size_lw"):
+    with pytest.raises(ValueError, match=r"^size_lw(_m)? components must be (positive|finite)$"):
         threat.oriented_box_polygon((0.0, 0.0), 0.0, bad_size)
 
 
@@ -692,7 +692,7 @@ def test_an_impossible_rollout_step_is_refused(bad_value: float) -> None:
 
     threat = load_threat_module()
 
-    with pytest.raises(ValueError, match="step_s"):
+    with pytest.raises(ValueError, match=r"^step_s must "):
         threat.assess_threat(make_ego(), make_track(), step_s=bad_value)
 
 
@@ -701,7 +701,7 @@ def test_a_step_longer_than_the_horizon_is_refused() -> None:
 
     threat = load_threat_module()
 
-    with pytest.raises(ValueError, match="step_s"):
+    with pytest.raises(ValueError, match=r"^step_s 2\.0 exceeds horizon_s 1\.0;"):
         threat.assess_threat(make_ego(), make_track(), horizon_s=1.0, step_s=2.0)
 
 
@@ -715,7 +715,7 @@ def test_a_point_that_is_not_a_pair_is_refused() -> None:
 
     threat = load_threat_module()
 
-    with pytest.raises(ValueError, match="center_xy"):
+    with pytest.raises(ValueError, match=r"^center_xy must "):
         threat.oriented_box_polygon((0.0, 0.0, 0.0), 0.0, (4.0, 2.0))  # type: ignore[arg-type]
 
 

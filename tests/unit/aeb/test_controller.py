@@ -125,7 +125,7 @@ def test_an_impossible_step_duration_is_refused(bad_value: float) -> None:
 
     controller = load_controller_module()
 
-    with pytest.raises(ValueError, match="dt_s"):
+    with pytest.raises(ValueError, match=r"^dt_s must "):
         controller.limit_acceleration(0.0, -6.0, dt_s=bad_value)
 
 
@@ -135,7 +135,7 @@ def test_an_impossible_jerk_limit_is_refused(bad_value: float) -> None:
 
     controller = load_controller_module()
 
-    with pytest.raises(ValueError, match="jerk_limit_mps3"):
+    with pytest.raises(ValueError, match=r"^jerk_limit_mps3 must "):
         controller.limit_acceleration(0.0, -6.0, jerk_limit_mps3=bad_value)
 
 

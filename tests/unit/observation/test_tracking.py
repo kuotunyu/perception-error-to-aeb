@@ -150,7 +150,7 @@ def test_an_impossible_elapsed_time_is_refused(bad_value: float) -> None:
 
     tracking = load_tracking_module()
 
-    with pytest.raises(ValueError, match="dt_s"):
+    with pytest.raises(ValueError, match=r"^dt_s must "):
         tracking.finite_difference_velocity((0.0, 0.0), (1.0, 0.0), bad_value)
 
 
@@ -169,7 +169,7 @@ def test_estimate_velocity_refuses_an_impossible_elapsed_time_too() -> None:
 
     tracking = load_tracking_module()
 
-    with pytest.raises(ValueError, match="dt_s"):
+    with pytest.raises(ValueError, match=r"^dt_s must "):
         tracking.estimate_velocity(make_track((0.0, 0.0)), make_track((1.0, 0.0)), 0.0)
 
 

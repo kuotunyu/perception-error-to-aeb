@@ -546,7 +546,7 @@ def test_a_missing_parameter_in_a_channel_is_refused() -> None:
     config = pipeline.load_error_config()
     del config["channels"]["localization_shape"]["yaw_std_deg"]
 
-    with pytest.raises(ValueError, match="yaw_std_deg"):
+    with pytest.raises(ValueError, match=r"is missing parameters: "):
         pipeline.validate_error_config(config)
 
 

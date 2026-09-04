@@ -380,7 +380,7 @@ def test_an_impossible_current_speed_is_refused(bad_value: float) -> None:
 
     route_follower = load_route_follower_module()
 
-    with pytest.raises(ValueError, match="current_speed_mps"):
+    with pytest.raises(ValueError, match=r"^current_speed_mps must "):
         route_follower.build_nominal_plan(straight_route(), bad_value, 8.0, 13.0)
 
 

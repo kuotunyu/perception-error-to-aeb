@@ -596,7 +596,7 @@ def test_an_impossible_rate_is_refused(bad_value: float) -> None:
 
     fragmentation = load_fragmentation_module()
 
-    with pytest.raises(ValueError, match="rate_per_s"):
+    with pytest.raises(ValueError, match=r"^rate_per_s must "):
         fragmentation.update_fragmentation(
             (make_track(),),
             {},
@@ -630,7 +630,7 @@ def test_an_impossible_reacquisition_delay_is_refused(bad_value: float) -> None:
 
     fragmentation = load_fragmentation_module()
 
-    with pytest.raises(ValueError, match="reacquisition_delay_s"):
+    with pytest.raises(ValueError, match=r"^reacquisition_delay_s must "):
         fragmentation.update_fragmentation(
             (make_track(),),
             {},
@@ -664,7 +664,7 @@ def test_an_impossible_step_duration_is_refused(bad_value: float) -> None:
 
     fragmentation = load_fragmentation_module()
 
-    with pytest.raises(ValueError, match="dt_s"):
+    with pytest.raises(ValueError, match=r"^dt_s must "):
         fragmentation.update_fragmentation(
             (make_track(),),
             {},
