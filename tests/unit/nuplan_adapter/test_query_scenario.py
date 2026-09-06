@@ -258,3 +258,40 @@ def test_the_query_module_pulls_in_no_sensor_or_map_reader() -> None:
 
     assert loaded == []
     assert [name for name in ("cv2", "rasterio", "matplotlib") if name in sys.modules] == []
+
+
+def test_a_twenty_hertz_log_with_the_jitter_real_timestamps_carry_is_accepted(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A real lidar frame is 50,002 microseconds after the last, not 50,000.
+
+    That is not another sampling rate; it is the clock. This check first ran over
+    the mini split on 2026-09-06 and refused 2,671 of 2,675 candidates, keeping
+    only the handful whose jitter happened to cancel — a cohort selected on a
+    property of the recording's clock, which is exactly the kind of silent
+    selection the eligibility record exists to expose.
+    """
+
+    module = load_query_scenario_module()
+    patch_queries(monkeypatch, module, lidarpcs=sampled(400, period_us=50_002))
+
+    scenario = module.build_scenario("log.db", "anchor", duration_s=1.0, frequency_hz=10.0)
+
+    assert scenario.get_number_of_iterations() == 10
+
+
+def test_a_rate_the_protocol_does_not_divide_is_still_refused_after_the_tolerance(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The pair to the test above: microseconds are jitter, percent is another rate.
+
+    A 25 Hz recording strides to two frames per step and lands 20 percent short
+    of the protocol's 0.1 s. Nothing about a tolerance for jitter may let that
+    through.
+    """
+
+    module = load_query_scenario_module()
+    patch_queries(monkeypatch, module, lidarpcs=sampled(400, period_us=40_000))
+
+    with pytest.raises(ValueError, match=r"^log\.db samples at "):
+        module.build_scenario("log.db", "anchor", duration_s=1.0, frequency_hz=10.0)

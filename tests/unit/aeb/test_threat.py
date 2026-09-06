@@ -768,3 +768,70 @@ def test_a_corridor_margin_that_is_not_a_number_is_refused(bad_value: object) ->
             make_track(),
             corridor_margin_m=bad_value,  # type: ignore[arg-type]
         )
+
+
+# --------------------------------------------------------------------------
+# The bound that skips a rollout it cannot change
+# --------------------------------------------------------------------------
+
+
+def test_a_body_that_cannot_close_the_gap_skips_the_rollout() -> None:
+    """A real urban frame holds over a hundred tracks, and almost none of them matter.
+
+    Measured on nuPlan mini on 2026-09-06: 134 tracked objects in one frame,
+    6.9 ms of rollout each, 37 seconds to decide one cohort candidate. The
+    skip is a bound rather than a heuristic — both bodies translate at constant
+    velocity, so their separation cannot fall faster than the relative speed —
+    and the clearance it reports is that bound.
+    """
+
+    threat = load_threat_module()
+
+    # The corridor's front edge is 2.5 m ahead of the ego's centre and the
+    # track's rear is 2 m behind its own, so 95.5 m of clear road separates them;
+    # closing at 10 m/s for 4 s covers at most 40 of it.
+    assessment = threat.assess_threat(make_ego(), make_track(center=(100.0, 0.0)))
+
+    assert assessment.ttc_s is None
+    assert assessment.predicted_overlap is False
+    assert assessment.min_clearance_m == pytest.approx(95.5 - 40.0, abs=1e-6)
+
+
+def test_a_body_inside_the_bound_is_still_rolled_forward() -> None:
+    """The pair to the test above: the bound must not refuse a threat that is real."""
+
+    threat = load_threat_module()
+
+    # The same closing speed, a gap it can close: this must brake, not skip.
+    assessment = threat.assess_threat(make_ego(), make_track(center=(30.0, 0.0)))
+
+    assert assessment.predicted_overlap is True
+    assert assessment.ttc_s is not None
+
+
+def test_a_body_that_is_already_touching_is_never_skipped() -> None:
+    """Zero separation cannot exceed any reach, however slowly the two are closing."""
+
+    threat = load_threat_module()
+
+    assessment = threat.assess_threat(
+        make_ego(speed=0.0, velocity=(0.0, 0.0)),
+        make_track(center=(4.0, 0.0)),
+    )
+
+    assert assessment.predicted_overlap is True
+    assert assessment.ttc_s == 0.0
+
+
+def test_two_bodies_that_never_approach_are_skipped_on_the_first_step() -> None:
+    """With no relative motion the rollout is forty-one copies of one measurement."""
+
+    threat = load_threat_module()
+
+    assessment = threat.assess_threat(
+        make_ego(speed=6.0, velocity=(6.0, 0.0)),
+        make_track(center=(0.0, 30.0), velocity=(6.0, 0.0)),
+    )
+
+    assert assessment.ttc_s is None
+    assert assessment.min_clearance_m > 0.0

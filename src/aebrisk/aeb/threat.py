@@ -19,6 +19,16 @@ than the real one has would flatter every result.
 Required deceleration is ``v^2 / (2 d)`` on the longitudinal gap between the two
 bodies. It is a magnitude, so a receding object requires zero rather than a
 negative amount, and it saturates rather than diverging when the gap has closed.
+
+A body that cannot reach the corridor before the horizon ends skips the rollout
+entirely. That is a BOUND rather than a heuristic — both bodies translate at
+constant velocity, so their separation cannot fall faster than the relative
+speed, and the separation now is measured rather than guessed — and it changes
+neither the time to collision nor the overlap flag. It exists because a real
+urban frame carries over a hundred tracked objects and almost all of them are
+parked cars and pedestrians tens of metres away: measured on nuPlan mini on
+2026-09-06, one frame held 134 tracks and a full rollout cost 6.9 ms each, which
+made a single cohort candidate cost 37 seconds and the freeze cost days.
 """
 
 from __future__ import annotations
@@ -75,6 +85,11 @@ class ThreatAssessment:
     ttc_s: Optional[float]
     required_deceleration_mps2: float
     predicted_overlap: bool
+    #: A LOWER BOUND on how close the rollout came. It is the exact sampled
+    #: minimum whenever the rollout was walked, and the provable bound when the
+    #: body was far enough away that walking it could not have changed anything.
+    #: Nothing in this study consumes it — the clearance a run reports is
+    #: measured on the true geometry by the step loop — so it is diagnostic.
     min_clearance_m: float
 
 
@@ -248,6 +263,34 @@ def assess_threat(
         )
     if not isinstance(corridor_margin_m, (int, float)) or isinstance(corridor_margin_m, bool):
         raise ValueError("corridor_margin_m must be a number")
+
+    # The bound. `polygon_clearance` is exact and costs one rollout step; the
+    # rollout costs forty-one. A body that cannot close the measured gap within
+    # the horizon cannot overlap the corridor at any step of it.
+    separation = polygon_clearance(
+        oriented_box_polygon(
+            ego_state.center_xy_m,
+            ego_state.yaw_rad,
+            ego_state.size_lw_m,
+            margin_m=corridor_margin_m,
+        ),
+        oriented_box_polygon(track.center_xy_m, track.yaw_rad, track.size_lw_m),
+    )
+    reach = (
+        math.hypot(
+            ego_state.velocity_xy_mps[0] - track.velocity_xy_mps[0],
+            ego_state.velocity_xy_mps[1] - track.velocity_xy_mps[1],
+        )
+        * horizon_s
+    )
+    if separation > reach:
+        return ThreatAssessment(
+            track_id=track.track_id,
+            ttc_s=None,
+            required_deceleration_mps2=_required_deceleration(ego_state, track),
+            predicted_overlap=False,
+            min_clearance_m=separation - reach,
+        )
 
     steps = math.floor(horizon_s / step_s + 1e-9)
     closest = math.inf

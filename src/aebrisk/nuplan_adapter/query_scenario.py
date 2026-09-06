@@ -59,6 +59,12 @@ LIDAR_SOURCE = get_lidarpc_sensor_data()
 #: a median to be stable against the microsecond jitter real timestamps carry.
 RATE_PROBE_FRAMES = 21
 
+#: How far one protocol step may fall from the rate it claims, as a fraction of
+#: that step: half a percent, which is 500 microseconds of the study's 0.1 s.
+#: Wide enough for every real lidar clock, and narrower by two orders of
+#: magnitude than the smallest wrong rate a nuPlan log could be recorded at.
+STEP_TOLERANCE = 0.005
+
 
 @dataclass(frozen=True)
 class ScenarioReference:
@@ -103,11 +109,20 @@ def stride_for(period_us: int, frequency_hz: float) -> int:
     A log recorded at a rate the protocol's does not divide cannot be stepped
     onto evenly spaced instants, and simulating it anyway would put the study's
     steps at times that drift against the recording.
+
+    The tolerance is RELATIVE, and it has to be. This check first ran over real
+    recordings on 2026-09-06 with an absolute tolerance of one microsecond, and
+    refused 2,671 of 2,675 candidates: a real 20 Hz lidar measures as 19.99 or
+    20.01 Hz, so a stride of two lands a few microseconds off 0.1 s. Worse than
+    the refusals were the four acceptances — the scenarios whose jitter happened
+    to cancel, which is a cohort selected on a property of the clock. Microseconds
+    are jitter; a rate the protocol genuinely does not divide misses by percent
+    (12 Hz by 17, 15 Hz by 33, 25 Hz by 20).
     """
 
     wanted_us = 1_000_000.0 / frequency_hz
     stride = round(wanted_us / period_us)
-    if stride < 1 or abs(stride * period_us - wanted_us) > 1.0:
+    if stride < 1 or abs(stride * period_us - wanted_us) > wanted_us * STEP_TOLERANCE:
         raise ValueError(
             f"samples at {1_000_000.0 / period_us:.3f} Hz, which {frequency_hz:.3f} Hz "
             "does not divide; the study would step at instants the recording does not have"
