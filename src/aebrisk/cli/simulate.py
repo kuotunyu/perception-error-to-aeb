@@ -36,6 +36,7 @@ job that takes hours to reach its first refusal.
 # use `Optional[X]`, never `X | None`.
 
 import hashlib
+import json
 import os
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass
@@ -53,12 +54,13 @@ from aebrisk.simulation.orchestrate import (
     configurations_for,
     finished_tokens,
     resolve_cohort,
+    resolve_synthetic_cohort,
     run_cohort,
     summarize,
+    validate_resume_results,
     write_run_complete,
     write_token_run,
 )
-from aebrisk.simulation.synthetic import synthetic_cohort
 
 #: Where the mounted nuPlan split is named. Read from the environment rather than
 #: taken as an option so one operator decision cannot disagree with another.
@@ -113,6 +115,21 @@ def write_run_context(context: RunContext, path: Path) -> None:
         handle.write("\n")
 
 
+def _validate_resume_context(context: RunContext, output_dir: Path) -> None:
+    """Refuse to reuse evidence until its recorded inputs match this invocation."""
+
+    path = output_dir / "run_context.json"
+    if path.exists():
+        try:
+            recorded = json.loads(path.read_bytes())
+        except (OSError, ValueError) as error:
+            raise ValueError(f"the resume context cannot be read: {path}: {error}") from error
+        if recorded != asdict(context):
+            raise ValueError("the resume context does not match the current run inputs")
+    elif any(candidate.is_file() for candidate in output_dir.rglob("*")):
+        raise ValueError("the resume context is missing but the output directory contains evidence")
+
+
 def _known_configuration(configuration_id: str) -> None:
     known = {config.configuration_id for config in formal_configurations()}
     if configuration_id == ALL_CONFIGURATIONS:
@@ -157,7 +174,7 @@ def simulate(
     """Run one configuration and write its results and run context."""
 
     _known_configuration(config_id)
-    if resume and (output_dir / "run_complete.json").exists():
+    if (output_dir / "run_complete.json").exists():
         _refuse(
             "this run is already complete; a second run into the same directory would overwrite evidence"
         )
@@ -193,6 +210,8 @@ def simulate(
         ) from error
 
     protocol_sha256 = hashlib.sha256(protocol.read_bytes()).hexdigest()
+    if protocol_sha256 != cohort_manifest.protocol_sha256:
+        _refuse("the protocol hash does not match the frozen cohort manifest")
     cohort_manifest_sha256 = membership_sha256(cohort_manifest)
     context = RunContext(
         configuration_id=config_id,
@@ -201,14 +220,6 @@ def simulate(
         container_digest=container_digest(),
         commit=os.environ.get("AEBRISK_COMMIT", "0" * 40),
     )
-    if not resume or not (output_dir / "run_context.json").exists():
-        write_run_context(context, output_dir / "run_context.json")
-    typer.echo(f"wrote the run context for {config_id} to {output_dir}")
-
-    if dry_run:
-        typer.echo(f"nothing was simulated ({scenario_source}, dry-run={dry_run})")
-        return
-
     chosen = configurations_for(
         formal_configurations(),
         None if config_id == ALL_CONFIGURATIONS else config_id,
@@ -219,9 +230,29 @@ def simulate(
         else (config_id,)
     )
     try:
+        synthetic = (
+            resolve_synthetic_cohort(cohort_manifest) if scenario_source == "synthetic" else None
+        )
+        if resume:
+            _validate_resume_context(context, output_dir)
+            validate_resume_results(
+                cohort_manifest,
+                output_dir,
+                written_configurations=written_configurations,
+                protocol_sha256=protocol_sha256,
+                cohort_manifest_sha256=cohort_manifest_sha256,
+            )
+        if not resume or not (output_dir / "run_context.json").exists():
+            write_run_context(context, output_dir / "run_context.json")
+        typer.echo(f"run context for {config_id} is recorded at {output_dir}")
+
+        if dry_run:
+            typer.echo(f"nothing was simulated ({scenario_source}, dry-run={dry_run})")
+            return
+
         cohort = (
-            synthetic_cohort()
-            if scenario_source == "synthetic"
+            synthetic
+            if synthetic is not None
             else resolve_cohort(
                 cohort_manifest,
                 resolve_installation(Path(os.environ.get(DATA_ROOT_VAR, "")), split=split),

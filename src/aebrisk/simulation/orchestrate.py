@@ -41,7 +41,7 @@ from aebrisk.nuplan_adapter.nuplan_scenario import NuPlanScenario
 from aebrisk.nuplan_adapter.query_scenario import ScenarioReference, scenarios_of_type
 from aebrisk.simulation.common_cohort import CohortScenario, ExperimentConfiguration
 from aebrisk.simulation.runner import REFERENCE_OBSERVATION_MODE, run_common_scenario
-from aebrisk.simulation.synthetic import SYNTHETIC_LOG, SyntheticLeadScenario
+from aebrisk.simulation.synthetic import SYNTHETIC_LOG, SyntheticLeadScenario, synthetic_cohort
 from aebrisk.simulation.validity import InvalidScenario
 
 #: Named so a test can resolve a cohort without a log database.
@@ -283,7 +283,10 @@ def documents_for(
 
 
 def _check_run_membership(runs: Sequence[TokenRun], manifest: CohortManifestV1) -> None:
-    expected = {token for family in FAMILIES for token in manifest.families[family]}
+    expected_families = {
+        token: family for family in FAMILIES for token in manifest.families[family]
+    }
+    expected = set(expected_families)
     produced = {run.token for run in runs}
     if produced != expected:
         missing = sorted(expected - produced)
@@ -293,6 +296,24 @@ def _check_run_membership(runs: Sequence[TokenRun], manifest: CohortManifestV1) 
             f"{len(expected)}; missing {missing[:3]}, unexpected {extra[:3]}. "
             "The requested write is refused because the token sets differ"
         )
+    for run in runs:
+        if run.family != expected_families[run.token]:
+            raise ValueError(
+                f"token {run.token!r} has family {run.family!r}, but the manifest names "
+                f"{expected_families[run.token]!r}"
+            )
+
+
+def resolve_synthetic_cohort(manifest: CohortManifestV1) -> tuple[CohortScenario, ...]:
+    """Resolve the fixed synthetic source only against its actual frozen membership."""
+
+    cohort = synthetic_cohort()
+    _check_run_membership(
+        tuple(TokenRun(s.reference.token, s.family, (), None) for s in cohort), manifest
+    )
+    if manifest.log_names != (SYNTHETIC_LOG,):
+        raise ValueError("the synthetic scenario source requires exactly the synthetic log")
+    return cohort
 
 
 def _publish_bytes(path: Path, payload: bytes) -> None:
@@ -361,6 +382,51 @@ def finished_tokens(
         for token in tokens
         if all((output_dir / name / f"{token}.json").is_file() for name in written_configurations)
     )
+
+
+def validate_resume_results(
+    manifest: CohortManifestV1,
+    output_dir: Path,
+    *,
+    written_configurations: Sequence[str],
+    protocol_sha256: str,
+    cohort_manifest_sha256: str,
+) -> None:
+    """Validate every existing requested final document before any evidence is reused."""
+
+    for family in FAMILIES:
+        for token in manifest.families[family]:
+            for name in written_configurations:
+                path = output_dir / name / f"{token}.json"
+                if path.exists():
+                    try:
+                        document = TokenResultsV1.model_validate_json(
+                            path.read_bytes(), strict=True
+                        )
+                    except (OSError, ValueError) as error:
+                        raise ValueError(
+                            f"the resume token document cannot be read: {path}: {error}"
+                        ) from error
+                    expected = {
+                        "scenario_token": token,
+                        "family": family,
+                        "split": manifest.split,
+                        "configuration_id": name,
+                        "protocol_sha256": protocol_sha256,
+                        "cohort_manifest_sha256": cohort_manifest_sha256,
+                    }
+                    if document.model_dump(include=set(expected)) != expected:
+                        raise ValueError(
+                            f"the resume token document does not match the current run inputs: {path}"
+                        )
+                    identities = {
+                        (record.scenario_token, record.family, record.configuration_id)
+                        for record in document.results
+                    }
+                    if identities - {(token, family, name)}:
+                        raise ValueError(
+                            f"the resume token document contains records for another token, family or configuration: {path}"
+                        )
 
 
 def write_cohort_results(

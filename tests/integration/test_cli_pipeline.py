@@ -14,13 +14,18 @@ nuPlan split and skip when none is there.
 
 from __future__ import annotations
 
+import hashlib
 import json
+import os
 from pathlib import Path
 
 import pytest
 from typer.testing import CliRunner
 
 from aebrisk.cli.app import app
+
+PROTOCOL_TEXT = "protocol: nuplan_aeb_v2\n"
+PROTOCOL_SHA = hashlib.sha256(PROTOCOL_TEXT.encode()).hexdigest()
 
 
 def run(*arguments: str):
@@ -33,7 +38,7 @@ def cohort_document(tokens: tuple[str, ...]) -> dict:
     return {
         "schema_version": "aeb-cohort-manifest/v1",
         "split": "evaluation",
-        "protocol_sha256": "a" * 64,
+        "protocol_sha256": PROTOCOL_SHA,
         "families": {
             "lead_or_stopping": list(tokens),
             "cut_in_or_crossing": [],
@@ -49,7 +54,7 @@ def workspace(tmp_path: Path) -> Path:
     """A protocol, a cohort manifest, an evaluation and a claims file."""
 
     protocol = tmp_path / "protocol.yaml"
-    protocol.write_text("protocol: nuplan_aeb_v2\n", encoding="utf-8")
+    protocol.write_text(PROTOCOL_TEXT, encoding="utf-8")
 
     manifest = tmp_path / "cohort.json"
     manifest.write_text(json.dumps(cohort_document(("s-0002", "s-0001"))), encoding="utf-8")
@@ -129,9 +134,12 @@ def test_simulate_writes_a_run_context(workspace: Path) -> None:
     assert (workspace / "runs" / "oracle_aeb" / "synthetic-lead-0001.json").is_file()
 
 
-def test_the_cohort_hash_does_not_depend_on_the_manifest_order(workspace: Path) -> None:
+def test_the_cohort_hash_does_not_depend_on_the_manifest_order(
+    workspace: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     """A cohort is a set. Two manifests listing it differently are one cohort."""
 
+    mounted_split(tmp_path, monkeypatch)
     reversed_manifest = workspace / "reversed.json"
     reversed_manifest.write_text(
         json.dumps(cohort_document(("s-0001", "s-0002"))), encoding="utf-8"
@@ -149,7 +157,9 @@ def test_the_cohort_hash_does_not_depend_on_the_manifest_order(workspace: Path) 
             "--output-dir",
             str(workspace / name),
             "--scenario-source",
-            "synthetic",
+            "nuplan",
+            "--split",
+            "mini",
             "--dry-run",
         )
 
@@ -723,7 +733,8 @@ def test_a_resolved_cohort_is_run_and_written(
     """
 
     from aebrisk.artifacts.results import AEBScenarioResultV1
-    from aebrisk.cohort.manifest import load_manifest
+    from aebrisk.cli.simulate import RunContext, container_digest, write_run_context
+    from aebrisk.cohort.manifest import load_manifest, membership_sha256
     from aebrisk.simulation.orchestrate import TokenRun, write_token_run
 
     mounted_split(tmp_path, monkeypatch)
@@ -765,13 +776,24 @@ def test_a_resolved_cohort_is_run_and_written(
     monkeypatch.setattr("aebrisk.cli.simulate.resolve_cohort", lambda manifest, layout: cohort)
     preserved = b""
     if resume:
+        document = load_manifest(workspace / "cohort.json")
+        write_run_context(
+            RunContext(
+                "oracle_aeb",
+                PROTOCOL_SHA,
+                membership_sha256(document),
+                container_digest(),
+                os.environ.get("AEBRISK_COMMIT", "0" * 40),
+            ),
+            workspace / "runs" / "run_context.json",
+        )
         write_token_run(
             TokenRun("s-0001", "lead_or_stopping", (record("s-0001"),), None),
             load_manifest(workspace / "cohort.json"),
             workspace / "runs",
             written_configurations=("oracle_aeb",),
-            protocol_sha256="a" * 64,
-            cohort_manifest_sha256="b" * 64,
+            protocol_sha256=PROTOCOL_SHA,
+            cohort_manifest_sha256=membership_sha256(document),
         )
         preserved = (workspace / "runs" / "oracle_aeb" / "s-0001.json").read_bytes()
     monkeypatch.setattr(
@@ -862,17 +884,27 @@ def test_cli_writes_a_token_before_the_runner_returns(
     assert result.exit_code == 0, result.exception
 
 
-def test_resume_refuses_completed_run_without_overwriting_context(workspace: Path) -> None:
+@pytest.mark.parametrize("resume", [False, True])
+def test_resume_refuses_completed_run_without_overwriting_context(
+    workspace: Path, monkeypatch: pytest.MonkeyPatch, resume: bool
+) -> None:
     synthetic_manifest(workspace)
     output = workspace / "runs"
     output.mkdir()
     (output / "run_complete.json").write_bytes(b"completion evidence")
     (output / "run_context.json").write_bytes(b"original context")
-    result = simulate_synthetic(workspace, "--resume")
+
+    def interrupted_replacement(*args, **kwargs):
+        (output / "partial-replacement.json").write_bytes(b"replacement started")
+        raise RuntimeError("replacement interrupted")
+
+    monkeypatch.setattr("aebrisk.cli.simulate.run_cohort", interrupted_replacement)
+    result = simulate_synthetic(workspace, *(("--resume",) if resume else ()))
     assert result.exit_code != 0
     assert "this run is already complete" in result.output
     assert (output / "run_context.json").read_bytes() == b"original context"
     assert (output / "run_complete.json").read_bytes() == b"completion evidence"
+    assert not (output / "partial-replacement.json").exists()
 
 
 def test_resume_with_all_files_present_only_finishes_marker(
@@ -906,3 +938,178 @@ def test_workers_zero_is_refused_even_for_dry_run(workspace: Path) -> None:
     result = simulate_synthetic(workspace, "--workers", "0", "--dry-run")
     assert result.exit_code != 0
     assert not (workspace / "runs").exists()
+
+
+def saved_bytes(workspace: Path) -> dict[Path, bytes]:
+    return {
+        p.relative_to(workspace / "runs"): p.read_bytes()
+        for p in (workspace / "runs").rglob("*")
+        if p.is_file()
+    }
+
+
+def interrupted_synthetic_run(workspace: Path) -> Path:
+    synthetic_manifest(workspace)
+    result = simulate_synthetic(workspace)
+    assert result.exit_code == 0, result.exception
+    (workspace / "runs" / "run_complete.json").unlink()
+    return workspace / "runs"
+
+
+@pytest.mark.parametrize(
+    "field",
+    [
+        "configuration_id",
+        "protocol_sha256",
+        "cohort_sha256",
+        "commit",
+        "container_digest",
+        "missing",
+        "malformed",
+        "unknown-field",
+        "not-object",
+    ],
+)
+def test_resume_refuses_context_drift_without_changing_evidence(
+    workspace: Path, field: str
+) -> None:
+    output = interrupted_synthetic_run(workspace)
+    path = output / "run_context.json"
+    context = json.loads(path.read_bytes())
+    if field == "missing":
+        del context["protocol_sha256"]
+    elif field == "unknown-field":
+        context["unrecognized"] = "value"
+    elif field == "not-object":
+        context = []
+    elif field != "malformed":
+        context[field] = "different"
+    path.write_bytes(b"{truncated" if field == "malformed" else json.dumps(context).encode())
+    before = saved_bytes(workspace)
+    result = simulate_synthetic(workspace, "--resume")
+    assert result.exit_code != 0
+    assert "resume context" in result.output
+    assert saved_bytes(workspace) == before
+
+
+def test_resume_refuses_evidence_without_context(workspace: Path) -> None:
+    output = interrupted_synthetic_run(workspace)
+    (output / "run_context.json").unlink()
+    before = saved_bytes(workspace)
+    result = simulate_synthetic(workspace, "--resume")
+    assert result.exit_code != 0
+    assert "resume context" in result.output
+    assert saved_bytes(workspace) == before
+
+
+@pytest.mark.parametrize(
+    "field",
+    [
+        "schema_version",
+        "scenario_token",
+        "family",
+        "configuration_id",
+        "split",
+        "protocol_sha256",
+        "cohort_manifest_sha256",
+        "missing",
+        "malformed",
+        "valid-type",
+        "record-token",
+        "record-family",
+        "record-configuration",
+    ],
+)
+def test_resume_refuses_unrelated_or_malformed_token_documents(workspace: Path, field: str) -> None:
+    output = interrupted_synthetic_run(workspace)
+    path = output / "oracle_aeb" / "synthetic-lead-0001.json"
+    document = json.loads(path.read_bytes())
+    if field == "missing":
+        del document["protocol_sha256"]
+    elif field == "valid-type":
+        document["valid"] = "true"
+    elif field.startswith("record-"):
+        key, value = {
+            "record-token": ("scenario_token", "another-token"),
+            "record-family": ("family", "bicycle_or_vru"),
+            "record-configuration": ("configuration_id", "no_aeb"),
+        }[field]
+        document["results"][0][key] = value
+    elif field != "malformed":
+        document[field] = {
+            "schema_version": "aeb-token-results/v0",
+            "scenario_token": "another-token",
+            "family": "bicycle_or_vru",
+            "configuration_id": "no_aeb",
+            "split": "evaluation",
+            "protocol_sha256": "b" * 64,
+            "cohort_manifest_sha256": "b" * 64,
+        }[field]
+    path.write_bytes(b"{truncated" if field == "malformed" else json.dumps(document).encode())
+    before = saved_bytes(workspace)
+    result = simulate_synthetic(workspace, "--resume")
+    assert result.exit_code != 0
+    assert "resume token" in result.output
+    assert saved_bytes(workspace) == before
+
+
+@pytest.mark.parametrize("drift", ["token", "family", "source"])
+@pytest.mark.parametrize("dry_run", [False, True])
+def test_synthetic_manifest_drift_is_refused_before_publication(
+    workspace: Path, drift: str, dry_run: bool
+) -> None:
+    synthetic_manifest(workspace)
+    path = workspace / "cohort.json"
+    manifest = json.loads(path.read_bytes())
+    if drift == "token":
+        manifest["families"]["lead_or_stopping"] = ["different-token"]
+    elif drift == "family":
+        manifest["families"]["bicycle_or_vru"] = manifest["families"]["lead_or_stopping"]
+        manifest["families"]["lead_or_stopping"] = []
+    else:
+        manifest["log_names"] = ["one.db"]
+    path.write_text(json.dumps(manifest))
+    output = workspace / "runs"
+    output.mkdir()
+    (output / "run_context.json").write_bytes(b"existing evidence")
+    before = saved_bytes(workspace)
+    result = simulate_synthetic(workspace, *(("--dry-run",) if dry_run else ()))
+    assert result.exit_code != 0
+    assert saved_bytes(workspace) == before
+
+
+@pytest.mark.parametrize("resume", [False, True])
+def test_protocol_bytes_must_match_manifest_before_any_publication(
+    workspace: Path, resume: bool
+) -> None:
+    interrupted_synthetic_run(workspace)
+    (workspace / "protocol.yaml").write_text("different protocol\n")
+    before = saved_bytes(workspace)
+    result = simulate_synthetic(workspace, *(("--resume",) if resume else ()))
+    assert result.exit_code != 0
+    assert "protocol hash" in result.output
+    assert saved_bytes(workspace) == before
+
+
+@pytest.mark.parametrize("changed_input", ["protocol", "cohort", "configuration"])
+def test_resume_cannot_certify_old_files_under_new_inputs(
+    workspace: Path, changed_input: str
+) -> None:
+    interrupted_synthetic_run(workspace)
+    arguments: tuple[str, ...] = ("--resume",)
+    manifest_path = workspace / "cohort.json"
+    document = json.loads(manifest_path.read_bytes())
+    if changed_input == "protocol":
+        new_protocol = b"protocol: different-version\n"
+        (workspace / "protocol.yaml").write_bytes(new_protocol)
+        document["protocol_sha256"] = hashlib.sha256(new_protocol).hexdigest()
+    elif changed_input == "cohort":
+        document["split"] = "evaluation"
+    else:
+        arguments += ("--config-id", "no_aeb")
+    manifest_path.write_text(json.dumps(document))
+    before = saved_bytes(workspace)
+    result = simulate_synthetic(workspace, *arguments)
+    assert result.exit_code != 0
+    assert "resume context" in result.output
+    assert saved_bytes(workspace) == before

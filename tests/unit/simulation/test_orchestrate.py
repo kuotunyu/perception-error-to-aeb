@@ -734,3 +734,70 @@ def test_interrupted_publication_never_exposes_truncated_final_evidence(
         "aeb-token-results/v1" if artifact == "token" else "aeb-run-complete/v1"
     )
     assert not list(output.rglob("*.tmp"))
+
+
+@pytest.mark.parametrize("writer", ["cohort", "marker"])
+def test_wrong_family_cannot_publish_a_cohort_or_completion_marker(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, writer: str
+) -> None:
+    from dataclasses import replace
+
+    module, document, runs = run_everything(monkeypatch, tmp_path)
+    drifted = (replace(runs[0], family="bicycle_or_vru"), *runs[1:])
+    output = tmp_path / "results"
+    with pytest.raises(ValueError, match="family"):
+        if writer == "cohort":
+            written(module, document, drifted, output)
+        else:
+            module.write_run_complete(
+                drifted, document, output, cohort_manifest_sha256=MEMBERSHIP_SHA
+            )
+    assert not output.exists()
+
+
+def test_resume_validates_existing_files_even_when_a_token_is_only_partly_written(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A missing second configuration does not authorize overwriting unrelated first-cell evidence."""
+    module, document, runs = run_everything(monkeypatch, tmp_path)
+    output = tmp_path / "results"
+    module.write_token_run(
+        runs[0],
+        document,
+        output,
+        written_configurations=("oracle_aeb",),
+        protocol_sha256="d" * 64,
+        cohort_manifest_sha256=MEMBERSHIP_SHA,
+    )
+    path = output / "oracle_aeb" / "t-lead.json"
+    before = path.read_bytes()
+    assert (
+        module.finished_tokens(output, ("oracle_aeb", "dropout-high"), ("t-lead",)) == frozenset()
+    )
+    with pytest.raises(ValueError, match="resume token"):
+        module.validate_resume_results(
+            document,
+            output,
+            written_configurations=("oracle_aeb", "dropout-high"),
+            protocol_sha256=PROTOCOL_SHA,
+            cohort_manifest_sha256=MEMBERSHIP_SHA,
+        )
+    assert path.read_bytes() == before
+
+
+def test_resume_accepts_matching_invalid_token_evidence(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """An explained infrastructure exclusion is still a finished token to preserve."""
+    module, document, runs = run_everything(monkeypatch, tmp_path, failing="dropout-high")
+    output = tmp_path / "results"
+    written(module, document, runs, output)
+    before = {p: p.read_bytes() for p in output.rglob("*.json")}
+    module.validate_resume_results(
+        document,
+        output,
+        written_configurations=("oracle_aeb", "dropout-high"),
+        protocol_sha256=PROTOCOL_SHA,
+        cohort_manifest_sha256=MEMBERSHIP_SHA,
+    )
+    assert {p: p.read_bytes() for p in before} == before
