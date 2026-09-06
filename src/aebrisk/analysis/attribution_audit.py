@@ -1,0 +1,273 @@
+"""Audit AEB attribution prose against exact published evidence."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import sys
+from decimal import Decimal
+from pathlib import Path
+from typing import Any
+
+import yaml
+
+from aebrisk.analysis.claims import (
+    ClaimV1,
+    _json_numbers,
+    _resolve_json_pointer,
+    audit_claims,
+    load_registry,
+)
+
+MARKER = re.compile(r"<!--\s*claim:\s*([a-z0-9][a-z0-9._-]*)\s*-->")
+NUMBER = re.compile(r"(?<![\w.])[-+]?(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][-+]?\d+)?%?")
+RESULT_TERM = re.compile(
+    r"\b(?:shapley|collision(?:s|_indicator)?|contacts_not_at_fault|"
+    r"intervention(?:s|_duration_s)?|false_interventions|missed_interventions)\b",
+    re.IGNORECASE,
+)
+PER_100_KM = re.compile(r"(?:per[-_ ]?100\s*km|/\s*100\s*km)", re.IGNORECASE)
+COHORT_SIZE = re.compile(
+    r"(?:common[-_ ]valid(?:\s+(?:cohort|tokens?))?|cohort(?:\s+of)?)\D{0,20}(\d+)",
+    re.IGNORECASE,
+)
+FENCE_PREFIXES = ("```", "~~~")
+
+
+def _text_numbers(text: str) -> tuple[Decimal, ...]:
+    return tuple(Decimal(match.group().removesuffix("%")) for match in NUMBER.finditer(text))
+
+
+def _json_document(path: Path) -> object:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _claim_numbers(claim: ClaimV1, repository_root: Path) -> set[Decimal]:
+    artifact = repository_root / claim.artifact_path
+    return _json_numbers(_resolve_json_pointer(_json_document(artifact), claim.metric_path))
+
+
+def _common_valid_tokens(registry: dict[str, ClaimV1], repository_root: Path) -> int:
+    relative = next(
+        claim.artifact_path
+        for claim in registry.values()
+        if Path(claim.artifact_path).name == "shapley.json"
+    )
+    document = _json_document(repository_root / relative)
+    return int(document["common_valid_tokens"])  # type: ignore[index]
+
+
+def _structural_violations(
+    source: str,
+    text: str,
+    claims: tuple[ClaimV1, ...],
+    common_valid_tokens: int,
+) -> list[str]:
+    lower = text.lower()
+    violations: list[str] = []
+    if _text_numbers(PER_100_KM.sub("", text)) and PER_100_KM.search(text):
+        violations.append(
+            f"{source}: per-100 km rate is unpublished in this release; evaluation.json holds null"
+        )
+
+    for match in COHORT_SIZE.finditer(text):
+        stated = int(match.group(1))
+        if stated != common_valid_tokens:
+            violations.append(
+                f"{source}: stated cohort {stated}, but the common-valid cohort is "
+                f"{common_valid_tokens}"
+            )
+
+    attribution = "shapley" in lower or "attribut" in lower
+    collision_metric = "collision" in lower
+    duration_metric = "duration" in lower or "seconds" in lower or re.search(r"\d\s*s\b", lower)
+    if attribution and collision_metric and duration_metric and len(_text_numbers(text)) >= 2:
+        violations.append(
+            f"{source}: collision_indicator and intervention_duration_s are separate estimands; "
+            "state them on separate result lines and never sum, compare or rank them"
+        )
+
+    if attribution and any(Path(claim.artifact_path).name != "shapley.json" for claim in claims):
+        violations.append(f"{source}: every Shapley number must trace to shapley.json")
+
+    oracle_collision = re.search(r"oracle(?:_|\s|-)?aeb", lower) and re.search(
+        r"\bcollisions?\b", lower
+    )
+    if oracle_collision:
+        contact_claims = [
+            claim
+            for claim in claims
+            if claim.metric_path.endswith("/contacts_not_at_fault")
+            and "oracle_aeb" in claim.claim_id
+        ]
+        if "contacts_not_at_fault" not in lower or not contact_claims:
+            violations.append(
+                f"{source}: an oracle_aeb collision result must also state "
+                "contacts_not_at_fault and cite its claim"
+            )
+    return violations
+
+
+def _check_statement(
+    source: str,
+    text: str,
+    claim_ids: tuple[str, ...],
+    registry: dict[str, ClaimV1],
+    repository_root: Path,
+    common_valid_tokens: int,
+) -> tuple[list[str], list[dict[str, Any]]]:
+    violations: list[str] = []
+    claims: list[ClaimV1] = []
+    traces: list[dict[str, Any]] = []
+    held_numbers: set[Decimal] = set()
+    for claim_id in claim_ids:
+        claim = registry.get(claim_id)
+        if claim is None:
+            violations.append(f"{source} {claim_id}: no registry claim backs this result")
+            continue
+        claims.append(claim)
+        numbers = _claim_numbers(claim, repository_root)
+        held_numbers.update(numbers)
+        traces.append(
+            {
+                "source": source,
+                "claim_id": claim_id,
+                "artifact_path": claim.artifact_path,
+                "metric_path": claim.metric_path,
+                "numbers": [str(number) for number in sorted(numbers)],
+                "verdict": "pass",
+            }
+        )
+
+    violations.extend(_structural_violations(source, text, tuple(claims), common_valid_tokens))
+    provenance_numbers = {Decimal(common_valid_tokens)}
+    for number in _text_numbers(PER_100_KM.sub("", text)):
+        if number not in held_numbers and number not in provenance_numbers:
+            held = ", ".join(str(value) for value in sorted(held_numbers)) or "no number"
+            violations.append(f"{source}: statement says {number}, but cited evidence holds {held}")
+    if violations:
+        for trace in traces:
+            trace["verdict"] = "fail"
+    return violations, traces
+
+
+def _proposal_statements(path: Path) -> tuple[tuple[str, str, tuple[str, ...]], ...]:
+    document = yaml.safe_load(path.read_text(encoding="utf-8"))
+    entries = document.get("proposals") if isinstance(document, dict) else document
+    if not isinstance(entries, list):
+        raise ValueError(f"{path}: expected a list under 'proposals'")
+    statements: list[tuple[str, str, tuple[str, ...]]] = []
+    for position, entry in enumerate(entries):
+        source = f"proposal[{position}]"
+        if not isinstance(entry, dict) or not isinstance(entry.get("text"), str):
+            statements.append((source, "", ()))
+            continue
+        raw_ids = entry.get("claim_ids")
+        if (
+            not isinstance(raw_ids, list)
+            or not raw_ids
+            or not all(isinstance(value, str) for value in raw_ids)
+        ):
+            statements.append((source, entry["text"], ()))
+            continue
+        statements.append((source, entry["text"], tuple(raw_ids)))
+    return tuple(statements)
+
+
+def _document_statements(path: Path) -> tuple[tuple[str, str, tuple[str, ...]], ...]:
+    statements: list[tuple[str, str, tuple[str, ...]]] = []
+    in_fence = False
+    for line_number, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        if raw.strip().startswith(FENCE_PREFIXES):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        claim_ids = tuple(MARKER.findall(raw))
+        text = MARKER.sub("", raw).strip()
+        result_numbers = _text_numbers(PER_100_KM.sub("", text))
+        if claim_ids or (RESULT_TERM.search(text) and result_numbers):
+            statements.append((f"{path.name}:{line_number}", text, claim_ids))
+    return tuple(statements)
+
+
+def validate_attribution(
+    claims_path: Path,
+    repository_root: Path,
+    proposal_path: Path | None,
+    document_paths: list[Path],
+) -> tuple[tuple[str, ...], dict[str, Any]]:
+    """Return every publication violation and a machine-readable evidence trace."""
+
+    registry_model = load_registry(claims_path)
+    registry = {claim.claim_id: claim for claim in registry_model.claims}
+    violations = [
+        f"registry: {violation}" for violation in audit_claims(claims_path, repository_root)
+    ]
+    common_valid_tokens = _common_valid_tokens(registry, repository_root)
+    statements: list[tuple[str, str, tuple[str, ...]]] = []
+    if proposal_path is not None:
+        statements.extend(_proposal_statements(proposal_path))
+    for document_path in document_paths:
+        statements.extend(_document_statements(document_path))
+
+    traces: list[dict[str, Any]] = []
+    for source, text, claim_ids in statements:
+        if not text or not claim_ids:
+            violations.append(
+                f"{source}: result needs text and claim_ids; no <!-- claim: ... --> marker"
+            )
+            violations.extend(_structural_violations(source, text, (), common_valid_tokens))
+            continue
+        found, traced = _check_statement(
+            source, text, claim_ids, registry, repository_root, common_valid_tokens
+        )
+        violations.extend(found)
+        traces.extend(traced)
+
+    status = {
+        "validator": "validate_attribution",
+        "claims_registry": str(claims_path),
+        "common_valid_tokens": common_valid_tokens,
+        "statements": traces,
+    }
+    return tuple(violations), status
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Audit Markdown or YAML attribution prose and print every violation."""
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--claims", required=True, type=Path)
+    parser.add_argument("--repo-root", default=Path(), type=Path)
+    parser.add_argument("--proposal", type=Path)
+    parser.add_argument("--document", action="append", default=[], type=Path)
+    arguments = parser.parse_args(argv)
+    if arguments.proposal is None and not arguments.document:
+        print("nothing to audit: pass --proposal and/or --document", file=sys.stderr)
+        return 2
+    try:
+        violations, status = validate_attribution(
+            arguments.claims,
+            arguments.repo_root,
+            arguments.proposal,
+            arguments.document,
+        )
+    except (
+        KeyError,
+        OSError,
+        StopIteration,
+        LookupError,
+        TypeError,
+        ValueError,
+        yaml.YAMLError,
+    ) as error:
+        print(f"validation could not run: {error}", file=sys.stderr)
+        return 2
+    if violations:
+        for violation in violations:
+            print(violation, file=sys.stderr)
+        return 1
+    print(json.dumps(status, indent=2, sort_keys=True))
+    return 0
