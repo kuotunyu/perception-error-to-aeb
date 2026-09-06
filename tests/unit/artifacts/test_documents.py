@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import json
+from dataclasses import asdict
 from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
 
 from aebrisk.artifacts import documents
+from aebrisk.metrics.bootstrap import paired_scenario_bootstrap
 
 
 def evaluation_payload() -> dict:
@@ -68,10 +70,27 @@ def test_evaluation_contract_rejects_unknown_fields_and_non_integer_counts() -> 
         documents.AEBEvaluationV1.model_validate(payload)
 
 
-def test_interval_contract_rejects_an_estimate_outside_its_bounds() -> None:
-    with pytest.raises(ValidationError, match="estimate"):
+def test_interval_contract_accepts_exact_percentile_bootstrap_endpoints() -> None:
+    values = {
+        "t1": {"config": 0.1},
+        "t2": {"config": 0.2},
+        "t3": {"config": 0.3},
+        "t4": {"config": 0.4},
+    }
+    families = {"t1": "f4", "t2": "f3", "t3": "f1", "t4": "f2"}
+
+    interval = paired_scenario_bootstrap(values, family_by_scenario=families)["config"]
+
+    assert interval.estimate == 0.25
+    assert interval.low == 0.24999999999999997
+    assert interval.high == 0.24999999999999997
+    assert documents.BootstrapIntervalV1.model_validate(asdict(interval))
+
+
+def test_interval_contract_rejects_inverted_bounds() -> None:
+    with pytest.raises(ValidationError, match="low must not exceed high"):
         documents.BootstrapIntervalV1(
-            estimate=2.0, low=0.0, high=1.0, confidence=0.95, resamples=5000, seed=20260831
+            estimate=0.5, low=1.0, high=0.0, confidence=0.95, resamples=5000, seed=20260831
         )
 
 

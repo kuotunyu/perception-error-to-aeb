@@ -26,7 +26,7 @@ from aebrisk.artifacts.documents import (
     write_document,
 )
 from aebrisk.attribution.factorial import formal_configurations
-from aebrisk.cohort.manifest import load_manifest
+from aebrisk.cohort.manifest import CohortManifestV1, load_manifest
 
 app = typer.Typer(add_completion=False, help="Aggregate simulation results.")
 
@@ -37,6 +37,11 @@ _COHORT_FILES = (
     "development-eligibility.json",
     "evaluation-eligibility.json",
 )
+_MANIFEST_SPLITS = {
+    "smoke.json": "smoke",
+    "development.json": "development",
+    "evaluation.json": "evaluation",
+}
 
 
 class _EligibilityRow(BaseModel):
@@ -70,17 +75,28 @@ def _validate_eligibility(path: Path) -> bytes:
     return path.read_bytes()
 
 
-def _read_cohort_metadata(manifest_path: Path) -> dict[str, bytes]:
+def _read_cohort_metadata(
+    manifest_path: Path, analysis_manifest: CohortManifestV1
+) -> dict[str, bytes]:
     metadata: dict[str, bytes] = {}
     for name in _COHORT_FILES:
         source = manifest_path.parent / name
         if not source.is_file():
             raise ValueError(f"required cohort metadata {str(source)!r} does not exist")
-        payload = (
-            source.read_bytes() if "-eligibility" not in name else _validate_eligibility(source)
-        )
-        if "-eligibility" not in name:
-            load_manifest(source)
+        if "-eligibility" in name:
+            payload = _validate_eligibility(source)
+        else:
+            copied_manifest = load_manifest(source)
+            expected_split = _MANIFEST_SPLITS[name]
+            if copied_manifest.split != expected_split:
+                raise ValueError(
+                    f"{name} declares split {copied_manifest.split!r}; expected {expected_split!r}"
+                )
+            if name == "evaluation.json" and copied_manifest != analysis_manifest:
+                raise ValueError(
+                    "copied evaluation manifest does not match the supplied analysis manifest"
+                )
+            payload = source.read_bytes()
         metadata[name] = payload
     return metadata
 
@@ -108,7 +124,7 @@ def evaluate(
 
     try:
         cohort_manifest = load_manifest(manifest)
-        cohort_metadata = _read_cohort_metadata(manifest)
+        cohort_metadata = _read_cohort_metadata(manifest, cohort_manifest)
         tokens = tuple(
             token for family_tokens in cohort_manifest.families.values() for token in family_tokens
         )

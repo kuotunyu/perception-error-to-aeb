@@ -92,8 +92,8 @@ class BootstrapIntervalV1(_Strict):
 
     @model_validator(mode="after")
     def validate_order(self) -> BootstrapIntervalV1:
-        if not self.low <= self.estimate <= self.high:
-            raise ValueError("estimate must lie within [low, high]")
+        if self.low > self.high:
+            raise ValueError("low must not exceed high")
         return self
 
 

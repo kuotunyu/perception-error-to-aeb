@@ -520,6 +520,58 @@ def test_evaluate_requires_every_published_cohort_metadata_file(workspace: Path)
     assert "required cohort metadata" in result.output
 
 
+def test_evaluate_refuses_to_copy_an_evaluation_other_than_the_analysis_manifest(
+    workspace: Path,
+) -> None:
+    results, manifest = formal_evaluation_fixture(workspace)
+    analysis_manifest = manifest.with_name("analysis-input.json")
+    analysis_document = json.loads(manifest.read_text(encoding="utf-8"))
+    analysis_document["log_names"] = ["different-log.db"]
+    analysis_manifest.write_text(json.dumps(analysis_document), encoding="utf-8")
+    output = workspace / "metrics"
+
+    result = run(
+        "evaluate",
+        "--results-dir",
+        str(results),
+        "--manifest",
+        str(analysis_manifest),
+        "--output-dir",
+        str(output),
+    )
+
+    assert result.exit_code != 0
+    assert (
+        "copied evaluation manifest does not match the supplied analysis manifest" in result.output
+    )
+    assert not output.exists()
+
+
+def test_evaluate_refuses_a_manifest_whose_filename_and_declared_split_disagree(
+    workspace: Path,
+) -> None:
+    results, manifest = formal_evaluation_fixture(workspace)
+    development = manifest.with_name("development.json")
+    development_document = json.loads(development.read_text(encoding="utf-8"))
+    development_document["split"] = "smoke"
+    development.write_text(json.dumps(development_document), encoding="utf-8")
+    output = workspace / "metrics"
+
+    result = run(
+        "evaluate",
+        "--results-dir",
+        str(results),
+        "--manifest",
+        str(manifest),
+        "--output-dir",
+        str(output),
+    )
+
+    assert result.exit_code != 0
+    assert "development.json declares split 'smoke'; expected 'development'" in result.output
+    assert not output.exists()
+
+
 # --------------------------------------------------------------------------
 # report
 # --------------------------------------------------------------------------
