@@ -223,8 +223,9 @@ def test_the_family_of_every_mapped_type_can_be_looked_up() -> None:
 
     filters = load_filters_module()
 
-    assert filters.family_of("crossed_by_bike") == "bicycle_or_vru"
+    assert filters.family_of("behind_bike") == "bicycle_or_vru"
     assert filters.family_of("stopping_at_stop_sign_with_lead") == "lead_or_stopping"
+    assert filters.family_of("changing_lane_to_left") == "cut_in_or_crossing"
 
 
 def test_an_unknown_type_fails_closed_rather_than_defaulting() -> None:

@@ -27,12 +27,20 @@ SCENARIO_FAMILIES: tuple[str, ...] = (
     "bicycle_or_vru",
 )
 
-#: The nuPlan scenario types in each family, frozen by the protocol.
+#: The nuPlan scenario types in each family, frozen by protocol v2.
 #:
 #: The pinned devkit ships no canonical list of scenario types: they live in
-#: each log database's `scenario_tag` table rather than in the library, so this
-#: mapping cannot be checked against an import. It is checked here for internal
-#: consistency, and against the tags actually present in the data at P3-19.
+#: each log database's `scenario_tag` table rather than in the library. So this
+#: mapping was checked against the data instead, over every mini database on
+#: 2026-09-06, and every type below appears in
+#: `configs/nuplan_scenario_vocabulary.yaml`. Protocol v1 pinned five names that
+#: nuPlan tags nothing with; `tests/contract/test_scenario_families.py` now
+#: refuses that, and also refuses this mapping drifting from the protocol file
+#: whose bytes are the published hash.
+#:
+#: The tag decides which family a scenario is counted in. Whether a threat is
+#: present is decided by the corridor and TTC rules below, on oracle world
+#: state, never by the tag.
 FAMILY_TYPES: dict[str, tuple[str, ...]] = {
     "lead_or_stopping": (
         "following_lane_with_lead",
@@ -41,10 +49,14 @@ FAMILY_TYPES: dict[str, tuple[str, ...]] = {
         "stopping_at_stop_sign_with_lead",
         "stopping_at_traffic_light_with_lead",
     ),
+    # nuPlan tags no "cut in" and no "crossed by vehicle"; it tags the lane
+    # change itself, and the unprotected turns where crossing traffic conflicts.
     "cut_in_or_crossing": (
-        "crossed_by_vehicle",
-        "changing_lane_with_lead",
-        "changing_lane_with_trail",
+        "changing_lane",
+        "changing_lane_to_left",
+        "changing_lane_to_right",
+        "starting_unprotected_cross_turn",
+        "starting_unprotected_noncross_turn",
     ),
     "pedestrian_or_crosswalk": (
         "waiting_for_pedestrian_to_cross",
@@ -52,11 +64,9 @@ FAMILY_TYPES: dict[str, tuple[str, ...]] = {
         "near_pedestrian_on_crosswalk_with_ego",
         "behind_pedestrian_on_driveable",
     ),
-    "bicycle_or_vru": (
-        "behind_bike",
-        "crossed_by_bike",
-        "near_multiple_bikes",
-    ),
+    # `behind_bike` is the only bicycle tag nuPlan has. The family is kept with
+    # one type rather than dropped: a thin family is reported with its count.
+    "bicycle_or_vru": ("behind_bike",),
 }
 
 _TYPE_TO_FAMILY: dict[str, str] = {

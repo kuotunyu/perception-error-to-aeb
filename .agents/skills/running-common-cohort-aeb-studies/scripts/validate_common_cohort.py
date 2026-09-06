@@ -164,8 +164,8 @@ def resume_commands(runs: dict[str, dict[str, Any]], expected: set[str]) -> list
         if set(run.get("scenario_tokens", [])) != expected:
             commands.append(
                 "docker compose run --rm dev uv run --frozen aeb-risk simulate "
-                f"--protocol configs/protocols/nuplan_aeb_v1.yaml "
-                f"--manifest artifacts/manifests/nuplan_aeb_v1.json "
+                f"--protocol configs/protocols/nuplan_aeb_v2.yaml "
+                f"--manifest artifacts/manifests/nuplan_aeb_v2/evaluation.json "
                 f"--config-id {name} --output-dir artifacts/runs/{name}"
             )
     return commands

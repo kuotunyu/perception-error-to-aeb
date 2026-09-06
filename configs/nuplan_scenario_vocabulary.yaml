@@ -1,0 +1,98 @@
+# The nuPlan scenario-type vocabulary, observed rather than assumed.
+#
+# The pinned devkit ships NO canonical list of scenario types. They live in each
+# log database's `scenario_tag` table, so a family mapping written from
+# expectation cannot be checked against an import, and P3-04 recorded that it
+# would have to be checked against the data when the order gate opened.
+#
+# It was, on 2026-09-06, over every database of the mini split, read-only. Five
+# of the fifteen types protocol v1 pinned appear nowhere in this list:
+# `crossed_by_vehicle`, `changing_lane_with_lead`, `changing_lane_with_trail`,
+# `crossed_by_bike` and `near_multiple_bikes`. Protocol v2 was written from this
+# file instead, and a test refuses any family type that is not in it.
+#
+# This is a floor, not a ceiling: a type present only in `train` or `val` would
+# be absent here. The census is re-run over both at the cohort freeze and this
+# file is extended if it finds one. Removing a type is a different matter and
+# would mean the dataset changed under the study.
+
+schema_version: nuplan-scenario-vocabulary/v1
+
+provenance:
+  dataset: nuplan-v1.1
+  split: mini
+  log_databases_read: 64
+  observed_on: 2026-09-06
+  method: >-
+    SELECT type, COUNT(*) FROM scenario_tag GROUP BY type, over every database
+    opened read-only, with no devkit ORM and no map access.
+
+# 67 types, sorted.
+scenario_types:
+  - accelerating_at_crosswalk
+  - accelerating_at_stop_sign
+  - accelerating_at_stop_sign_no_crosswalk
+  - accelerating_at_traffic_light
+  - accelerating_at_traffic_light_with_lead
+  - accelerating_at_traffic_light_without_lead
+  - behind_bike
+  - behind_long_vehicle
+  - behind_pedestrian_on_driveable
+  - behind_pedestrian_on_pickup_dropoff
+  - changing_lane
+  - changing_lane_to_left
+  - changing_lane_to_right
+  - following_lane_with_lead
+  - following_lane_with_slow_lead
+  - following_lane_without_lead
+  - high_lateral_acceleration
+  - high_magnitude_jerk
+  - high_magnitude_speed
+  - low_magnitude_speed
+  - medium_magnitude_speed
+  - near_barrier_on_driveable
+  - near_construction_zone_sign
+  - near_high_speed_vehicle
+  - near_long_vehicle
+  - near_multiple_pedestrians
+  - near_multiple_vehicles
+  - near_pedestrian_at_pickup_dropoff
+  - near_pedestrian_on_crosswalk
+  - near_pedestrian_on_crosswalk_with_ego
+  - near_trafficcone_on_driveable
+  - on_all_way_stop_intersection
+  - on_carpark
+  - on_intersection
+  - on_pickup_dropoff
+  - on_stopline_crosswalk
+  - on_stopline_stop_sign
+  - on_stopline_traffic_light
+  - on_traffic_light_intersection
+  - starting_high_speed_turn
+  - starting_left_turn
+  - starting_low_speed_turn
+  - starting_protected_cross_turn
+  - starting_protected_noncross_turn
+  - starting_right_turn
+  - starting_straight_stop_sign_intersection_traversal
+  - starting_straight_traffic_light_intersection_traversal
+  - starting_unprotected_cross_turn
+  - starting_unprotected_noncross_turn
+  - stationary
+  - stationary_at_crosswalk
+  - stationary_at_traffic_light_with_lead
+  - stationary_at_traffic_light_without_lead
+  - stationary_in_traffic
+  - stopping_at_crosswalk
+  - stopping_at_stop_sign_no_crosswalk
+  - stopping_at_stop_sign_with_lead
+  - stopping_at_stop_sign_without_lead
+  - stopping_at_traffic_light_with_lead
+  - stopping_at_traffic_light_without_lead
+  - stopping_with_lead
+  - traversing_crosswalk
+  - traversing_intersection
+  - traversing_narrow_lane
+  - traversing_pickup_dropoff
+  - traversing_traffic_light_intersection
+  - waiting_for_pedestrian_to_cross

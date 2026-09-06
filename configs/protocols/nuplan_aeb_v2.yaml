@@ -1,0 +1,113 @@
+# The frozen protocol for this study. Everything a published number depends on
+# is here, and changing any of it is a new protocol version rather than an edit:
+# results produced under different values are not comparable, and the protocol
+# hash is what says so.
+#
+# v2 REPLACES v1, WHICH NEVER PRODUCED A RESULT. v1 pinned fifteen scenario
+# types written from expectation, because the pinned devkit ships no canonical
+# list to check them against; P3-04 recorded that they had to be checked against
+# the data when the order gate opened. On 2026-09-06 they were, over every
+# database of the mini split, and five of the fifteen turned out to be names
+# nuPlan tags nothing with: crossed_by_vehicle, changing_lane_with_lead,
+# changing_lane_with_trail, crossed_by_bike and near_multiple_bikes. Two of the
+# four families were therefore unfreezable. Every type below comes from
+# ../nuplan_scenario_vocabulary.yaml, which records what the databases carry,
+# and a contract test refuses any type that is not in it.
+#
+# v2 also names the three splits it uses rather than one. The spec has always
+# required development scenarios from official training logs and locked
+# evaluation from official validation logs; v1's single `split: mini` could not
+# express that, and mini is a smoke split — two of its four families hold too
+# few logs to divide log-disjointly at all.
+schema_version: nuplan-aeb-protocol/v2
+
+dataset:
+  name: nuplan
+  version: nuplan-v1.1
+  # Development scenarios come from official training logs, locked evaluation
+  # from official validation logs, and the two never share a log. The smoke
+  # split exercises the pipeline and never appears in a reported result.
+  development_split: train
+  evaluation_split: val
+  smoke_split: mini
+
+simulation:
+  frequency_hz: 10
+  prediction_horizon_s: 4.0
+  # Non-reactive logged agents: the recording plays out as it happened and only
+  # the ego responds. A reactive background would change what the AEB is being
+  # measured against between one configuration and the next.
+  agents: non_reactive_logged
+
+# The corridor used to decide whether a scenario is worth simulating at all.
+# It is the ego footprint swept along the expert route over the horizon, widened
+# laterally, and it exists ONLY for the prefilter: it selects scenarios, it never
+# scores one. Using it to score would make the cohort a function of the outcome.
+prefilter:
+  corridor_lateral_margin_m: 0.5
+  corridor_horizon_s: 4.0
+  minimum_initial_ego_speed_mps: 2.0
+  maximum_oracle_min_ttc_s: 6.0
+
+cohort:
+  development_per_family: 50
+  evaluation_per_family: 100
+  # Development and evaluation never share a log. Scenarios cut from one log are
+  # the same road, the same traffic and often the same agents minutes apart, so a
+  # split that shares logs would report a tuned result as a held-out one.
+  log_disjoint: true
+
+# The four families the cohort is stratified across, and the nuPlan scenario
+# types that belong to each. A type appears in exactly one family, every type is
+# one the databases actually carry, and `aebrisk.cohort.filters.FAMILY_TYPES`
+# holds the same mapping — a contract test compares the two, because this file's
+# bytes are the protocol hash while the code is what selects scenarios.
+#
+# What the tag decides is which family a scenario is counted in. Whether a
+# threat is actually present is decided by the prefilter's corridor and TTC
+# rules on the oracle world state, never by the tag.
+scenario_families:
+  lead_or_stopping:
+    - following_lane_with_lead
+    - following_lane_with_slow_lead
+    - stopping_with_lead
+    - stopping_at_stop_sign_with_lead
+    - stopping_at_traffic_light_with_lead
+  # nuPlan tags no "cut in" and no "crossed by vehicle". What it does tag is the
+  # lane change itself, and the unprotected turns, which are where crossing
+  # traffic conflicts arise.
+  cut_in_or_crossing:
+    - changing_lane
+    - changing_lane_to_left
+    - changing_lane_to_right
+    - starting_unprotected_cross_turn
+    - starting_unprotected_noncross_turn
+  pedestrian_or_crosswalk:
+    - waiting_for_pedestrian_to_cross
+    - near_pedestrian_on_crosswalk
+    - near_pedestrian_on_crosswalk_with_ego
+    - behind_pedestrian_on_driveable
+  # `behind_bike` is the ONLY bicycle tag in nuPlan's vocabulary. The family is
+  # kept with one type rather than dropped, because the study exists to report
+  # what happens to vulnerable road users, and a family that turns out thin is
+  # reported with its count rather than quietly removed.
+  bicycle_or_vru:
+    - behind_bike
+
+aeb:
+  warning:
+    ttc_lt_s: 3.0
+    required_decel_gt_mps2: 2.0
+    consecutive_steps: 2
+  partial:
+    ttc_lt_s: 2.5
+    target_accel_mps2: -3.0
+  full:
+    ttc_lt_s: 1.5
+    required_decel_gt_mps2: 5.0
+    target_accel_mps2: -6.0
+  release:
+    no_qualifying_ttc_lt_s: 4.0
+    consecutive_steps: 5
+  acceleration_bounds_mps2: [-6.0, 2.0]
+  jerk_limit_mps3: 5.0

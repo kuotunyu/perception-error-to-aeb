@@ -28,7 +28,7 @@ plausible, and they point in the direction the hypothesis predicts.
 docker compose run --rm dev uv run --frozen python \
   .agents/skills/running-common-cohort-aeb-studies/scripts/validate_common_cohort.py \
   --runs-dir artifacts/runs \
-  --manifest artifacts/manifests/nuplan_aeb_v1.json
+  --manifest artifacts/manifests/nuplan_aeb_v2/evaluation.json
 ```
 
 Exit 0 means the configurations are comparable. Exit 1 lists what makes them

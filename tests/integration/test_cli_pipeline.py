@@ -31,7 +31,7 @@ def workspace(tmp_path: Path) -> Path:
     """A protocol, a cohort manifest, an evaluation and a claims file."""
 
     protocol = tmp_path / "protocol.yaml"
-    protocol.write_text("protocol: nuplan_aeb_v1\n", encoding="utf-8")
+    protocol.write_text("protocol: nuplan_aeb_v2\n", encoding="utf-8")
 
     manifest = tmp_path / "cohort.json"
     manifest.write_text(json.dumps({"scenario_tokens": ["s-0002", "s-0001"]}), encoding="utf-8")
