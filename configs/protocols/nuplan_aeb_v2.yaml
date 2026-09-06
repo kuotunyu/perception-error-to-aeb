@@ -34,6 +34,12 @@ dataset:
 simulation:
   frequency_hz: 10
   prediction_horizon_s: 4.0
+  # How long every scenario runs. Fixed rather than per-scenario, because two
+  # scenarios simulated for different lengths cannot be compared on any rate, and
+  # a configuration must never be able to change how long it is measured over.
+  # A recording with fewer frames than this after its anchor is ineligible, which
+  # is a property of the recording and so belongs in the prefilter.
+  scenario_duration_s: 15.0
   # Non-reactive logged agents: the recording plays out as it happened and only
   # the ego responds. A reactive background would change what the AEB is being
   # measured against between one configuration and the next.

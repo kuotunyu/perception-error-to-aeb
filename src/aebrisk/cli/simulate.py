@@ -12,9 +12,9 @@ wrong digest is worse than an absent one — it claims a reproducibility that wa
 never checked — and "unknown" is a truthful answer for a run outside the image.
 
 The scenario source is named on the command line rather than inferred. The
-synthetic source works today; the nuPlan source is refused until the portfolio
-order gate opens, and refusing loudly is better than reading a database this
-study is not yet allowed to read.
+synthetic source exercises the pipeline without a licensed dataset; the nuPlan
+source reads the real split, and refuses with the path it looked for when none
+is mounted. Naming the missing root beats a driver error three layers down.
 """
 
 # This module deliberately does NOT use `from __future__ import annotations`.
@@ -36,6 +36,11 @@ import typer
 
 from aebrisk.artifacts.envelope import canonical_json_bytes
 from aebrisk.attribution.factorial import formal_configurations
+from aebrisk.nuplan_adapter.database import resolve_installation
+
+#: Where the mounted nuPlan split is named. Read from the environment rather than
+#: taken as an option so one operator decision cannot disagree with another.
+DATA_ROOT_VAR = "NUPLAN_DATA_ROOT"
 
 #: Set by the container image so a run can name the environment it happened in.
 IMAGE_DIGEST_VAR = "AEBRISK_IMAGE_DIGEST"
@@ -117,6 +122,9 @@ def simulate(
     scenario_source: Annotated[
         str, typer.Option("--scenario-source", help="synthetic or nuplan.")
     ] = "nuplan",
+    split: Annotated[
+        str, typer.Option("--split", help="Which nuPlan split the scenarios come from.")
+    ] = "val",
 ) -> None:
     """Run one configuration and write its results and run context."""
 
@@ -133,12 +141,17 @@ def simulate(
         raise typer.BadParameter(f"the cohort manifest {str(manifest)!r} does not exist")
 
     if scenario_source == "nuplan":
-        # Refusing loudly is better than reading a database this study is not
-        # yet allowed to read. The gate opens when bev-calibration-lab releases.
-        raise typer.BadParameter(
-            "the nuplan scenario source is closed until the portfolio order gate "
-            "opens; use --scenario-source synthetic to exercise the pipeline"
-        )
+        # An operational check, not a gate: the command needs a mounted split and
+        # the operator who forgot to mount one should be told which path was
+        # looked for, rather than meeting a driver error three layers down.
+        try:
+            resolve_installation(Path(os.environ.get(DATA_ROOT_VAR, "")), split=split)
+        except (ValueError, FileNotFoundError) as error:
+            raise typer.BadParameter(
+                f"the nuplan scenario source needs a mounted split: {error}. Set "
+                f"{DATA_ROOT_VAR} to the nuPlan data root, or use "
+                "--scenario-source synthetic to exercise the pipeline without one"
+            ) from error
 
     tokens = tuple(json.loads(manifest.read_text(encoding="utf-8"))["scenario_tokens"])
     context = RunContext(

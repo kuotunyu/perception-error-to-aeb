@@ -37,6 +37,10 @@ CLOSED_LOOP_EGO = "closed_loop_controlled"
 WIRING_ID = "aebrisk-simulation-wiring/v1"
 
 PROTOCOL_FREQUENCY_HZ = 10.0
+#: How long every scenario runs, in seconds. Fixed by the protocol so that no
+#: configuration can change how long it is measured over; a contract test ties
+#: this to the protocol file, whose bytes are the published hash.
+PROTOCOL_SCENARIO_DURATION_S = 15.0
 
 
 @dataclass(frozen=True)

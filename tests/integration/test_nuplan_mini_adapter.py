@@ -5,9 +5,10 @@ that it reads a real scenario correctly: a fake is only ever as right as the
 author's belief about the devkit. This test is the one place that belief is
 checked, and it is the reason the fakes elsewhere are trustworthy.
 
-It skips, loudly and with a reason, whenever the dataset is absent. It is also
-gated by the portfolio's order gate: until `bev-calibration-lab` is released,
-no real nuPlan file may be read at all, so on this machine it skips today.
+It skips, loudly and with a reason, whenever the dataset is absent, which is
+what happens in CI and on any machine without a licensed copy. The portfolio's
+order gate opened when `driving-risk-metrics` released, so where the data is
+mounted this test runs.
 """
 
 from __future__ import annotations
@@ -37,9 +38,8 @@ def dataset_root() -> Path | None:
 requires_dataset = pytest.mark.skipif(
     dataset_root() is None,
     reason=(
-        f"{DATA_ROOT_VAR} does not point at a nuPlan mini split with log databases. "
-        "This is expected until the portfolio order gate opens: no real nuPlan file "
-        "may be read until bev-calibration-lab is released."
+        f"{DATA_ROOT_VAR} does not point at a nuPlan mini split with log databases, "
+        "so there is no real scenario to read. Mount one to run this test."
     ),
 )
 
@@ -91,16 +91,93 @@ def test_no_sensor_root_is_configured_for_the_real_dataset() -> None:
 
 
 def _first_scenario(layout: Any) -> Any:
-    """Build one scenario from the first log, importing the devkit lazily.
+    """Build one real scenario from the first log that has a pinned scenario type.
 
-    The import is inside the function because the devkit's scenario builder
-    pulls in its observation types, which pull in OpenCV. Importing it at module
-    scope would make this file unimportable in the container this project ships,
-    and the skip above would never be reached.
+    Through the query module rather than the devkit's scenario builder, which
+    cannot be imported here: it pulls in the map stack and the observation types,
+    which need rasterio and OpenCV, and this container has neither. That is the
+    boundary working, so this test exercises the path the study actually uses.
     """
 
-    raise pytest.skip(
-        "building a real scenario needs the devkit's scenario builder, which "
-        "imports the sensor stack; wire this up at P3-19 together with the "
-        "cohort freeze, when the order gate opens"
+    from aebrisk.cohort.filters import FAMILY_TYPES
+    from aebrisk.nuplan_adapter.query_scenario import build_scenario, scenarios_of_type
+    from aebrisk.nuplan_adapter.simulation import (
+        PROTOCOL_FREQUENCY_HZ,
+        PROTOCOL_SCENARIO_DURATION_S,
     )
+
+    wanted = sorted(
+        scenario_type
+        for scenario_types in FAMILY_TYPES.values()
+        for scenario_type in scenario_types
+    )
+    for database in sorted(layout.log_databases):
+        references = scenarios_of_type(str(database), wanted)
+        for reference in references:
+            try:
+                return build_scenario(
+                    reference.log_file,
+                    reference.token,
+                    duration_s=PROTOCOL_SCENARIO_DURATION_S,
+                    frequency_hz=PROTOCOL_FREQUENCY_HZ,
+                )
+            except ValueError:
+                # Too close to the end of its recording to run the full duration.
+                # That is an eligibility fact, not a failure; try the next one.
+                continue
+    raise pytest.skip(
+        "no log in the mounted split holds a scenario of a pinned type with enough "
+        "frames after it to run the protocol's duration"
+    )
+
+
+@requires_dataset
+def test_the_iteration_grid_runs_at_the_protocol_rate_over_real_timestamps() -> None:
+    """The log records at about 20 Hz; the study steps at 10, and must prove it does.
+
+    Reading the grid straight from the log would double every duration this study
+    reports, and nothing downstream would look wrong: the numbers would simply be
+    twice what they should be.
+    """
+
+    from aebrisk.nuplan_adapter.database import resolve_installation
+    from aebrisk.nuplan_adapter.simulation import (
+        PROTOCOL_FREQUENCY_HZ,
+        PROTOCOL_SCENARIO_DURATION_S,
+    )
+
+    root = dataset_root()
+    assert root is not None
+    scenario = _first_scenario(resolve_installation(root))
+
+    expected_steps = round(PROTOCOL_SCENARIO_DURATION_S * PROTOCOL_FREQUENCY_HZ)
+    assert scenario.get_number_of_iterations() == expected_steps
+
+    step_us = 1_000_000.0 / PROTOCOL_FREQUENCY_HZ
+    stamps = [
+        scenario.get_ego_state_at_iteration(index).time_us
+        for index in range(min(11, expected_steps))
+    ]
+    gaps = [later - earlier for earlier, later in zip(stamps, stamps[1:])]
+    # Real timestamps jitter by a few microseconds; a whole step out is a bug.
+    assert all(abs(gap - step_us) < step_us * 0.05 for gap in gaps), gaps
+
+
+@requires_dataset
+def test_a_real_scenario_reads_only_the_members_the_adapter_is_allowed_to_touch() -> None:
+    """The fakes elsewhere are only as right as this: a real object, the same members."""
+
+    from aebrisk.nuplan_adapter.database import resolve_installation
+    from aebrisk.nuplan_adapter.scenario import oracle_world_frame
+
+    root = dataset_root()
+    assert root is not None
+    scenario = _first_scenario(resolve_installation(root))
+
+    frame = oracle_world_frame(scenario, 0)
+
+    assert frame.scenario_token == scenario.token
+    assert frame.timestamp_us > 0
+    assert len({track.track_id for track in frame.tracks}) == len(frame.tracks)
+    assert all(track.visible for track in frame.tracks)
+    assert all(track.covariance_xy == (0.0, 0.0, 0.0, 0.0) for track in frame.tracks)

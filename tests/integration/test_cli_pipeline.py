@@ -6,9 +6,10 @@ one stage writes are the files the next stage reads. That seam is where a
 pipeline breaks, and it breaks silently: each stage passes its own tests while
 producing something the next one cannot use.
 
-THE INPUTS ARE SYNTHETIC AND NOTHING HERE IS A RESULT. The portfolio order gate
-forbids reading real nuPlan data until `bev-calibration-lab` is released, and
-this file exists precisely so the pipeline can be shown to work before then.
+THE INPUTS ARE SYNTHETIC AND NOTHING HERE IS A RESULT. The pipeline is shown to
+work without a licensed dataset, which is what lets it be checked in CI and on
+any machine; the real cohort is exercised by the integration tests that mount a
+nuPlan split and skip when none is there.
 """
 
 from __future__ import annotations
@@ -137,8 +138,19 @@ def test_the_cohort_hash_does_not_depend_on_the_manifest_order(workspace: Path) 
     assert first["cohort_sha256"] == second["cohort_sha256"]
 
 
-def test_the_nuplan_source_is_closed_until_the_order_gate_opens(workspace: Path) -> None:
-    """Refusing loudly beats reading a database this study may not read yet."""
+def test_the_nuplan_source_refuses_when_no_split_is_mounted(
+    workspace: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Naming the missing root beats a stack trace from deep inside a query.
+
+    The portfolio order gate that once closed this source opened when
+    `driving-risk-metrics` released. What remains is an operational check: the
+    command needs a mounted split, and an operator who forgot to mount one
+    should be told which path was looked for, in a second, rather than after a
+    driver error three layers down.
+    """
+
+    monkeypatch.delenv("NUPLAN_DATA_ROOT", raising=False)
 
     result = run(
         "simulate",
@@ -153,7 +165,41 @@ def test_the_nuplan_source_is_closed_until_the_order_gate_opens(workspace: Path)
     )
 
     assert result.exit_code != 0
-    assert "order gate" in result.output
+    assert "NUPLAN_DATA_ROOT" in result.output
+    assert "order gate" not in result.output
+
+
+def test_the_nuplan_source_is_accepted_when_a_split_is_mounted(
+    workspace: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """The source the study actually uses must be reachable, not permanently refused."""
+
+    root = tmp_path / "root"
+    split = root / "nuplan-v1.1" / "splits" / "mini"
+    split.mkdir(parents=True)
+    (split / "one.db").write_bytes(b"")
+    # The installation is a split AND its maps; the resolver checks both, so a
+    # fixture that made only the split would pass this test for the wrong reason.
+    (root / "maps").mkdir()
+    monkeypatch.setenv("NUPLAN_DATA_ROOT", str(root))
+
+    result = run(
+        "simulate",
+        "--protocol",
+        str(workspace / "protocol.yaml"),
+        "--manifest",
+        str(workspace / "cohort.json"),
+        "--config-id",
+        "oracle_aeb",
+        "--output-dir",
+        str(workspace / "runs"),
+        "--split",
+        "mini",
+    )
+
+    assert result.exit_code == 0, result.output
+    context = json.loads((workspace / "runs" / "run_context.json").read_text(encoding="utf-8"))
+    assert context["configuration_id"] == "oracle_aeb"
 
 
 # --------------------------------------------------------------------------

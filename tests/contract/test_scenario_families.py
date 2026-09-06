@@ -112,3 +112,22 @@ def test_the_vocabulary_records_where_it_came_from() -> None:
     assert provenance["log_databases_read"] >= 1
     assert provenance["observed_on"]
     assert vocabulary["scenario_types"] == sorted(set(vocabulary["scenario_types"]))
+
+
+def test_the_protocol_file_and_the_code_agree_on_the_simulation_timing() -> None:
+    """Rate and duration decide every reported duration; two sources would drift.
+
+    Only these two are compared. The protocol's `agents: non_reactive_logged` and
+    the wiring's `NON_REACTIVE_AGENTS = "log_playback_agents"` name the same
+    decision in two vocabularies — one the study's, one the devkit's — and
+    asserting a string transformation between them would test the transformation
+    rather than the agreement. `build_simulation_wiring` already refuses any
+    policy but that one.
+    """
+
+    from aebrisk.nuplan_adapter import simulation
+
+    timing = read_yaml(PROTOCOL_PATH)["simulation"]
+
+    assert float(timing["frequency_hz"]) == simulation.PROTOCOL_FREQUENCY_HZ
+    assert float(timing["scenario_duration_s"]) == simulation.PROTOCOL_SCENARIO_DURATION_S
