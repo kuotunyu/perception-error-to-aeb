@@ -153,6 +153,7 @@ class FakeToken:
         )
 
     def simulate(self, setup: Any, configuration: Any, replicate: int) -> Any:
+        from aebrisk.aeb.state_machine import AEBState
         from aebrisk.simulation.step_loop import StepLoopOutcome
 
         if configuration.configuration_id == self.failing_configuration:
@@ -161,7 +162,7 @@ class FakeToken:
             token=self.token,
             configuration_id=configuration.configuration_id,
             replicate=replicate,
-            states=(),
+            states=(AEBState.MONITOR,),
             commands=(),
             nominal_accelerations_mps2=(),
             collisions={"vru": 0, "vehicle": 0, "object": 0},
@@ -785,13 +786,23 @@ def test_resume_validates_existing_files_even_when_a_token_is_only_partly_writte
     assert path.read_bytes() == before
 
 
+@pytest.mark.parametrize("legacy", [False, True])
 def test_resume_accepts_matching_invalid_token_evidence(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, legacy: bool
 ) -> None:
     """An explained infrastructure exclusion is still a finished token to preserve."""
     module, document, runs = run_everything(monkeypatch, tmp_path, failing="dropout-high")
     output = tmp_path / "results"
     written(module, document, runs, output)
+    if legacy:
+        import json
+
+        for path in output.glob("*/*.json"):
+            payload = json.loads(path.read_bytes())
+            for record in payload["results"]:
+                record["schema_version"] = "aeb-scenario-result/v1"
+                record.pop("simulated_duration_s")
+            path.write_text(json.dumps(payload), encoding="utf-8")
     before = {p: p.read_bytes() for p in output.rglob("*.json")}
     module.validate_resume_results(
         document,
@@ -801,3 +812,90 @@ def test_resume_accepts_matching_invalid_token_evidence(
         cohort_manifest_sha256=MEMBERSHIP_SHA,
     )
     assert {p: p.read_bytes() for p in before} == before
+
+
+@pytest.mark.parametrize(
+    "mutation", ["missing", "null", "negative", "nan", "infinity", "bool", "string", "version"]
+)
+def test_resume_refuses_malformed_measured_exposure(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, mutation: str
+) -> None:
+    import json
+
+    module, document, runs = run_everything(monkeypatch, tmp_path)
+    output = tmp_path / "results"
+    written(module, document, runs, output)
+    path = output / "oracle_aeb" / "t-lead.json"
+    payload = json.loads(path.read_bytes())
+    record = payload["results"][0]
+    if mutation == "missing":
+        record.pop("simulated_duration_s")
+    elif mutation == "version":
+        record["schema_version"] = "aeb-scenario-result/v3"
+    else:
+        record["simulated_duration_s"] = {
+            "null": None,
+            "negative": -0.1,
+            "nan": float("nan"),
+            "infinity": float("inf"),
+            "bool": True,
+            "string": "1.0",
+        }[mutation]
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    before = path.read_bytes()
+    with pytest.raises(ValueError, match="resume token document cannot be read"):
+        module.validate_resume_results(
+            document,
+            output,
+            written_configurations=("oracle_aeb",),
+            protocol_sha256=PROTOCOL_SHA,
+            cohort_manifest_sha256=MEMBERSHIP_SHA,
+        )
+    assert path.read_bytes() == before
+
+
+def test_resume_refuses_valid_legacy_records_without_measured_exposure(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    import json
+
+    module, document, runs = run_everything(monkeypatch, tmp_path)
+    output = tmp_path / "results"
+    written(module, document, runs, output)
+    path = output / "oracle_aeb" / "t-lead.json"
+    payload = json.loads(path.read_bytes())
+    for record in payload["results"]:
+        record["schema_version"] = "aeb-scenario-result/v1"
+        record.pop("simulated_duration_s", None)
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    assert module.TokenResultsV1.model_validate_json(path.read_bytes()).results[0].valid
+    with pytest.raises(ValueError, match=r"measured.*exposure"):
+        module.validate_resume_results(
+            document,
+            output,
+            written_configurations=("oracle_aeb",),
+            protocol_sha256=PROTOCOL_SHA,
+            cohort_manifest_sha256=MEMBERSHIP_SHA,
+        )
+
+
+def test_token_json_round_trip_preserves_nested_measured_results(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    import json
+
+    module, document, runs = run_everything(monkeypatch, tmp_path)
+    output = tmp_path / "results"
+    written(module, document, runs, output)
+    raw = (output / "oracle_aeb" / "t-lead.json").read_bytes()
+    parsed = module.TokenResultsV1.model_validate_json(raw, strict=True)
+    nested = json.loads(module.token_results_bytes(parsed))["results"][0]
+    assert nested["schema_version"] == "aeb-scenario-result/v2"
+    assert nested["simulated_duration_s"] == 0.1
+    module.validate_resume_results(
+        document,
+        output,
+        written_configurations=("oracle_aeb",),
+        protocol_sha256=PROTOCOL_SHA,
+        cohort_manifest_sha256=MEMBERSHIP_SHA,
+    )

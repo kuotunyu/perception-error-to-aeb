@@ -732,16 +732,17 @@ def test_a_resolved_cohort_is_run_and_written(
     `tests/integration/test_nuplan_mini_adapter.py`, which skips without data.
     """
 
-    from aebrisk.artifacts.results import AEBScenarioResultV1
+    from aebrisk.artifacts.results import AEBScenarioResultV2
     from aebrisk.cli.simulate import RunContext, container_digest, write_run_context
     from aebrisk.cohort.manifest import load_manifest, membership_sha256
     from aebrisk.simulation.orchestrate import TokenRun, write_token_run
 
     mounted_split(tmp_path, monkeypatch)
 
-    def record(token: str) -> AEBScenarioResultV1:
-        return AEBScenarioResultV1(
-            schema_version="aeb-scenario-result/v1",
+    def record(token: str) -> AEBScenarioResultV2:
+        return AEBScenarioResultV2(
+            schema_version="aeb-scenario-result/v2",
+            simulated_duration_s=1.0,
             scenario_token=token,
             family="lead_or_stopping",
             configuration_id="oracle_aeb",

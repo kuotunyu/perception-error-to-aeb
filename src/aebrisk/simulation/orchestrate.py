@@ -33,9 +33,10 @@ from typing import Any, Literal, Optional, get_args
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from aebrisk.artifacts.results import AEBScenarioResultV1, ScenarioFamily
+from aebrisk.artifacts.results import AEBScenarioResult, ScenarioFamily
 from aebrisk.cohort.filters import FAMILY_TYPES, family_of
 from aebrisk.cohort.manifest import CohortManifestV1
+from aebrisk.metrics.safety import measured_simulated_seconds
 from aebrisk.nuplan_adapter.database import NuPlanInstallation
 from aebrisk.nuplan_adapter.nuplan_scenario import NuPlanScenario
 from aebrisk.nuplan_adapter.query_scenario import ScenarioReference, scenarios_of_type
@@ -75,7 +76,7 @@ class TokenRun:
 
     token: str
     family: ScenarioFamily
-    results: tuple[AEBScenarioResultV1, ...]
+    results: tuple[AEBScenarioResult, ...]
     invalid: Optional[InvalidScenario]
 
 
@@ -94,7 +95,7 @@ class TokenResultsV1(BaseModel):
     valid: bool
     invalid_reason: Optional[str] = None
     invalid_phase: Optional[str] = None
-    results: tuple[AEBScenarioResultV1, ...]
+    results: tuple[AEBScenarioResult, ...]
 
 
 def resolve_cohort(
@@ -257,7 +258,7 @@ def documents_for(
 ) -> tuple[TokenResultsV1, ...]:
     """One document per configuration this invocation is responsible for writing."""
 
-    by_configuration: dict[str, list[AEBScenarioResultV1]] = {
+    by_configuration: dict[str, list[AEBScenarioResult]] = {
         name: [] for name in written_configurations
     }
     for record in run.results:
@@ -427,6 +428,7 @@ def validate_resume_results(
                         raise ValueError(
                             f"the resume token document contains records for another token, family or configuration: {path}"
                         )
+                    measured_simulated_seconds(document.results, cohort=(token,))
 
 
 def write_cohort_results(

@@ -61,6 +61,56 @@ def valid_values(**overrides: Any) -> dict[str, Any]:
     return values
 
 
+def v2_model() -> Any:
+    model = getattr(load_results_module(), "AEBScenarioResultV2", None)
+    assert model is not None, "measured result v2 is missing"
+    return model
+
+
+@pytest.mark.parametrize("duration", [None, 0.0, -1.0, float("inf"), float("nan")])
+def test_valid_v2_requires_positive_finite_measured_exposure(duration: Any) -> None:
+    model = v2_model()
+    with pytest.raises(ValidationError, match="simulated_duration_s"):
+        model.model_validate(
+            valid_values(schema_version="aeb-scenario-result/v2", simulated_duration_s=duration)
+        )
+
+
+def test_v2_exposure_is_required_even_for_invalid_runs() -> None:
+    model = v2_model()
+    for valid in (True, False):
+        with pytest.raises(ValidationError, match="simulated_duration_s"):
+            model.model_validate(
+                valid_values(
+                    schema_version="aeb-scenario-result/v2",
+                    valid=valid,
+                    invalid_reason=None if valid else "database failure",
+                )
+            )
+
+
+@pytest.mark.parametrize("valid,duration", [(True, 5.6), (False, None), (False, 2.0)])
+def test_v2_round_trip_preserves_measured_or_explicit_unknown_exposure(
+    valid: bool, duration: Any
+) -> None:
+    model = v2_model()
+    record = model.model_validate(
+        valid_values(
+            schema_version="aeb-scenario-result/v2",
+            simulated_duration_s=duration,
+            valid=valid,
+            invalid_reason=None if valid else "database failure",
+        )
+    )
+    assert model.model_validate_json(record.model_dump_json()) == record
+    assert record.simulated_duration_s == duration
+
+
+def test_legacy_v1_remains_readable_without_invented_exposure() -> None:
+    record = load_results_module().AEBScenarioResultV1.model_validate(valid_values())
+    assert "simulated_duration_s" not in record.model_dump()
+
+
 def test_a_complete_result_validates() -> None:
     """The success path must pass or no simulation could record its outcome."""
 

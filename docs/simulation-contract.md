@@ -128,6 +128,30 @@ overlap lasts.
 An at-fault collision does end the run, because integrating a vehicle through a
 body it has hit is not a simulation of anything.
 
+## Measured simulation exposure
+
+New runs emit `aeb-scenario-result/v2`. Its required `simulated_duration_s` is
+the number of executed steps (`len(outcome.states)`) divided by the setup's
+frequency in Hz. It includes the final collision or route-end step. Valid
+results require a finite, strictly positive duration. An infrastructure failure
+with no recoverable step count explicitly records `null` and remains excluded
+from every configuration's common valid cohort.
+
+The requested horizon and braking duration are different measurements. For
+example, the synthetic stationary-lead diagnostic has a 9 s horizon, but its
+no-AEB run collides after 56 steps at 10 Hz and records 5.6 s. This is synthetic
+verification only, not evidence about nuPlan or a real AEB.
+
+`metrics.safety.measured_simulated_seconds(results, cohort=...)` sums each
+included replicate's actual duration for one configuration, after selection of
+the common valid cohort. Formal per-hour rates must use this measured sum.
+`summarize_configuration` continues to accept an explicitly supplied measured
+denominator for historical callers. Historical `aeb-scenario-result/v1` records
+remain readable and retain their original fields, but the measured-exposure
+helper and formal resume refuse valid v1 records: missing elapsed time is never
+filled from the horizon, intervention duration, or zero. Token JSON preserves
+the nested version discriminator and v2 duration through serialization.
+
 ## Invalidity
 
 Infrastructure-invalid scenarios are removed from **all** configurations before

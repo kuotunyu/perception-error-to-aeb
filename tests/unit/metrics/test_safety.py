@@ -76,6 +76,56 @@ def summarize(results: tuple, **kwargs: Any) -> Any:
     return safety.summarize_configuration(results, **settings)
 
 
+def measured_helper() -> Any:
+    helper = getattr(load_safety_module(), "measured_simulated_seconds", None)
+    assert helper is not None, "measured exposure aggregation is missing"
+    return helper
+
+
+def measured_result(token: str, duration: Any, **overrides: Any) -> Any:
+    from aebrisk.artifacts import results
+
+    model = getattr(results, "AEBScenarioResultV2", None)
+    assert model is not None, "measured result v2 is missing"
+    values = result(token, **overrides).model_dump()
+    values.update(schema_version="aeb-scenario-result/v2", simulated_duration_s=duration)
+    return model.model_validate(values)
+
+
+def test_mixed_execution_lengths_use_the_common_valid_cohort_and_every_replicate() -> None:
+    helper = measured_helper()
+    records = (
+        measured_result("s-1", 5.6, collision_vehicle=1),
+        measured_result("s-1", 2.3, replicate=1),
+        measured_result("s-2", 9.0, collision_object=1),
+        result("outside", collision_vru=99),
+        measured_result("invalid", None, valid=False, invalid_reason="database failure"),
+    )
+    seconds = helper(records, cohort=("s-1", "s-2", "invalid"))
+    assert seconds == pytest.approx(16.9)
+    summary = summarize(records, cohort=("s-1", "s-2", "invalid"), simulated_seconds=seconds)
+    assert summary.collisions_per_hour.numerator == 2
+    assert summary.collisions_per_hour.denominator == pytest.approx(16.9)
+    assert summary.collisions_per_hour.value == pytest.approx(426.0355029585799)
+
+
+def test_measured_aggregation_refuses_valid_legacy_exposure() -> None:
+    helper = measured_helper()
+    with pytest.raises(ValueError, match=r"measured.*exposure"):
+        helper((result("s-1"),), cohort=("s-1",))
+
+
+def test_measured_aggregation_refuses_multiple_configurations() -> None:
+    helper = measured_helper()
+    with pytest.raises(ValueError, match="configuration"):
+        helper((result("s-1"), result("s-2", configuration_id="other")), cohort=("s-1",))
+
+
+def test_empty_measured_cohort_has_no_exposure() -> None:
+    helper = measured_helper()
+    assert helper((result("outside"),), cohort=()) == 0.0
+
+
 # --------------------------------------------------------------------------
 # Counting
 # --------------------------------------------------------------------------

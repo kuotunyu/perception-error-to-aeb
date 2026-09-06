@@ -23,7 +23,7 @@ x = 32.5, which is 23 m short of contact — more than the 17 m it needs to stop
 
 from __future__ import annotations
 
-from aebrisk.artifacts.results import AEBScenarioResultV1
+from aebrisk.artifacts.results import AEBScenarioResultV2
 from aebrisk.simulation.common_cohort import ExperimentConfiguration, common_valid_scenarios
 from aebrisk.simulation.runner import run_common_scenario
 from aebrisk.simulation.synthetic import TOKEN, SyntheticLeadScenario
@@ -65,7 +65,7 @@ def corrupted_zero() -> ExperimentConfiguration:
     )
 
 
-def run(*configurations: ExperimentConfiguration) -> dict[str, AEBScenarioResultV1]:
+def run(*configurations: ExperimentConfiguration) -> dict[str, AEBScenarioResultV2]:
     """Run the token, always including the oracle every other cell is measured against.
 
     The runner refuses a matrix without that reference, because a missed
@@ -89,6 +89,12 @@ def test_without_the_aeb_the_ego_hits_the_lead_vehicle() -> None:
 
     assert outcome.collision_vehicle == 1
     assert outcome.collision_energy > 0.0
+
+
+def test_measured_exposure_stops_at_collision_instead_of_the_nine_second_horizon() -> None:
+    outcomes = run(no_aeb(), oracle_aeb())
+    assert getattr(outcomes["no_aeb"], "simulated_duration_s", None) == 5.6
+    assert getattr(outcomes["oracle_aeb"], "simulated_duration_s", None) == 9.0
 
 
 def test_with_the_aeb_the_ego_stops_short() -> None:
@@ -186,7 +192,7 @@ def test_the_configurations_share_a_cohort() -> None:
         (no_aeb(), oracle_aeb(), corrupted_zero()),
         protocol=object(),
     )
-    by_config: dict[str, tuple[AEBScenarioResultV1, ...]] = {}
+    by_config: dict[str, tuple[AEBScenarioResultV2, ...]] = {}
     for record in results:
         by_config.setdefault(record.configuration_id, ())
         by_config[record.configuration_id] += (record,)

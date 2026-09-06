@@ -37,7 +37,7 @@ from typing import Any, Optional
 from aebrisk.aeb.state_machine import AEBCommand
 from aebrisk.artifacts.results import (
     SCENARIO_FAMILIES,
-    AEBScenarioResultV1,
+    AEBScenarioResultV2,
     ScenarioFamily,
 )
 from aebrisk.metrics.events import (
@@ -104,21 +104,22 @@ def _failed_result(
     configuration: ExperimentConfiguration,
     replicate: int,
     invalid: InvalidScenario,
-) -> AEBScenarioResultV1:
+) -> AEBScenarioResultV2:
     """A result that records a failure rather than a measurement.
 
-    Every measurement field is zero because nothing was measured. The `valid`
-    flag and its reason are what any reader must go by, and the cohort excludes
-    the token on both.
+    Outcome counters carry placeholders and elapsed execution time is explicitly
+    unknown. The `valid` flag and its reason are what any reader must go by,
+    and the cohort excludes the token on both.
     """
 
-    return AEBScenarioResultV1(
-        schema_version="aeb-scenario-result/v1",
+    return AEBScenarioResultV2(
+        schema_version="aeb-scenario-result/v2",
         scenario_token=setup.scenario_token,
         family=setup.family,
         configuration_id=configuration.configuration_id,
         replicate=replicate,
         valid=False,
+        simulated_duration_s=None,
         invalid_reason=invalid.reason,
         collision_vru=0,
         collision_vehicle=0,
@@ -172,16 +173,17 @@ def _record_from_outcome(
     configuration: ExperimentConfiguration,
     outcome: StepLoopOutcome,
     summary: EventMatchSummary,
-) -> AEBScenarioResultV1:
+) -> AEBScenarioResultV2:
     """Assemble one run's record from what it measured and what it was compared with."""
 
-    return AEBScenarioResultV1(
-        schema_version="aeb-scenario-result/v1",
+    return AEBScenarioResultV2(
+        schema_version="aeb-scenario-result/v2",
         scenario_token=setup.scenario_token,
         family=setup.family,
         configuration_id=configuration.configuration_id,
         replicate=outcome.replicate,
         valid=True,
+        simulated_duration_s=len(outcome.states) / setup.frequency_hz,
         invalid_reason=None,
         collision_vru=outcome.collisions["vru"],
         collision_vehicle=outcome.collisions["vehicle"],
@@ -228,7 +230,7 @@ def run_common_scenario(
     scenario: Any,
     configurations: tuple[ExperimentConfiguration, ...],
     protocol: Any,
-) -> tuple[tuple[AEBScenarioResultV1, ...], Optional[InvalidScenario]]:
+) -> tuple[tuple[AEBScenarioResultV2, ...], Optional[InvalidScenario]]:
     """Run one token through every configuration under a single shared setup."""
 
     if not configurations:

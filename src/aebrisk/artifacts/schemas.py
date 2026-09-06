@@ -17,7 +17,7 @@ from typing import Any
 from pydantic import BaseModel
 
 from aebrisk.artifacts.envelope import PortfolioArtifactEnvelopeV1
-from aebrisk.artifacts.results import AEBScenarioResultV1
+from aebrisk.artifacts.results import AEBScenarioResultV1, AEBScenarioResultV2
 from aebrisk.artifacts.run_record import RunRecordV1
 
 #: Every committed schema, paired with the model it is generated from.
@@ -25,6 +25,7 @@ SCHEMA_MODELS: tuple[tuple[str, type[BaseModel]], ...] = (
     ("portfolio_artifact_envelope_v1", PortfolioArtifactEnvelopeV1),
     ("run_record_v1", RunRecordV1),
     ("aeb_result_v1", AEBScenarioResultV1),
+    ("aeb_result_v2", AEBScenarioResultV2),
 )
 
 

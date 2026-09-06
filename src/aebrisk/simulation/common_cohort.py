@@ -17,7 +17,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass
 
-from aebrisk.artifacts.results import AEBScenarioResultV1, ScenarioFamily
+from aebrisk.artifacts.results import AEBScenarioResult, ScenarioFamily
 from aebrisk.errors.pipeline import ERROR_CHANNELS, SEVERITIES
 from aebrisk.nuplan_adapter.query_scenario import ScenarioReference
 
@@ -86,7 +86,7 @@ class ExperimentConfiguration:
 
 
 def common_valid_scenarios(
-    results_by_config: Mapping[str, tuple[AEBScenarioResultV1, ...]],
+    results_by_config: Mapping[str, tuple[AEBScenarioResult, ...]],
 ) -> tuple[str, ...]:
     """The tokens that produced a valid result in every configuration, sorted.
 

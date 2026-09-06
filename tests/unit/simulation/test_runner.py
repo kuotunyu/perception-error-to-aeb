@@ -56,13 +56,14 @@ def make_configuration(configuration_id: str, **overrides: Any) -> Any:
 
 
 def make_outcome(token: str, configuration_id: str, replicate: int, **overrides: Any) -> Any:
+    from aebrisk.aeb.state_machine import AEBState
     from aebrisk.simulation.step_loop import StepLoopOutcome
 
     fields: dict[str, Any] = {
         "token": token,
         "configuration_id": configuration_id,
         "replicate": replicate,
-        "states": (),
+        "states": (AEBState.MONITOR,),
         "commands": (),
         "nominal_accelerations_mps2": (),
         "collisions": {"vru": 0, "vehicle": 0, "object": 0},
@@ -164,6 +165,45 @@ def oracle_configuration(configuration_id: str = "oracle_aeb", **overrides: Any)
 
 def two_configurations() -> tuple[Any, ...]:
     return (make_configuration("no_aeb", aeb_enabled=False), oracle_configuration())
+
+
+@pytest.mark.parametrize(
+    "steps,route_end,collision,want",
+    [
+        (150, False, 0, 15.0),
+        (56, False, 1, 5.6),
+        (23, True, 0, 2.3),
+    ],
+)
+def test_result_exposure_counts_executed_steps(
+    steps: int, route_end: bool, collision: int, want: float
+) -> None:
+    from aebrisk.aeb.state_machine import AEBState
+
+    class TimedScenario(SpyScenario):
+        def simulate(self, setup: Any, configuration: Any, replicate: int) -> Any:
+            return make_outcome(
+                self.token,
+                configuration.configuration_id,
+                replicate,
+                states=(AEBState.MONITOR,) * steps,
+                ran_out_of_route=route_end,
+                collisions={"vru": 0, "vehicle": collision, "object": 0},
+            )
+
+    records, invalid = load_runner_module().run_common_scenario(
+        TimedScenario(), (oracle_configuration(),), protocol=object()
+    )
+    assert invalid is None
+    assert getattr(records[0], "simulated_duration_s", None) == want
+
+
+def test_infrastructure_failure_records_explicit_unknown_exposure() -> None:
+    records, invalid = load_runner_module().run_common_scenario(
+        SpyScenario(fail_on="oracle_aeb"), (oracle_configuration(),), protocol=object()
+    )
+    assert invalid is not None
+    assert records[0].model_dump().get("simulated_duration_s", "missing") is None
 
 
 # --------------------------------------------------------------------------

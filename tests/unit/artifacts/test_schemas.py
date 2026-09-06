@@ -32,7 +32,12 @@ def test_every_committed_schema_has_a_model() -> None:
 
     names = [name for name, _ in schemas.SCHEMA_MODELS]
 
-    assert names == ["portfolio_artifact_envelope_v1", "run_record_v1", "aeb_result_v1"]
+    assert names == [
+        "portfolio_artifact_envelope_v1",
+        "run_record_v1",
+        "aeb_result_v1",
+        "aeb_result_v2",
+    ]
 
 
 def test_the_dialect_is_stated_explicitly() -> None:
@@ -81,6 +86,7 @@ def test_writing_schemas_produces_the_declared_files(tmp_path: Path) -> None:
 
     assert sorted(path.name for path in written) == [
         "aeb_result_v1.json",
+        "aeb_result_v2.json",
         "portfolio_artifact_envelope_v1.json",
         "run_record_v1.json",
     ]

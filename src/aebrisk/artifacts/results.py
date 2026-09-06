@@ -9,7 +9,7 @@ bug would otherwise reach a published figure looking like a measurement.
 from __future__ import annotations
 
 import math
-from typing import Literal, Optional, get_args
+from typing import Annotated, Literal, Optional, Union, get_args
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -44,12 +44,12 @@ def _require_finite(value: Optional[float], name: str) -> Optional[float]:
     return value
 
 
-class AEBScenarioResultV1(BaseModel):
-    """What one (scenario, configuration, replicate) simulation produced."""
+class _AEBScenarioResultBase(BaseModel):
+    """Measurements and physical constraints shared by all result versions."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    schema_version: Literal["aeb-scenario-result/v1"]
+    schema_version: str
     scenario_token: str = Field(min_length=1)
     family: ScenarioFamily
     configuration_id: str = Field(min_length=1)
@@ -130,7 +130,7 @@ class AEBScenarioResultV1(BaseModel):
         return value
 
     @model_validator(mode="after")
-    def validate_validity_is_explained(self) -> AEBScenarioResultV1:
+    def validate_validity_is_explained(self) -> _AEBScenarioResultBase:
         """Tie the validity flag to its reason in both directions.
 
         An invalid run without a reason is indistinguishable from one that was
@@ -143,3 +143,30 @@ class AEBScenarioResultV1(BaseModel):
         if not self.valid and not self.invalid_reason:
             raise ValueError("an invalid result must record its invalid_reason")
         return self
+
+
+class AEBScenarioResultV1(_AEBScenarioResultBase):
+    """What one (scenario, configuration, replicate) simulation produced."""
+
+    schema_version: Literal["aeb-scenario-result/v1"]
+
+
+class AEBScenarioResultV2(_AEBScenarioResultBase):
+    """One simulation's measurements, including its actual executed duration."""
+
+    schema_version: Literal["aeb-scenario-result/v2"]
+    simulated_duration_s: Optional[float] = Field(gt=0.0, allow_inf_nan=False, strict=True)
+
+    @model_validator(mode="after")
+    def validate_measured_exposure(self) -> AEBScenarioResultV2:
+        """Valid measurements require exposure; failed execution can be unknown."""
+
+        if self.valid and self.simulated_duration_s is None:
+            raise ValueError("a valid result requires measured simulated_duration_s")
+        return self
+
+
+# The discriminator preserves each nested version and its fields on serialization.
+AEBScenarioResult = Annotated[
+    Union[AEBScenarioResultV1, AEBScenarioResultV2], Field(discriminator="schema_version")
+]

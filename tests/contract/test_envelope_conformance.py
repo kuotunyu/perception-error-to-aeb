@@ -114,7 +114,7 @@ def test_consuming_a_p2_artifact_is_never_implicit(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize(
     "name",
-    ["portfolio_artifact_envelope_v1", "run_record_v1", "aeb_result_v1"],
+    ["portfolio_artifact_envelope_v1", "run_record_v1", "aeb_result_v1", "aeb_result_v2"],
 )
 def test_every_declared_schema_exists_and_is_valid_json(name: str) -> None:
     """A schema nobody can parse is documentation, not a contract."""
@@ -132,6 +132,7 @@ def test_every_declared_schema_exists_and_is_valid_json(name: str) -> None:
         ("portfolio_artifact_envelope_v1", "envelope.PortfolioArtifactEnvelopeV1"),
         ("run_record_v1", "run_record.RunRecordV1"),
         ("aeb_result_v1", "results.AEBScenarioResultV1"),
+        ("aeb_result_v2", "results.AEBScenarioResultV2"),
     ],
 )
 def test_every_schema_regenerates_byte_identically(name: str, model_path: str) -> None:

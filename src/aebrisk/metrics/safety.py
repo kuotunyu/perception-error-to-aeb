@@ -27,7 +27,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Optional
 
-from aebrisk.artifacts.results import AEBScenarioResultV1
+from aebrisk.artifacts.results import AEBScenarioResult, AEBScenarioResultV2
 
 SECONDS_PER_HOUR = 3600.0
 METRES_PER_100KM = 100_000.0
@@ -103,8 +103,39 @@ def _mean(values: Sequence[float]) -> Optional[float]:
     return sum(values) / len(values) if values else None
 
 
+def _configuration_identifiers(results: tuple[AEBScenarioResult, ...]) -> set[str]:
+    identifiers = {record.configuration_id for record in results}
+    if len(identifiers) > 1:
+        raise ValueError(
+            f"results span several configuration_id values {sorted(identifiers)}; a "
+            "summary describes one cell, and mixing two would report neither"
+        )
+    return identifiers
+
+
+def measured_simulated_seconds(
+    results: tuple[AEBScenarioResult, ...], *, cohort: tuple[str, ...]
+) -> float:
+    """Sum executed seconds for one configuration's common valid cohort.
+
+    Every included replicate contributes its own measured duration. Legacy valid
+    results have no exposure and are refused; an empty selection sums to zero.
+    Callers must first determine the common cohort across all configurations.
+    """
+
+    _configuration_identifiers(results)
+    included_tokens = set(cohort)
+    total = 0.0
+    for record in results:
+        if record.scenario_token in included_tokens and record.valid:
+            if not isinstance(record, AEBScenarioResultV2) or record.simulated_duration_s is None:
+                raise ValueError("valid results require measured simulation exposure (result/v2)")
+            total += record.simulated_duration_s
+    return total
+
+
 def summarize_configuration(
-    results: tuple[AEBScenarioResultV1, ...],
+    results: tuple[AEBScenarioResult, ...],
     *,
     cohort: tuple[str, ...],
     simulated_seconds: float,
@@ -121,12 +152,7 @@ def summarize_configuration(
                 f"simulated_metres must be finite and non-negative, got {simulated_metres!r}"
             )
 
-    identifiers = {record.configuration_id for record in results}
-    if len(identifiers) > 1:
-        raise ValueError(
-            f"results span several configuration_id values {sorted(identifiers)}; a "
-            "summary describes one cell, and mixing two would report neither"
-        )
+    identifiers = _configuration_identifiers(results)
 
     included = tuple(
         record for record in results if record.scenario_token in set(cohort) and record.valid
