@@ -37,7 +37,7 @@ from aebrisk.cohort.census import census_json_bytes, census_split
 from aebrisk.cohort.freeze import freeze_split, write_eligibility
 from aebrisk.cohort.manifest import save_manifest
 from aebrisk.cohort.splits import OFFICIAL_SPLIT_FOR
-from aebrisk.nuplan_adapter.database import resolve_installation
+from aebrisk.nuplan_adapter.database import EXPECTED_MAP_VERSION, resolve_installation
 
 app = typer.Typer(add_completion=False, help="Check a nuPlan installation.")
 
@@ -74,12 +74,22 @@ def preflight(
         "split": installation.split,
         "data_root": str(installation.data_root),
         "maps_root": str(installation.maps_root),
+        "map_version": installation.map_version,
         "log_database_count": len(installation.log_databases),
     }
     output.parent.mkdir(parents=True, exist_ok=True)
     with output.open("w", encoding="utf-8", newline="\n") as handle:
         json.dump(report, handle, indent=2, sort_keys=True)
         handle.write("\n")
+    if installation.map_version != EXPECTED_MAP_VERSION:
+        # Said out loud, not refused: this study reads no map, so the version
+        # cannot change a result. What it can do is make a record ambiguous
+        # months later about which release was mounted.
+        typer.echo(
+            f"note: the map release is {installation.map_version!r}, not "
+            f"{EXPECTED_MAP_VERSION!r}; nothing here reads a map, so this is recorded "
+            "rather than refused"
+        )
     typer.echo(f"preflight wrote {output}")
 
 
@@ -127,15 +137,15 @@ def freeze(
         Path, typer.Option("--output-dir", help="Where the manifest and its evidence go.")
     ],
     split: Annotated[
-        str, typer.Option("--split", help="development or evaluation.")
+        str, typer.Option("--split", help="development, evaluation or smoke.")
     ] = "evaluation",
 ) -> None:
     """Freeze one cohort out of the official split it is drawn from, once.
 
     The official split is not an option: development comes from nuPlan's
-    training logs and locked evaluation from its validation logs, and letting an
-    operator pair them differently is how held-out recordings end up in the half
-    that thresholds were chosen on.
+    training logs, locked evaluation from its validation logs, and the smoke
+    cohort from mini. Letting an operator pair them differently is how held-out
+    recordings end up in the half that thresholds were chosen on.
 
     This reads recordings and takes a while. It writes two documents: the
     manifest, which `simulate` reads and every published number is checked
@@ -164,7 +174,7 @@ def freeze(
         frozen = freeze_split(
             installation,
             families,
-            split=cast(Literal["development", "evaluation"], split),
+            split=cast(Literal["development", "evaluation", "smoke"], split),
             protocol_sha256=protocol_sha256,
         )
         save_manifest(frozen.manifest, output_dir / f"{split}.json")

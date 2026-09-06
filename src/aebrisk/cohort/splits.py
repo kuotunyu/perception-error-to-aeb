@@ -34,15 +34,24 @@ from collections.abc import Iterable
 
 from aebrisk.cohort.filters import CorridorCandidate, passes_prefilter
 
-SPLITS: tuple[str, ...] = ("development", "evaluation")
+#: The two halves the study reports on, and the smoke cohort that exists to prove
+#: the pipeline runs on real recordings before a formal run is started. The smoke
+#: is not a result and is never aggregated with either half.
+SPLITS: tuple[str, ...] = ("development", "evaluation", "smoke")
 
-#: The plan's budget per family, per split.
-PER_FAMILY_CAP: dict[str, int] = {"development": 50, "evaluation": 100}
+#: The plan's budget per family, per split. The smoke's two per family is enough
+#: to exercise every configuration on every family mini carries, and small enough
+#: that the whole smoke finishes in minutes.
+PER_FAMILY_CAP: dict[str, int] = {"development": 50, "evaluation": 100, "smoke": 2}
 
 #: Which official nuPlan split each cohort is drawn from. Development scenarios
 #: come from the training logs and locked evaluation from the validation logs,
 #: so the two can never share a log, a road or an agent.
-OFFICIAL_SPLIT_FOR: dict[str, str] = {"development": "train", "evaluation": "val"}
+OFFICIAL_SPLIT_FOR: dict[str, str] = {
+    "development": "train",
+    "evaluation": "val",
+    "smoke": "mini",
+}
 
 
 def _digest(protocol_hash: str, value: str) -> str:

@@ -171,3 +171,32 @@ def test_the_environment_defaults_to_the_process_environment(
 
     with pytest.raises(ValueError, match=r"^NUPLAN_SENSOR_ROOT is set\. "):
         database.resolve_installation(root)
+
+
+def test_the_map_release_beside_the_maps_is_recorded(tmp_path: Path) -> None:
+    """A record that cannot say which map release was mounted is ambiguous later.
+
+    Nothing in this study reads a map, so the version is evidence rather than a
+    dependency: it says what was present when a cohort was frozen.
+    """
+
+    database = load_database_module()
+    root = build_installation(tmp_path)
+    (root / "maps" / "nuplan-maps-v1.0.json").write_text("{}", encoding="utf-8")
+
+    installation = database.resolve_installation(root, split="mini", environment={})
+
+    assert installation.map_version == "nuplan-maps-v1.0"
+    assert installation.map_version == database.EXPECTED_MAP_VERSION
+
+
+def test_an_installation_with_no_map_manifest_records_that_too(tmp_path: Path) -> None:
+    """Absent is a fact about the installation, and `None` says it without guessing."""
+
+    database = load_database_module()
+
+    installation = database.resolve_installation(
+        build_installation(tmp_path), split="mini", environment={}
+    )
+
+    assert installation.map_version is None

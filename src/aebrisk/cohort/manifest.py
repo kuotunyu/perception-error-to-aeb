@@ -28,7 +28,7 @@ class CohortManifestV1(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     schema_version: Literal["aeb-cohort-manifest/v1"]
-    split: Literal["development", "evaluation"]
+    split: Literal["development", "evaluation", "smoke"]
     protocol_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     families: dict[str, tuple[str, ...]]
     log_names: tuple[str, ...]

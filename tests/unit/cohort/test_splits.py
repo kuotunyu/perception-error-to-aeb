@@ -289,3 +289,38 @@ def test_duplicate_scenario_tokens_are_refused() -> None:
         splits.freeze_family_cohort(
             candidates + candidates[:1], "development", protocol_hash=PROTOCOL_HASH
         )
+
+
+def test_the_smoke_cohort_is_drawn_from_mini_and_from_nothing_else() -> None:
+    """The smoke proves the pipeline runs on real recordings before a formal run starts.
+
+    It is not a result and is never aggregated with either half, so what matters
+    is the other direction: a mini recording must never reach development or
+    locked evaluation, whatever the candidate set contains.
+    """
+
+    splits = load_splits_module()
+    candidates = (
+        make_candidates(4, logs=2)
+        + make_candidates(4, logs=2, official_split="val")
+        + make_candidates(4, logs=2, official_split="mini")
+    )
+
+    smoke = splits.freeze_family_cohort(candidates, "smoke", protocol_hash=PROTOCOL_HASH)
+    development = splits.freeze_family_cohort(
+        candidates, "development", protocol_hash=PROTOCOL_HASH
+    )
+    evaluation = splits.freeze_family_cohort(candidates, "evaluation", protocol_hash=PROTOCOL_HASH)
+
+    assert len(smoke) == 2
+    assert all(token.startswith("mini-") for token in smoke)
+    assert not any(token.startswith("mini-") for token in development + evaluation)
+
+
+def test_the_smoke_cohort_is_capped_far_below_the_two_halves() -> None:
+    """Two per family exercises every configuration without costing an evening."""
+
+    splits = load_splits_module()
+
+    assert splits.PER_FAMILY_CAP["smoke"] == 2
+    assert splits.OFFICIAL_SPLIT_FOR["smoke"] == "mini"

@@ -118,7 +118,7 @@ def freeze_split(
     installation: NuPlanInstallation,
     family_types: Mapping[str, Sequence[str]],
     *,
-    split: Literal["development", "evaluation"],
+    split: Literal["development", "evaluation", "smoke"],
     protocol_sha256: str,
     pool_size: int = SELECTION_POOL_PER_FAMILY,
 ) -> FrozenSplit:

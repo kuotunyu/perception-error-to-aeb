@@ -83,7 +83,7 @@ class TokenResultsV1(BaseModel):
     schema_version: Literal["aeb-token-results/v1"]
     scenario_token: str = Field(min_length=1)
     family: ScenarioFamily
-    split: Literal["development", "evaluation"]
+    split: Literal["development", "evaluation", "smoke"]
     configuration_id: str = Field(min_length=1)
     protocol_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     cohort_manifest_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
@@ -226,7 +226,7 @@ def token_results_bytes(document: TokenResultsV1) -> bytes:
 def documents_for(
     run: TokenRun,
     *,
-    split: Literal["development", "evaluation"],
+    split: Literal["development", "evaluation", "smoke"],
     written_configurations: Sequence[str],
     protocol_sha256: str,
     cohort_manifest_sha256: str,

@@ -83,7 +83,11 @@ MINIMUM_INITIAL_EGO_SPEED_MPS = 2.0
 #: fixes the bound rather than leaving it to whoever writes the comparison.
 MAXIMUM_ORACLE_MIN_TTC_S = 6.0
 
-OFFICIAL_SPLITS: tuple[str, ...] = ("train", "val")
+#: The official nuPlan splits a candidate can be recorded in. `mini` is here for
+#: the smoke cohort only: it is neither of the two halves the study reports on,
+#: and `OFFICIAL_SPLIT_FOR` keeps it out of both, so a mini recording can never
+#: reach development or locked evaluation however the candidates are assembled.
+OFFICIAL_SPLITS: tuple[str, ...] = ("train", "val", "mini")
 
 
 @dataclass(frozen=True)

@@ -16,6 +16,16 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
+#: The map release the pinned devkit expects, and the name of the manifest file
+#: nuPlan ships beside the four map directories. This study reads no map, so a
+#: different version cannot change a single number it produces — which is
+#: exactly why the version is RECORDED rather than enforced. A preflight that
+#: refused here would block a run for a reason that could not affect it; a
+#: preflight that said nothing would leave a reader unable to tell which map
+#: release was mounted when the cohort was frozen.
+EXPECTED_MAP_VERSION = "nuplan-maps-v1.0"
+MAP_VERSION_GLOB = "nuplan-maps-*.json"
+
 #: Set by anyone intending to replay camera or lidar data. This project never
 #: does, so its presence is a configuration error rather than an option.
 SENSOR_ROOT_VAR = "NUPLAN_SENSOR_ROOT"
@@ -30,6 +40,9 @@ class NuPlanInstallation:
     maps_root: Path
     split: str
     log_databases: tuple[Path, ...]
+    #: The map release found beside the map directories, or ``None`` when the
+    #: installation carries no manifest naming one.
+    map_version: Optional[str] = None
 
 
 def resolve_installation(
@@ -64,9 +77,11 @@ def resolve_installation(
     if not maps_root.is_dir():
         raise FileNotFoundError(f"nuPlan maps root does not exist: {maps_root}")
 
+    versions = sorted(path.stem for path in maps_root.glob(MAP_VERSION_GLOB))
     return NuPlanInstallation(
         data_root=root,
         maps_root=maps_root,
         split=split,
         log_databases=databases,
+        map_version=versions[0] if versions else None,
     )

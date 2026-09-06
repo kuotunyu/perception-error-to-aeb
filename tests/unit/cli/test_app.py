@@ -537,3 +537,61 @@ def test_a_cohort_name_that_is_not_a_cohort_is_refused(tmp_path: Path) -> None:
 
     assert result.exit_code != 0
     assert "holdout" in result.output
+
+
+def test_the_preflight_records_the_map_release_and_says_nothing_when_it_is_expected(
+    tmp_path: Path,
+) -> None:
+    """The version is evidence, not a dependency: this study reads no map.
+
+    A preflight that refused on it would block a run for a reason that could not
+    affect a single number; one that said nothing at all would leave a reader
+    unable to tell which release was mounted when the cohort was frozen. So it
+    is written into the record, and only a SURPRISE is worth a line of output.
+    """
+
+    root = _installation(tmp_path / "root")
+    (root / "maps" / "nuplan-maps-v1.0.json").write_text("{}", encoding="utf-8")
+    output = tmp_path / "preflight.json"
+
+    result = invoke(
+        "data",
+        "preflight",
+        "--db-root",
+        str(root),
+        "--map-root",
+        str(root / "maps"),
+        "--split",
+        "mini",
+        "--output",
+        str(output),
+    )
+
+    assert result.exit_code == 0, result.output
+    assert json.loads(output.read_text(encoding="utf-8"))["map_version"] == "nuplan-maps-v1.0"
+    assert "note: the map release" not in result.output
+
+
+def test_a_map_release_that_is_not_the_expected_one_is_noted_rather_than_refused(
+    tmp_path: Path,
+) -> None:
+    """The pair to the test above; without it the note could never have fired."""
+
+    root = _installation(tmp_path / "root")
+    (root / "maps" / "nuplan-maps-v2.0.json").write_text("{}", encoding="utf-8")
+
+    result = invoke(
+        "data",
+        "preflight",
+        "--db-root",
+        str(root),
+        "--map-root",
+        str(root / "maps"),
+        "--split",
+        "mini",
+        "--output",
+        str(tmp_path / "preflight.json"),
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "note: the map release is 'nuplan-maps-v2.0'" in result.output
