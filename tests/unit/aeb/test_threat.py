@@ -787,14 +787,17 @@ def test_a_body_that_cannot_close_the_gap_skips_the_rollout() -> None:
 
     threat = load_threat_module()
 
-    # The corridor's front edge is 2.5 m ahead of the ego's centre and the
-    # track's rear is 2 m behind its own, so 95.5 m of clear road separates them;
-    # closing at 10 m/s for 4 s covers at most 40 of it.
+    # Settled by arithmetic alone: 100 m between the centres, less how far each
+    # box's corner can reach (2.9155 m for the corridor, 2.2361 m for the body),
+    # less the 40 m the two can close in four seconds at 10 m/s.
     assessment = threat.assess_threat(make_ego(), make_track(center=(100.0, 0.0)))
 
     assert assessment.ttc_s is None
     assert assessment.predicted_overlap is False
-    assert assessment.min_clearance_m == pytest.approx(95.5 - 40.0, abs=1e-6)
+    assert assessment.min_clearance_m == pytest.approx(
+        100.0 - threat.half_diagonal_m((4.0, 2.0), 0.5) - threat.half_diagonal_m((4.0, 2.0)) - 40.0,
+        abs=1e-9,
+    )
 
 
 def test_a_body_inside_the_bound_is_still_rolled_forward() -> None:

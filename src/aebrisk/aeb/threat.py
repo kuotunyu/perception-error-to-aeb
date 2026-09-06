@@ -162,25 +162,38 @@ def polygons_overlap(first_n2: Float64Array, second_n2: Float64Array) -> bool:
     Bodies that exactly touch count as overlapping. Contact is a collision, and
     treating a shared edge as clear would let the study report a grazing impact
     as an avoided one.
+
+    Every axis is projected in one pass rather than in a loop with an early
+    return. The loop looked cheaper and was not: eight axes cost eight NumPy
+    round trips, and the early return only helps when the first axis separates.
     """
 
-    for axis in np.concatenate([_axes(first_n2), _axes(second_n2)]):
-        first = first_n2 @ axis
-        second = second_n2 @ axis
-        if first.max() < second.min() or second.max() < first.min():
-            return False
-    return True
+    axes = np.concatenate([_axes(first_n2), _axes(second_n2)])
+    first = first_n2 @ axes.T
+    second = second_n2 @ axes.T
+    separated = (first.max(axis=0) < second.min(axis=0)) | (second.max(axis=0) < first.min(axis=0))
+    return not bool(separated.any())
 
 
-def _point_segment_distance(point: Float64Array, start: Float64Array, end: Float64Array) -> float:
-    edge = end - start
-    length_squared = float(edge @ edge)
+def _point_segment_distances(points_n2: Float64Array, polygon_m2: Float64Array) -> Float64Array:
+    """Every point's distance to every edge of one polygon, in one pass.
+
+    The scalar version of this — one NumPy call per point-edge pair — was 5.9 of
+    the 10.7 seconds one simulated scenario took, over 1.58 million calls, and
+    almost all of that was NumPy's per-call overhead rather than arithmetic.
+    """
+
+    starts = polygon_m2
+    edges = np.roll(polygon_m2, -1, axis=0) - polygon_m2
     # A degenerate edge cannot occur here: every polygon comes from
     # ``oriented_box_polygon``, which refuses a non-positive dimension.
-    position = float((point - start) @ edge) / length_squared
-    clamped = min(1.0, max(0.0, position))
-    nearest = start + clamped * edge
-    return float(np.hypot(*(point - nearest)))
+    lengths_squared = np.einsum("ij,ij->i", edges, edges)
+    offsets = points_n2[:, None, :] - starts[None, :, :]
+    position = np.einsum("nmj,mj->nm", offsets, edges) / lengths_squared
+    nearest = starts[None, :, :] + np.clip(position, 0.0, 1.0)[:, :, None] * edges[None, :, :]
+    separation = points_n2[:, None, :] - nearest
+    distances: Float64Array = np.hypot(separation[:, :, 0], separation[:, :, 1])
+    return distances
 
 
 def polygon_clearance(first_n2: Float64Array, second_n2: Float64Array) -> float:
@@ -196,17 +209,43 @@ def polygon_clearance(first_n2: Float64Array, second_n2: Float64Array) -> float:
     if polygons_overlap(first_n2, second_n2):
         return 0.0
 
-    best = math.inf
-    for source, target in ((first_n2, second_n2), (second_n2, first_n2)):
-        for point in source:
-            for index in range(len(target)):
-                best = min(
-                    best,
-                    _point_segment_distance(
-                        point, target[index], target[(index + 1) % len(target)]
-                    ),
-                )
-    return best
+    return min(
+        float(_point_segment_distances(first_n2, second_n2).min()),
+        float(_point_segment_distances(second_n2, first_n2).min()),
+    )
+
+
+def half_diagonal_m(size_lw_m: tuple[float, float], margin_m: float = 0.0) -> float:
+    """How far a box's corner reaches from its centre, whatever its heading."""
+
+    return 0.5 * math.hypot(size_lw_m[0] + 2.0 * margin_m, size_lw_m[1] + 2.0 * margin_m)
+
+
+def separation_at_least(
+    first_center_xy_m: tuple[float, float],
+    first_size_lw_m: tuple[float, float],
+    second_center_xy_m: tuple[float, float],
+    second_size_lw_m: tuple[float, float],
+    margin_m: float = 0.0,
+) -> float:
+    """A lower bound on the clearance between two boxes, from arithmetic alone.
+
+    Two centres cannot be closer than their distance apart less how far each
+    box's corner reaches, whatever either heading is. The bound costs a hypot
+    and the exact answer costs two polygons and thirty-two point-to-edge
+    distances, and in a real urban frame — 227 tracked objects in the scenario
+    profiled on 2026-09-06 — almost every one of them is far enough away that
+    the bound settles it.
+    """
+
+    return (
+        math.hypot(
+            second_center_xy_m[0] - first_center_xy_m[0],
+            second_center_xy_m[1] - first_center_xy_m[1],
+        )
+        - half_diagonal_m(first_size_lw_m, margin_m)
+        - half_diagonal_m(second_size_lw_m)
+    )
 
 
 def _longitudinal_gap(ego_state: EgoKinematicState, track: TrackState) -> float:
@@ -264,9 +303,35 @@ def assess_threat(
     if not isinstance(corridor_margin_m, (int, float)) or isinstance(corridor_margin_m, bool):
         raise ValueError("corridor_margin_m must be a number")
 
-    # The bound. `polygon_clearance` is exact and costs one rollout step; the
-    # rollout costs forty-one. A body that cannot close the measured gap within
-    # the horizon cannot overlap the corridor at any step of it.
+    reach = (
+        math.hypot(
+            ego_state.velocity_xy_mps[0] - track.velocity_xy_mps[0],
+            ego_state.velocity_xy_mps[1] - track.velocity_xy_mps[1],
+        )
+        * horizon_s
+    )
+
+    # Arithmetic first, geometry second. Both bounds are sound and the cheap one
+    # settles the overwhelming majority of a real frame's tracks.
+    bound = separation_at_least(
+        ego_state.center_xy_m,
+        ego_state.size_lw_m,
+        track.center_xy_m,
+        track.size_lw_m,
+        margin_m=corridor_margin_m,
+    )
+    if bound > reach:
+        return ThreatAssessment(
+            track_id=track.track_id,
+            ttc_s=None,
+            required_deceleration_mps2=_required_deceleration(ego_state, track),
+            predicted_overlap=False,
+            min_clearance_m=bound - reach,
+        )
+
+    # The tighter bound. `polygon_clearance` is exact and costs one rollout step;
+    # the rollout costs forty-one. A body that cannot close the measured gap
+    # within the horizon cannot overlap the corridor at any step of it.
     separation = polygon_clearance(
         oriented_box_polygon(
             ego_state.center_xy_m,
@@ -275,13 +340,6 @@ def assess_threat(
             margin_m=corridor_margin_m,
         ),
         oriented_box_polygon(track.center_xy_m, track.yaw_rad, track.size_lw_m),
-    )
-    reach = (
-        math.hypot(
-            ego_state.velocity_xy_mps[0] - track.velocity_xy_mps[0],
-            ego_state.velocity_xy_mps[1] - track.velocity_xy_mps[1],
-        )
-        * horizon_s
     )
     if separation > reach:
         return ThreatAssessment(

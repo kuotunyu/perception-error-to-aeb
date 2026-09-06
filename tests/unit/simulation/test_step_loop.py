@@ -435,3 +435,45 @@ def test_a_world_source_that_goes_backwards_is_refused() -> None:
 
     with pytest.raises(ValueError, match=r"^the world source went backwards in time at step 2"):
         run(module, steps=3, source=lambda step: (stamps[step], ()))
+
+
+def bodies(*centres: tuple[float, float]) -> Any:
+    """Several stationary vehicles, wherever they are put."""
+
+    def tracks(step: int, timestamp_us: int) -> tuple[TrackState, ...]:
+        return tuple(
+            TrackState(
+                track_id=f"body-{index}",
+                category="vehicle",
+                center_xy_m=centre,
+                yaw_rad=0.0,
+                size_lw_m=EGO_SIZE,
+                velocity_xy_mps=(0.0, 0.0),
+                visible=True,
+                source_timestamp_us=timestamp_us,
+                covariance_xy=(0.0, 0.0, 0.0, 0.0),
+            )
+            for index, centre in enumerate(centres)
+        )
+
+    return tracks
+
+
+def test_a_body_that_cannot_be_the_closest_does_not_change_the_clearance() -> None:
+    """The reported clearance stays exact; a far body only loses its geometry.
+
+    A real urban frame carries over two hundred tracked objects and two of them
+    matter. Measuring every one of them exactly cost 90 percent of a simulated
+    scenario's time, so a body whose arithmetic bound already exceeds the closest
+    approach seen so far is skipped — which cannot change the minimum, because
+    the bound is never above the true clearance.
+    """
+
+    module = load_step_loop_module()
+
+    alone = run(module, bodies((60.0, 0.0)), steps=60)
+    crowded = run(module, bodies((60.0, 0.0), (200.0, 80.0)), steps=60)
+
+    assert crowded.min_clearance_m == alone.min_clearance_m
+    assert crowded.collisions == alone.collisions
+    assert crowded.states == alone.states

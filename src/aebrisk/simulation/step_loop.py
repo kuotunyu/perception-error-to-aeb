@@ -45,6 +45,7 @@ from aebrisk.aeb.threat import (
     assess_threat,
     oriented_box_polygon,
     polygon_clearance,
+    separation_at_least,
 )
 from aebrisk.errors.channels import ScenarioChannels
 from aebrisk.errors.pipeline import ErrorConfiguration, ErrorKey, apply_error_pipeline
@@ -278,13 +279,20 @@ def run_steps(
         ego_polygon = oriented_box_polygon(pose, yaw, ego_size_lw_m)
         struck: Optional[TrackState] = None
         for track in history[-1].tracks:
-            clearance = polygon_clearance(
-                ego_polygon,
-                oriented_box_polygon(track.center_xy_m, track.yaw_rad, track.size_lw_m),
-            )
-            min_clearance = min(min_clearance, clearance)
-            if clearance == 0.0 and struck is None:
-                struck = track
+            # Arithmetic before geometry. The bound is never above the true
+            # clearance, so a track whose bound already exceeds the closest
+            # approach seen so far cannot be the closest and cannot be touching:
+            # skipping it leaves the reported minimum exactly what it was. A real
+            # urban frame carries over two hundred tracks and two of them matter.
+            at_least = separation_at_least(pose, ego_size_lw_m, track.center_xy_m, track.size_lw_m)
+            if at_least < min_clearance:
+                clearance = polygon_clearance(
+                    ego_polygon,
+                    oriented_box_polygon(track.center_xy_m, track.yaw_rad, track.size_lw_m),
+                )
+                min_clearance = min(min_clearance, clearance)
+                if clearance == 0.0 and struck is None:
+                    struck = track
 
         if struck is not None:
             collisions[_category_column(struck.category)] += 1

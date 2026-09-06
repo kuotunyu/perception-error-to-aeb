@@ -46,10 +46,16 @@ from aebrisk.nuplan_adapter.query_scenario import ScenarioReference, scenarios_o
 #: Named so a test can freeze a cohort without a log database.
 QUERY_SCENARIOS = scenarios_of_type
 
-#: How many candidates per family are kept from the sweep, in freeze order. Far
-#: more than any cap, and small enough that the pool costs a megabyte rather
-#: than a gigabyte. Exhausting it without filling the cap is a refusal.
-SELECTION_POOL_PER_FAMILY = 5000
+#: How many candidates per family are kept from the sweep, in freeze order.
+#: Exhausting it without filling the cap is a refusal, so it has to be wide
+#: enough for the least accepting family: measured on mini on 2026-09-06, only
+#: 3.8 percent of `lead_or_stopping` candidates pass the prefilter, because the
+#: tag marks the moment the ego HAS stopped behind a lead and a stopped ego had
+#: no braking decision to make. A hundred acceptances at that rate needs about
+#: 2,600 examinations, so twenty thousand is a wide margin and still costs a few
+#: megabytes rather than the gigabyte that holding a 677,553-scenario family
+#: would.
+SELECTION_POOL_PER_FAMILY = 20000
 
 ELIGIBILITY_SCHEMA_VERSION = "aeb-cohort-eligibility/v1"
 
