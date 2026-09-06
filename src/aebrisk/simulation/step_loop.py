@@ -126,7 +126,6 @@ def _category_column(category: str) -> str:
 def run_steps(
     *,
     token: str,
-    family: str,
     route_xy: Float64Array,
     tracks_at_step: Callable[[int, int], Sequence[TrackState]],
     steps: int,
@@ -183,6 +182,7 @@ def run_steps(
         previous_acceleration_mps2=0.0,
     )
     travelled = 0.0
+    stop_distance: Optional[float] = None
     speed = float(initial_speed_mps)
     applied = 0.0
     pose, yaw = pose_at_distance(route_xy, travelled)
@@ -254,6 +254,12 @@ def run_steps(
 
         speed = max(0.0, speed + applied * dt_s)
         travelled += speed * dt_s
+        if stop_distance is None and speed <= STOPPED_SPEED_MPS:
+            # The FIRST time it came to rest, not the last. The AEB releases
+            # after its clear steps and the blind nominal controller then
+            # re-accelerates, so a stopping distance read off the final speed
+            # would report a run that stopped as never having stopped at all.
+            stop_distance = travelled
         if travelled >= total_route_m:
             # The recording ended. Continuing would invent road nobody drove.
             travelled = total_route_m
@@ -278,7 +284,6 @@ def run_steps(
         if ran_out:
             break
 
-    stopped = speed <= STOPPED_SPEED_MPS
     return StepLoopOutcome(
         token=token,
         configuration_id=configuration.configuration_id,
@@ -296,6 +301,6 @@ def run_steps(
         distance_travelled_m=travelled,
         final_speed_mps=speed,
         final_pose_xy_m=pose,
-        stop_distance_m=travelled if stopped else None,
+        stop_distance_m=stop_distance,
         ran_out_of_route=ran_out,
     )

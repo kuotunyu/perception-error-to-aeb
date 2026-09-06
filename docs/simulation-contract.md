@@ -63,6 +63,37 @@ rather than inherited from a shell.
 `--scenario-source synthetic` exercises the whole pipeline with no licensed data,
 which is what lets the command line be checked in CI and on any machine.
 
+## Missed and false interventions
+
+Neither is a property of a run. Both are defined by comparing one run's braking
+with the ORACLE run's braking on the same token, which no single simulation can
+see. So a simulator returns what it measured together with its command trace,
+and `run_common_scenario` — the only place that holds all of a token's runs —
+assembles every result record once the last configuration has finished.
+
+The reference is the single configuration whose observation is the oracle's and
+whose AEB is enabled. A matrix without exactly one of those is refused before
+anything is simulated: with none, the two headline metrics have nothing to be
+measured against; with two, which one was chosen would decide every missed
+intervention in the study. The oracle passes through no error channel, so its
+replicates must produce the identical trace, and replicates that disagree are
+refused for the same reason.
+
+A configuration with no AEB is scored as zero missed and zero false rather than
+as having missed everything the oracle braked for. It has nothing to brake with,
+and counting the oracle's interventions against it would make the baseline that
+exists to show the scenario was dangerous read as the study's worst perception
+failure.
+
+The matched delay is SIGNED: this run's onset minus the oracle's. A negative
+delay is an intervention that arrived early, which is neither missed nor false,
+and folding the sign away would report it as late.
+
+A token whose run fails partway is returned as that failure alone. The runs that
+had already finished were measured correctly, but the comparison they would be
+scored by never happened, and a record carrying zeros for those two fields would
+be a fabricated result rather than a partial one.
+
 ## Invalidity
 
 Infrastructure-invalid scenarios are removed from **all** configurations before

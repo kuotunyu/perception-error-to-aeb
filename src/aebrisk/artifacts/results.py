@@ -70,9 +70,19 @@ class AEBScenarioResultV1(BaseModel):
 
     missed_interventions: int = Field(ge=0)
     false_interventions: int = Field(ge=0)
+
+    #: One SIGNED difference of brake onsets per matched intervention: this run's
+    #: onset minus the oracle's. Negative means it braked EARLIER than the oracle
+    #: did, which is not a failure and must not be folded away — an absolute
+    #: value would report an early intervention as a late one, and a clamp would
+    #: report it as simultaneous.
     matched_delay_s: tuple[float, ...] = ()
 
-    #: ``None`` where the ego never came to a stop, which is not a distance of zero.
+    #: How far the ego had travelled the FIRST time it came to rest, or ``None``
+    #: where it never did — which is not a distance of zero. The first time
+    #: rather than the last, because an AEB that stops the vehicle and then
+    #: releases still stopped it, and a distance read off the final speed would
+    #: report that run as never having stopped.
     stop_distance_m: Optional[float] = None
     max_deceleration_mps2: float = Field(ge=0.0, le=MAX_DECELERATION_MPS2)
     max_abs_jerk_mps3: float = Field(ge=0.0)
@@ -96,11 +106,19 @@ class AEBScenarioResultV1(BaseModel):
     @field_validator("matched_delay_s")
     @classmethod
     def validate_delays(cls, value: tuple[float, ...]) -> tuple[float, ...]:
-        """A delay is finite and non-negative; a negative one reverses cause and effect."""
+        """A delay is finite. Its SIGN is the measurement and is left alone.
+
+        This validator required non-negative delays until the runner began
+        producing them, on the reasoning that a negative delay reverses cause
+        and effect. It does not: the delay is the difference between two onsets,
+        and a corrupted run that braked before the oracle did is early rather
+        than impossible. Refusing it would have discarded exactly the runs where
+        perception error made the AEB jumpy.
+        """
 
         for delay in value:
-            if not math.isfinite(delay) or delay < 0.0:
-                raise ValueError("matched_delay_s entries must be finite and non-negative")
+            if not math.isfinite(delay):
+                raise ValueError("matched_delay_s entries must be finite")
         return value
 
     @model_validator(mode="after")

@@ -10,6 +10,12 @@ The second rule is the guarded transaction. A token is run for all its
 configurations or it is used in none of them. Keeping the configurations that
 finished would average them over a different set of roads than the one that
 failed, and that difference would be reported as an effect of perception error.
+
+The third rule is that the two headline failures are produced here. A missed
+intervention is not a property of a run: it is a property of a run compared with
+the oracle's run of the same token, which no single simulation can see. So the
+simulator returns what it measured, including its braking trace, and this module
+assembles the record once every configuration has finished.
 """
 
 from __future__ import annotations
@@ -49,33 +55,51 @@ def make_configuration(configuration_id: str, **overrides: Any) -> Any:
     return ExperimentConfiguration(**fields)
 
 
-def make_result(token: str, configuration_id: str, replicate: int, **overrides: Any) -> Any:
-    from aebrisk.artifacts.results import AEBScenarioResultV1
+def make_outcome(token: str, configuration_id: str, replicate: int, **overrides: Any) -> Any:
+    from aebrisk.simulation.step_loop import StepLoopOutcome
 
     fields: dict[str, Any] = {
-        "schema_version": "aeb-scenario-result/v1",
-        "scenario_token": token,
-        "family": "lead_or_stopping",
+        "token": token,
         "configuration_id": configuration_id,
         "replicate": replicate,
-        "valid": True,
-        "invalid_reason": None,
-        "collision_vru": 0,
-        "collision_vehicle": 0,
-        "collision_object": 0,
-        "collision_energy": 0.0,
+        "states": (),
+        "commands": (),
+        "nominal_accelerations_mps2": (),
+        "collisions": {"vru": 0, "vehicle": 0, "object": 0},
+        "collision_energy_j": 0.0,
         "min_ttc_s": 2.0,
         "min_clearance_m": 1.0,
-        "missed_interventions": 0,
-        "false_interventions": 0,
-        "matched_delay_s": (),
-        "stop_distance_m": None,
         "max_deceleration_mps2": 3.0,
         "max_abs_jerk_mps3": 5.0,
         "intervention_duration_s": 1.0,
+        "distance_travelled_m": 40.0,
+        "final_speed_mps": 8.0,
+        "final_pose_xy_m": (40.0, 0.0),
+        "stop_distance_m": None,
+        "ran_out_of_route": False,
     }
     fields.update(overrides)
-    return AEBScenarioResultV1(**fields)
+    return StepLoopOutcome(**fields)
+
+
+def trace(pattern: str) -> tuple[Any, ...]:
+    """A braking trace written as a picture: `.` monitors and `b` brakes.
+
+    The simulation steps on a 0.1 s grid, so `".....bbbbb"` is an intervention
+    that began half a second in, which is how a reader of these tests needs to
+    think about onset rather than in step indices.
+    """
+
+    from aebrisk.aeb.state_machine import AEBCommand, AEBState
+
+    return tuple(
+        AEBCommand(
+            state=AEBState.PARTIAL if mark == "b" else AEBState.MONITOR,
+            target_acceleration_mps2=-3.0 if mark == "b" else 0.0,
+            selected_track_id="lead-0001" if mark == "b" else None,
+        )
+        for mark in pattern
+    )
 
 
 class SpyScenario:
@@ -106,11 +130,39 @@ class SpyScenario:
         self.seen.append((setup, configuration.configuration_id, replicate))
         if configuration.configuration_id == self.fail_on:
             raise RuntimeError("the log database went away")
-        return make_result(self.token, configuration.configuration_id, replicate)
+        return make_outcome(self.token, configuration.configuration_id, replicate)
+
+
+class TracedScenario(SpyScenario):
+    """A scenario whose braking trace is chosen per configuration, and per replicate.
+
+    Nothing else about the runs differs, so any missed or false intervention in
+    the records came from the comparison rather than from the simulation.
+    """
+
+    def __init__(self, traces: dict[str, Any], token: str = "s-0001") -> None:
+        super().__init__(token=token)
+        self.traces = traces
+
+    def simulate(self, setup: Any, configuration: Any, replicate: int) -> Any:
+        self.seen.append((setup, configuration.configuration_id, replicate))
+        pattern = self.traces[configuration.configuration_id]
+        if not isinstance(pattern, str):
+            pattern = pattern[replicate]
+        return make_outcome(
+            self.token,
+            configuration.configuration_id,
+            replicate,
+            commands=trace(pattern),
+        )
+
+
+def oracle_configuration(configuration_id: str = "oracle_aeb", **overrides: Any) -> Any:
+    return make_configuration(configuration_id, observation_mode="oracle", **overrides)
 
 
 def two_configurations() -> tuple[Any, ...]:
-    return (make_configuration("no_aeb", aeb_enabled=False), make_configuration("oracle_aeb"))
+    return (make_configuration("no_aeb", aeb_enabled=False), oracle_configuration())
 
 
 # --------------------------------------------------------------------------
@@ -167,6 +219,7 @@ def test_every_configuration_and_replicate_is_run() -> None:
     scenario = SpyScenario()
     configurations = (
         make_configuration("no_aeb", aeb_enabled=False, replicate_count=1),
+        oracle_configuration(replicate_count=1),
         make_configuration("corrupted", replicate_count=3),
     )
 
@@ -175,11 +228,12 @@ def test_every_configuration_and_replicate_is_run() -> None:
     assert invalid is None
     assert [(name, replicate) for _, name, replicate in scenario.seen] == [
         ("no_aeb", 0),
+        ("oracle_aeb", 0),
         ("corrupted", 0),
         ("corrupted", 1),
         ("corrupted", 2),
     ]
-    assert len(results) == 4
+    assert len(results) == 5
 
 
 def test_the_configuration_order_is_preserved() -> None:
@@ -277,12 +331,12 @@ def test_a_collision_is_not_an_infrastructure_failure() -> None:
 
     class Colliding(SpyScenario):
         def simulate(self, setup: Any, configuration: Any, replicate: int) -> Any:
-            return make_result(
+            return make_outcome(
                 self.token,
                 configuration.configuration_id,
                 replicate,
-                collision_vehicle=1,
-                collision_energy=120_000.0,
+                collisions={"vru": 0, "vehicle": 1, "object": 0},
+                collision_energy_j=120_000.0,
                 min_ttc_s=0.0,
                 min_clearance_m=0.0,
             )
@@ -329,7 +383,7 @@ def test_a_result_for_the_wrong_token_is_refused() -> None:
 
     class Confused(SpyScenario):
         def simulate(self, setup: Any, configuration: Any, replicate: int) -> Any:
-            return make_result("s-9999", configuration.configuration_id, replicate)
+            return make_outcome("s-9999", configuration.configuration_id, replicate)
 
     with pytest.raises(ValueError, match=r"^simulator returned scenario_token 's-9999' for token "):
         runner.run_common_scenario(Confused(), two_configurations(), protocol=object())
@@ -342,7 +396,7 @@ def test_a_result_for_the_wrong_configuration_is_refused() -> None:
 
     class Confused(SpyScenario):
         def simulate(self, setup: Any, configuration: Any, replicate: int) -> Any:
-            return make_result(self.token, "somewhere-else", replicate)
+            return make_outcome(self.token, "somewhere-else", replicate)
 
     with pytest.raises(
         ValueError,
@@ -479,3 +533,226 @@ def test_a_setup_that_never_terminates_is_refused() -> None:
             frequency_hz=10.0,
             termination_s=0.0,
         )
+
+
+# --------------------------------------------------------------------------
+# The comparison the records are assembled from
+# --------------------------------------------------------------------------
+
+
+def by_configuration(results: tuple[Any, ...]) -> dict[str, Any]:
+    return {record.configuration_id: record for record in results}
+
+
+def test_a_corrupted_run_that_braked_late_is_counted_as_a_miss() -> None:
+    """Braking 0.4 s after the oracle is not the same protective action arriving later."""
+
+    runner = load_runner_module()
+    scenario = TracedScenario({"oracle_aeb": ".....bbbbb", "late": ".........bbbbb"})
+
+    results, invalid = runner.run_common_scenario(
+        scenario,
+        (oracle_configuration(), make_configuration("late")),
+        protocol=object(),
+    )
+
+    assert invalid is None
+    late = by_configuration(results)["late"]
+    assert late.missed_interventions == 1
+    assert late.false_interventions == 0
+    assert late.matched_delay_s == pytest.approx((0.4,))
+
+
+def test_a_corrupted_run_that_braked_for_nothing_is_counted_as_false() -> None:
+    """The cost side of the trade: braking for something the oracle never braked for."""
+
+    runner = load_runner_module()
+    scenario = TracedScenario({"oracle_aeb": "..........", "jumpy": "....bbb..."})
+
+    results, _ = runner.run_common_scenario(
+        scenario,
+        (oracle_configuration(), make_configuration("jumpy")),
+        protocol=object(),
+    )
+
+    jumpy = by_configuration(results)["jumpy"]
+    assert jumpy.false_interventions == 1
+    assert jumpy.missed_interventions == 0
+    assert jumpy.matched_delay_s == ()
+
+
+def test_a_run_that_braked_when_the_oracle_did_is_neither() -> None:
+    """The control: an intervention at the same moment is not a failure of any kind."""
+
+    runner = load_runner_module()
+    scenario = TracedScenario({"oracle_aeb": ".....bbbbb", "agreeing": ".....bbbbb"})
+
+    results, _ = runner.run_common_scenario(
+        scenario,
+        (oracle_configuration(), make_configuration("agreeing")),
+        protocol=object(),
+    )
+
+    agreeing = by_configuration(results)["agreeing"]
+    assert (agreeing.missed_interventions, agreeing.false_interventions) == (0, 0)
+    assert agreeing.matched_delay_s == pytest.approx((0.0,))
+
+
+def test_the_reference_run_is_scored_against_itself() -> None:
+    """Its own record must show the zero, or a reader cannot see what the baseline was."""
+
+    runner = load_runner_module()
+    scenario = TracedScenario({"oracle_aeb": ".....bbbbb", "agreeing": ".....bbbbb"})
+
+    results, _ = runner.run_common_scenario(
+        scenario,
+        (oracle_configuration(), make_configuration("agreeing")),
+        protocol=object(),
+    )
+
+    oracle = by_configuration(results)["oracle_aeb"]
+    assert (oracle.missed_interventions, oracle.false_interventions) == (0, 0)
+
+
+def test_a_configuration_with_no_aeb_has_missed_nothing() -> None:
+    """It has nothing to brake with, so the oracle's braking is not braking it MISSED.
+
+    Counting it would make the baseline that exists to show the scenario was
+    dangerous read as the study's worst perception failure.
+    """
+
+    runner = load_runner_module()
+    scenario = TracedScenario({"no_aeb": "", "oracle_aeb": ".....bbbbb"})
+
+    results, _ = runner.run_common_scenario(scenario, two_configurations(), protocol=object())
+
+    without = by_configuration(results)["no_aeb"]
+    assert without.missed_interventions == 0
+    assert without.false_interventions == 0
+    assert without.matched_delay_s == ()
+
+
+def test_the_record_carries_what_the_run_measured() -> None:
+    """The record is assembled here now, so this mapping is a contract rather than glue."""
+
+    runner = load_runner_module()
+
+    class Measured(SpyScenario):
+        def simulate(self, setup: Any, configuration: Any, replicate: int) -> Any:
+            return make_outcome(
+                self.token,
+                configuration.configuration_id,
+                replicate,
+                collisions={"vru": 2, "vehicle": 1, "object": 3},
+                collision_energy_j=1234.0,
+                min_ttc_s=0.7,
+                min_clearance_m=0.25,
+                max_deceleration_mps2=5.5,
+                max_abs_jerk_mps3=4.25,
+                intervention_duration_s=1.3,
+                stop_distance_m=12.5,
+            )
+
+    results, _ = runner.run_common_scenario(Measured(), two_configurations(), protocol=object())
+    record = by_configuration(results)["oracle_aeb"]
+
+    assert (record.collision_vru, record.collision_vehicle, record.collision_object) == (2, 1, 3)
+    assert record.collision_energy == 1234.0
+    assert (record.min_ttc_s, record.min_clearance_m) == (0.7, 0.25)
+    assert (record.max_deceleration_mps2, record.max_abs_jerk_mps3) == (5.5, 4.25)
+    assert record.intervention_duration_s == 1.3
+    assert record.stop_distance_m == 12.5
+    assert record.family == "lead_or_stopping"
+    assert record.valid is True
+
+
+def test_a_matrix_without_an_oracle_reference_is_refused() -> None:
+    """Without a reference the two headline metrics have nothing to be measured against."""
+
+    runner = load_runner_module()
+
+    with pytest.raises(ValueError, match=r"^no configuration is the oracle with its AEB enabled"):
+        runner.run_common_scenario(
+            SpyScenario(), (make_configuration("corrupted"),), protocol=object()
+        )
+
+
+def test_an_oracle_configuration_with_no_aeb_is_not_a_reference() -> None:
+    """A reference that never brakes would make every corrupted intervention false."""
+
+    runner = load_runner_module()
+    configurations = (
+        make_configuration("oracle_no_aeb", observation_mode="oracle", aeb_enabled=False),
+        make_configuration("corrupted"),
+    )
+
+    with pytest.raises(ValueError, match=r"^no configuration is the oracle with its AEB enabled"):
+        runner.run_common_scenario(SpyScenario(), configurations, protocol=object())
+
+
+def test_two_oracle_references_are_refused() -> None:
+    """Which one was chosen would decide every missed intervention in the study."""
+
+    runner = load_runner_module()
+    configurations = (oracle_configuration(), oracle_configuration("oracle_again"))
+
+    with pytest.raises(
+        ValueError, match=r"^more than one oracle configuration has its AEB enabled"
+    ):
+        runner.run_common_scenario(SpyScenario(), configurations, protocol=object())
+
+
+def test_the_reference_is_checked_before_anything_is_simulated() -> None:
+    """A matrix that cannot define its own metrics must cost a second, not a cohort."""
+
+    runner = load_runner_module()
+    scenario = SpyScenario()
+
+    with pytest.raises(ValueError, match=r"^no configuration is the oracle"):
+        runner.run_common_scenario(scenario, (make_configuration("corrupted"),), protocol=object())
+
+    assert scenario.setup_calls == 0
+    assert scenario.seen == []
+
+
+def test_oracle_replicates_that_disagree_are_refused() -> None:
+    """The oracle passes through no error channel, so its replicates must be identical."""
+
+    runner = load_runner_module()
+    scenario = TracedScenario({"oracle_aeb": (".....bbbbb", "......bbbbb")})
+
+    with pytest.raises(ValueError, match=r"produced 2 different braking traces"):
+        runner.run_common_scenario(
+            scenario, (oracle_configuration(replicate_count=2),), protocol=object()
+        )
+
+
+def test_a_result_for_the_wrong_replicate_is_refused() -> None:
+    """Two runs filed under one number overwrite each other and a third goes missing."""
+
+    runner = load_runner_module()
+
+    class Confused(SpyScenario):
+        def simulate(self, setup: Any, configuration: Any, replicate: int) -> Any:
+            return make_outcome(self.token, configuration.configuration_id, 7)
+
+    with pytest.raises(ValueError, match=r"^simulator returned replicate 7 for replicate 0"):
+        runner.run_common_scenario(Confused(), two_configurations(), protocol=object())
+
+
+def test_a_failed_token_returns_only_the_failure() -> None:
+    """The finished runs were measured, but their comparison will now never happen.
+
+    Their missed and false interventions are defined by a comparison against an
+    oracle run this token never completed, so a record carrying zeros for them
+    would be a fabricated result rather than a partial one.
+    """
+
+    runner = load_runner_module()
+    scenario = SpyScenario(fail_on="oracle_aeb")
+
+    results, invalid = runner.run_common_scenario(scenario, two_configurations(), protocol=object())
+
+    assert invalid is not None
+    assert [record.configuration_id for record in results] == ["oracle_aeb"]
+    assert results[0].valid is False

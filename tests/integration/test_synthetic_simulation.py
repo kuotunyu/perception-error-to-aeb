@@ -23,28 +23,18 @@ x = 32.5, which is 23 m short of contact — more than the 17 m it needs to stop
 
 from __future__ import annotations
 
-import math
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 
-from aebrisk.aeb.controller import limit_acceleration
-from aebrisk.aeb.state_machine import AEBMemory, AEBState, update_aeb
-from aebrisk.aeb.threat import (
-    EgoKinematicState,
-    assess_threat,
-    oriented_box_polygon,
-    polygon_clearance,
-)
 from aebrisk.artifacts.results import AEBScenarioResultV1
-from aebrisk.errors.channels import ScenarioChannels
-from aebrisk.errors.pipeline import ErrorConfiguration, ErrorKey, apply_error_pipeline
 from aebrisk.nuplan_adapter.planner import planner_identity
 from aebrisk.nuplan_adapter.simulation import build_simulation_wiring
-from aebrisk.observation.models import TrackState, WorldFrame
+from aebrisk.observation.models import TrackState
 from aebrisk.simulation.common_cohort import ExperimentConfiguration, common_valid_scenarios
 from aebrisk.simulation.route_follower import build_nominal_plan, plan_bytes
 from aebrisk.simulation.runner import ScenarioSetup, run_common_scenario
+from aebrisk.simulation.step_loop import StepLoopOutcome, run_steps
 
 DT_S = 0.1
 STEPS = 90
@@ -53,6 +43,12 @@ LEAD_X = 60.0
 INITIAL_SPEED = 10.0
 TOKEN = "synthetic-lead-0001"
 PROTOCOL_HASH = "b" * 64
+FIRST_TIMESTAMP_US = 1_600_000_000_000_000
+
+#: A straight road long enough that ninety steps at 10 m/s never reach its end.
+#: An ego that ran out of recording would stop for a reason this scenario is not
+#: about, and the stop would look like the AEB's work.
+ROUTE_XY = np.array([[index * 2.0, 0.0] for index in range(60)], dtype=np.float64)
 
 
 def lead_track(timestamp_us: int) -> TrackState:
@@ -69,18 +65,24 @@ def lead_track(timestamp_us: int) -> TrackState:
     )
 
 
+def lead_vehicle(step: int, timestamp_us: int) -> tuple[TrackState, ...]:
+    """The world at one step: one stationary vehicle, wherever the ego has reached."""
+
+    return (lead_track(timestamp_us),)
+
+
 class SyntheticLeadScenario:
-    """A stationary lead vehicle, driven by this project's own controller stack."""
+    """A stationary lead vehicle, driven through the production step loop.
+
+    The loop is `aebrisk.simulation.step_loop.run_steps` rather than a copy of it
+    written here, which is what makes this file evidence about the shipped code
+    instead of evidence about itself.
+    """
 
     token = TOKEN
 
     def build_setup(self, protocol: Any) -> ScenarioSetup:
-        plan = build_nominal_plan(
-            np.array([[index * 2.0, 0.0] for index in range(60)], dtype=np.float64),
-            INITIAL_SPEED,
-            INITIAL_SPEED,
-            None,
-        )
+        plan = build_nominal_plan(ROUTE_XY, INITIAL_SPEED, INITIAL_SPEED, None)
         # The route signature is the nominal plan's own bytes, which is what
         # makes "every configuration drove the same route" checkable rather
         # than asserted.
@@ -100,136 +102,20 @@ class SyntheticLeadScenario:
         setup: ScenarioSetup,
         configuration: ExperimentConfiguration,
         replicate: int,
-    ) -> AEBScenarioResultV1:
-        position = 0.0
-        speed = setup.initial_speed_mps
-        applied = 0.0
-        memory = AEBMemory(
-            state=AEBState.MONITOR,
-            warning_qualifying_steps=0,
-            release_clear_steps=0,
-            previous_acceleration_mps2=0.0,
-        )
-        key = ErrorKey(
-            scenario_token=TOKEN,
-            channel="dropout",
-            severity="zero",
+    ) -> StepLoopOutcome:
+        return run_steps(
+            token=TOKEN,
+            route_xy=ROUTE_XY,
+            tracks_at_step=lead_vehicle,
+            steps=STEPS,
+            first_timestamp_us=FIRST_TIMESTAMP_US,
+            initial_speed_mps=setup.initial_speed_mps,
+            ego_size_lw_m=EGO_SIZE,
+            configuration=configuration,
             replicate=replicate,
             protocol_hash=PROTOCOL_HASH,
-        )
-        error_configuration = ErrorConfiguration(
-            configuration_id=configuration.configuration_id,
-            severity_by_channel=configuration.severity_by_channel,
-        )
-        # Bound once per run, because dropout and fragmentation carry state
-        # across steps. Rebuilding per step would redraw fragmentation from
-        # scratch and no track would ever stay lost for its delay.
-        bound = ScenarioChannels(error_configuration, dt_s=DT_S)
-
-        history: list[WorldFrame] = []
-        collided = False
-        min_clearance = math.inf
-        min_ttc: Optional[float] = None
-        max_deceleration = 0.0
-        max_jerk = 0.0
-        intervention_steps = 0
-
-        for step in range(STEPS):
-            stamp = 1_600_000_000_000_000 + step * int(DT_S * 1_000_000)
-            history.append(
-                WorldFrame(
-                    scenario_token=TOKEN,
-                    timestamp_us=stamp,
-                    ego_center_xy_m=(position, 0.0),
-                    ego_yaw_rad=0.0,
-                    ego_speed_mps=speed,
-                    tracks=(lead_track(stamp),),
-                )
-            )
-
-            if configuration.observation_mode == "oracle":
-                observed = history[-1].tracks
-            else:
-                observed = apply_error_pipeline(
-                    history,
-                    len(history) - 1,
-                    error_configuration,
-                    key,
-                    stages=bound.stages(),
-                )
-
-            ego = EgoKinematicState(
-                center_xy_m=(position, 0.0),
-                yaw_rad=0.0,
-                size_lw_m=EGO_SIZE,
-                speed_mps=speed,
-                velocity_xy_mps=(speed, 0.0),
-                acceleration_mps2=applied,
-            )
-
-            threats = tuple(assess_threat(ego, track) for track in observed if track.visible)
-            for threat in threats:
-                # The threat's own clearance is what the controller PREDICTED,
-                # and it is zero the moment an overlap is predicted. The result
-                # records what actually happened, measured below.
-                if threat.ttc_s is not None:
-                    min_ttc = threat.ttc_s if min_ttc is None else min(min_ttc, threat.ttc_s)
-
-            if configuration.aeb_enabled:
-                memory, command = update_aeb(memory, threats, dt_s=DT_S)
-            else:
-                command = None
-
-            nominal = build_nominal_plan(
-                np.array([[position, 0.0], [position + 10.0, 0.0]], dtype=np.float64),
-                speed,
-                setup.initial_speed_mps,
-                None,
-            ).nominal_acceleration_mps2
-
-            target = nominal
-            if command is not None and command.state in (AEBState.PARTIAL, AEBState.FULL):
-                intervention_steps += 1
-                target = command.target_acceleration_mps2
-
-            previous = applied
-            applied = limit_acceleration(previous, target, dt_s=DT_S)
-            max_deceleration = max(max_deceleration, -applied)
-            max_jerk = max(max_jerk, abs(applied - previous) / DT_S)
-
-            speed = max(0.0, speed + applied * DT_S)
-            position += speed * DT_S
-
-            clearance = polygon_clearance(
-                oriented_box_polygon((position, 0.0), 0.0, EGO_SIZE),
-                oriented_box_polygon((LEAD_X, 0.0), 0.0, EGO_SIZE),
-            )
-            min_clearance = min(min_clearance, clearance)
-            if clearance == 0.0:
-                collided = True
-                break
-
-        return AEBScenarioResultV1(
-            schema_version="aeb-scenario-result/v1",
-            scenario_token=TOKEN,
-            family="lead_or_stopping",
-            configuration_id=configuration.configuration_id,
-            replicate=replicate,
-            valid=True,
-            invalid_reason=None,
-            collision_vru=0,
-            collision_vehicle=1 if collided else 0,
-            collision_object=0,
-            collision_energy=0.5 * 1500.0 * speed * speed if collided else 0.0,
-            min_ttc_s=min_ttc,
-            min_clearance_m=0.0 if min_clearance is math.inf else min_clearance,
-            missed_interventions=0,
-            false_interventions=0,
-            matched_delay_s=(),
-            stop_distance_m=None if speed > 0.01 else LEAD_X - position,
-            max_deceleration_mps2=max(0.0, max_deceleration),
-            max_abs_jerk_mps3=max_jerk,
-            intervention_duration_s=intervention_steps * DT_S,
+            dt_s=DT_S,
+            map_speed_limit_mps=None,
         )
 
 
@@ -270,6 +156,15 @@ def corrupted_zero() -> ExperimentConfiguration:
 
 
 def run(*configurations: ExperimentConfiguration) -> dict[str, AEBScenarioResultV1]:
+    """Run the token, always including the oracle every other cell is measured against.
+
+    The runner refuses a matrix without that reference, because a missed
+    intervention is defined by the comparison and by nothing else.
+    """
+
+    named = {configuration.configuration_id for configuration in configurations}
+    if "oracle_aeb" not in named:
+        configurations = (oracle_aeb(), *configurations)
     results, invalid = run_common_scenario(
         SyntheticLeadScenario(), configurations, protocol=object()
     )

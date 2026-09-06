@@ -227,13 +227,30 @@ def test_an_invalid_result_with_a_reason_validates() -> None:
     assert record.invalid_reason == "ego left the route"
 
 
-def test_matched_delays_must_be_finite_and_non_negative() -> None:
-    """A negative reaction delay would mean the AEB braked before the threat existed."""
+def test_matched_delays_must_be_finite() -> None:
+    """A NaN delay would poison every mean taken over the matched interventions."""
 
     results = load_results_module()
 
     with pytest.raises(ValidationError):
-        results.AEBScenarioResultV1.model_validate(valid_values(matched_delay_s=[0.2, -0.1]))
+        results.AEBScenarioResultV1.model_validate(
+            valid_values(matched_delay_s=[0.2, float("nan")])
+        )
+
+
+def test_a_delay_may_be_negative_because_an_early_intervention_is_not_a_failure() -> None:
+    """The delay is a signed difference of onsets, not a duration.
+
+    A corrupted run that braked before the oracle did is early, which the study
+    counts as neither missed nor false; folding the sign away would report it as
+    late, and those are the runs perception error makes jumpy.
+    """
+
+    results = load_results_module()
+
+    record = results.AEBScenarioResultV1.model_validate(valid_values(matched_delay_s=[-0.4]))
+
+    assert record.matched_delay_s == (-0.4,)
 
 
 def test_matched_delays_may_be_empty() -> None:

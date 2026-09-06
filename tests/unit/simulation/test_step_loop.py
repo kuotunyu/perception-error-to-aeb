@@ -106,7 +106,6 @@ def run(
 ) -> Any:
     return module.run_steps(
         token=TOKEN,
-        family="lead_or_stopping",
         route_xy=np.array([[0.0, 0.0], [400.0, 0.0]], dtype=np.float64),
         tracks_at_step=tracks,
         steps=steps,
@@ -301,7 +300,6 @@ def test_the_ego_follows_the_route_rather_than_a_straight_line() -> None:
 
     outcome = module.run_steps(
         token=TOKEN,
-        family="lead_or_stopping",
         route_xy=np.array([[0.0, 0.0], [10.0, 0.0], [10.0, 90.0]], dtype=np.float64),
         tracks_at_step=empty_road,
         steps=30,
@@ -326,7 +324,6 @@ def test_running_out_of_route_ends_the_run_rather_than_inventing_road() -> None:
 
     outcome = module.run_steps(
         token=TOKEN,
-        family="lead_or_stopping",
         route_xy=np.array([[0.0, 0.0], [12.0, 0.0]], dtype=np.float64),
         tracks_at_step=empty_road,
         steps=90,
