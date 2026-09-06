@@ -138,3 +138,71 @@ def plan_bytes(plan: NominalPlan) -> bytes:
     digest.update(np.float64(plan.nominal_acceleration_mps2).tobytes())
     digest.update(np.ascontiguousarray(plan.lateral_path_xy, dtype="<f8").tobytes())
     return digest.digest()
+
+
+def _segment_lengths(route: Float64Array) -> Float64Array:
+    """The planar length of every segment of a validated route."""
+
+    deltas = np.diff(route, axis=0)
+    lengths: Float64Array = np.hypot(deltas[:, 0], deltas[:, 1])
+    return lengths
+
+
+def route_length_m(expert_route_xy: Float64Array) -> float:
+    """How far the recording goes, so the caller can tell when it has run out."""
+
+    return float(_segment_lengths(_validated_route(expert_route_xy)).sum())
+
+
+def pose_at_distance(
+    expert_route_xy: Float64Array, distance_m: float
+) -> tuple[tuple[float, float], float]:
+    """Return the ego pose after travelling a distance along the expert route.
+
+    The lateral path is the study's control: every configuration drives this same
+    line and only the longitudinal command differs, so where the ego IS at a given
+    distance must not depend on anything a perception error could touch. Hence a
+    plain arc-length walk along the logged polyline, with no smoothing and no
+    lookahead.
+
+    Running past the end CLAMPS to the final waypoint rather than extrapolating.
+    The recording stopped there; continuing along the last heading would invent
+    road that was never driven and put agents beside an ego that is nowhere.
+    Zero-length segments are skipped rather than divided by, because a real log
+    repeats a pose whenever the vehicle stands still at a light.
+    """
+
+    route = _validated_route(expert_route_xy)
+    if not isinstance(distance_m, (int, float)) or isinstance(distance_m, bool):
+        raise ValueError("distance_m must be finite and non-negative, got a non-number")
+    if not math.isfinite(distance_m) or distance_m < 0.0:
+        raise ValueError(f"distance_m must be finite and non-negative, got {distance_m!r}")
+
+    lengths = _segment_lengths(route)
+    moving = np.flatnonzero(lengths > 0.0)
+    if moving.size == 0:
+        raise ValueError(
+            "the route has no length: every waypoint is the same point, so it carries "
+            "no heading and no distance along it means anything"
+        )
+
+    remaining = float(distance_m)
+    for index in moving:
+        length = float(lengths[index])
+        start = route[index]
+        end = route[index + 1]
+        heading = math.atan2(float(end[1] - start[1]), float(end[0] - start[0]))
+        if remaining <= length:
+            fraction = remaining / length
+            point = (
+                float(start[0] + (end[0] - start[0]) * fraction),
+                float(start[1] + (end[1] - start[1]) * fraction),
+            )
+            return point, heading
+        remaining -= length
+
+    last = int(moving[-1])
+    end = route[last + 1]
+    start = route[last]
+    heading = math.atan2(float(end[1] - start[1]), float(end[0] - start[0]))
+    return (float(end[0]), float(end[1])), heading

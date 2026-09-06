@@ -409,3 +409,112 @@ def test_the_plan_is_frozen() -> None:
 
     with pytest.raises(dataclasses.FrozenInstanceError):
         plan.target_speed_mps = 0.0  # type: ignore[misc]
+
+
+# --------------------------------------------------------------------------
+# pose_at_distance
+# --------------------------------------------------------------------------
+
+
+def cornering_route() -> Any:
+    """Ten metres east, then ten metres north, as two segments.
+
+    Named apart from `straight_route` above, which other tests index by position:
+    two helpers of one name in one file is a shadowing bug waiting to happen, and
+    it already caused one here.
+    """
+
+    return np.array([[0.0, 0.0], [10.0, 0.0], [10.0, 10.0]], dtype=np.float64)
+
+
+def test_the_pose_at_the_start_is_the_first_waypoint_facing_the_first_segment() -> None:
+    """The ego begins where the recording begins, pointed the way the road goes."""
+
+    route_follower = load_route_follower_module()
+
+    (x, y), yaw = route_follower.pose_at_distance(cornering_route(), 0.0)
+
+    assert (x, y) == (0.0, 0.0)
+    assert yaw == pytest.approx(0.0)
+
+
+def test_a_pose_inside_a_segment_is_interpolated_along_it() -> None:
+    """Following a route means being between its waypoints, not snapped to one."""
+
+    route_follower = load_route_follower_module()
+
+    (x, y), yaw = route_follower.pose_at_distance(cornering_route(), 4.0)
+
+    assert (x, y) == pytest.approx((4.0, 0.0))
+    assert yaw == pytest.approx(0.0)
+
+
+def test_the_heading_turns_with_the_route() -> None:
+    """A yaw that ignored the corner would point the ego's body across the road."""
+
+    route_follower = load_route_follower_module()
+
+    (x, y), yaw = route_follower.pose_at_distance(cornering_route(), 13.0)
+
+    assert (x, y) == pytest.approx((10.0, 3.0))
+    assert yaw == pytest.approx(math.pi / 2)
+
+
+def test_running_past_the_end_of_the_route_stops_at_its_last_waypoint() -> None:
+    """The recording ran out; extrapolating would invent road that was never driven."""
+
+    route_follower = load_route_follower_module()
+
+    (x, y), yaw = route_follower.pose_at_distance(cornering_route(), 1_000.0)
+
+    assert (x, y) == pytest.approx((10.0, 10.0))
+    assert yaw == pytest.approx(math.pi / 2)
+
+
+def test_a_distance_before_the_route_is_refused() -> None:
+    """Negative travel is a bug upstream, and clamping it would hide the bug."""
+
+    route_follower = load_route_follower_module()
+
+    with pytest.raises(ValueError, match=r"^distance_m must be finite and non-negative"):
+        route_follower.pose_at_distance(cornering_route(), -1.0)
+
+
+def test_a_repeated_waypoint_does_not_divide_by_zero() -> None:
+    """Real logs hold duplicate poses when the vehicle is stopped at a light."""
+
+    route_follower = load_route_follower_module()
+    route = np.array([[0.0, 0.0], [0.0, 0.0], [5.0, 0.0]], dtype=np.float64)
+
+    (x, y), yaw = route_follower.pose_at_distance(route, 2.0)
+
+    assert (x, y) == pytest.approx((2.0, 0.0))
+    assert yaw == pytest.approx(0.0)
+
+
+def test_a_route_that_never_moves_has_no_direction_and_is_refused() -> None:
+    """A stationary recording gives no heading, and guessing one would be a fiction."""
+
+    route_follower = load_route_follower_module()
+    route = np.array([[3.0, 4.0], [3.0, 4.0]], dtype=np.float64)
+
+    with pytest.raises(ValueError, match=r"^the route has no length"):
+        route_follower.pose_at_distance(route, 0.0)
+
+
+def test_the_route_length_is_the_sum_of_its_segments() -> None:
+    """The loop needs to know when the ego has run out of recording."""
+
+    route_follower = load_route_follower_module()
+
+    assert route_follower.route_length_m(cornering_route()) == pytest.approx(20.0)
+
+
+@pytest.mark.parametrize("bad_distance", ["4.0", True, None])
+def test_a_distance_that_is_not_a_number_is_refused(bad_distance: object) -> None:
+    """A non-number would reach `math.isfinite` as a TypeError three frames down."""
+
+    route_follower = load_route_follower_module()
+
+    with pytest.raises(ValueError, match=r"got a non-number$"):
+        route_follower.pose_at_distance(cornering_route(), bad_distance)
