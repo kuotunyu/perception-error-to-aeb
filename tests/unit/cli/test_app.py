@@ -312,3 +312,91 @@ def test_an_empty_container_digest_is_refused() -> None:
             container_digest="",
             commit="c" * 40,
         )
+
+
+# --------------------------------------------------------------------------
+# data census
+# --------------------------------------------------------------------------
+
+
+def _installation(root: Path, split: str = "mini", databases: int = 2) -> Path:
+    """Build the smallest tree `resolve_installation` accepts."""
+
+    split_dir = root / "nuplan-v1.1" / "splits" / split
+    split_dir.mkdir(parents=True)
+    for index in range(databases):
+        (split_dir / f"log{index}.db").write_bytes(b"")
+    (root / "maps").mkdir()
+    return root
+
+
+def _protocol(path: Path) -> Path:
+    """A protocol with two families, enough to exercise the mapping."""
+
+    path.write_text(
+        "scenario_families:\n"
+        "  lead_or_stopping:\n"
+        "    - stopping_with_lead\n"
+        "  bicycle_or_vru:\n"
+        "    - behind_bike\n",
+        encoding="utf-8",
+    )
+    return path
+
+
+def test_the_census_counts_families_by_log_and_writes_them(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Whether a family spans two logs decides whether a cohort can be frozen at all."""
+
+    from aebrisk.cohort import census as census_module
+
+    tags = {
+        "log0.db": [("stopping_with_lead", "t1"), ("behind_bike", "t2")],
+        "log1.db": [("stopping_with_lead", "t3")],
+    }
+    monkeypatch.setattr(
+        census_module, "QUERY_TAGS", lambda log_file: iter(tags[Path(log_file).name])
+    )
+    root = _installation(tmp_path / "root")
+    output = tmp_path / "out" / "mini.json"
+
+    result = invoke(
+        "data",
+        "census",
+        "--db-root",
+        str(root),
+        "--protocol",
+        str(_protocol(tmp_path / "protocol.yaml")),
+        "--split",
+        "mini",
+        "--output",
+        str(output),
+    )
+
+    assert result.exit_code == 0, result.output
+    document = json.loads(output.read_text(encoding="utf-8"))
+    families = {entry["family"]: entry for entry in document["families"]}
+    assert families["lead_or_stopping"]["logs"] == 2
+    assert families["lead_or_stopping"]["splittable"] is True
+    assert families["bicycle_or_vru"]["logs"] == 1
+    assert families["bicycle_or_vru"]["splittable"] is False
+    assert document["databases_read"] == 2
+
+
+def test_a_census_of_a_missing_installation_is_refused(tmp_path: Path) -> None:
+    """Failing in a second with the path beats a driver error deep in a query."""
+
+    result = invoke(
+        "data",
+        "census",
+        "--db-root",
+        str(tmp_path / "absent"),
+        "--protocol",
+        str(_protocol(tmp_path / "protocol.yaml")),
+        "--output",
+        str(tmp_path / "out.json"),
+    )
+
+    assert result.exit_code == 1
+    assert "census failed" in result.output

@@ -18,7 +18,9 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
+import yaml
 
+from aebrisk.cohort.census import census_json_bytes, census_split
 from aebrisk.nuplan_adapter.database import resolve_installation
 
 app = typer.Typer(add_completion=False, help="Check a nuPlan installation.")
@@ -63,3 +65,39 @@ def preflight(
         json.dump(report, handle, indent=2, sort_keys=True)
         handle.write("\n")
     typer.echo(f"preflight wrote {output}")
+
+
+@app.command()
+def census(
+    db_root: Annotated[Path, typer.Option("--db-root", help="Where the log databases live.")],
+    protocol: Annotated[Path, typer.Option("--protocol", help="The frozen protocol file.")],
+    output: Annotated[Path, typer.Option("--output", help="Where to write the census.")],
+    split: Annotated[str, typer.Option("--split", help="Which split to count.")] = "mini",
+) -> None:
+    """Count what a split holds, by scenario type and by family, before any freeze.
+
+    Whether each family has two logs to divide between development and locked
+    evaluation is the fact that decides whether a cohort can be frozen at all,
+    and no amount of reading the protocol can settle it.
+    """
+
+    try:
+        installation = resolve_installation(db_root, split=split)
+    except (ValueError, FileNotFoundError) as error:
+        typer.echo(f"census failed: {error}", err=True)
+        raise typer.Exit(code=1) from error
+
+    document = yaml.safe_load(protocol.read_text(encoding="utf-8"))
+    families = {family: tuple(types) for family, types in document["scenario_families"].items()}
+
+    report = census_split(
+        split=installation.split,
+        log_databases=installation.log_databases,
+        family_types=families,
+    )
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_bytes(census_json_bytes(report))
+    typer.echo(
+        f"census wrote {output}: {report.databases_read} databases, "
+        f"{len(report.types)} types, {len(report.pinned_absent)} pinned types absent"
+    )
