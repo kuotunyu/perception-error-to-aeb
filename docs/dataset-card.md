@@ -59,7 +59,7 @@ type v2 pins is present in each, and every family spans enough logs to be
 divided; the counts and the commands are in
 [the preflight record](verification/nuplan-preflight.md).
 
-| Family | `train` scenarios | `train` logs | `val` scenarios | `val` logs |
+| Family | `train` tag rows | `train` logs | `val` tag rows | `val` logs |
 | --- | ---: | ---: | ---: | ---: |
 | `lead_or_stopping` | 37,209 | 743 | 25,098 | 436 |
 | `cut_in_or_crossing` | 29,858 | 1,595 | 12,032 | 633 |
@@ -69,6 +69,11 @@ divided; the counts and the commands are in
 `bicycle_or_vru` is thin in mini and ordinary in the official splits, which is
 what the gate existed to find out. Nothing was dropped and no fallback city was
 needed.
+
+A tag row is not a scenario: one lidar frame can carry several of a family's
+types, and the census counts each row while the freeze counts distinct tokens.
+Measured on one validation database, 55 tag rows of the pedestrian family
+belonged to 30 tokens.
 
 A family's scenario count is an upper bound on its cohort rather than a
 prediction of it. Measured on mini, only 3.8 percent of `lead_or_stopping`

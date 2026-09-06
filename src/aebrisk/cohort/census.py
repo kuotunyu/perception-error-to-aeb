@@ -9,7 +9,12 @@ out empty. This is the command that discovers it first instead.
 It answers three questions, and the second is the one that decides whether a
 freeze is possible at all.
 
-- **How many scenarios does each family have?** The obvious one.
+- **How many tagged scenarios does each family have?** The obvious one — and it
+  counts TAG ROWS. One lidar frame can carry several of a family's types at once,
+  so this is an upper bound on the distinct scenarios a freeze will see: measured
+  on one validation database, 55 pedestrian-family tag rows belonged to 30
+  tokens. It is the right number for "does this family exist here at all", which
+  is what the census is for, and the wrong one for "how large can the cohort be".
 - **How many LOGS does each family span?** Development and locked evaluation
   never share a log, so a family confined to one log cannot be divided however
   many scenarios that log holds. `splittable` states that verdict rather than
