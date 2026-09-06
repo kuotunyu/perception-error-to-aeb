@@ -6,6 +6,11 @@ And development and evaluation must never share a log: scenarios cut from one
 log are the same road, the same traffic and often the same agents a minute
 apart, so a shared log would let a choice made on development leak into the
 result reported as held out.
+
+The second is enforced by where a recording came from rather than by arithmetic:
+development is drawn from nuPlan's official training logs and locked evaluation
+from its validation logs, so the halves cannot overlap however the candidates are
+assembled.
 """
 
 from __future__ import annotations
@@ -35,16 +40,17 @@ def make_candidates(
     family: str = "lead_or_stopping",
     scenario_type: str = "following_lane_with_lead",
     logs: int = 8,
+    official_split: str = "train",
 ) -> tuple[Any, ...]:
     from aebrisk.cohort.filters import CorridorCandidate
 
     return tuple(
         CorridorCandidate(
-            scenario_token=f"{family}-{index:05d}",
-            log_name=f"log-{index % logs:03d}",
+            scenario_token=f"{official_split}-{family}-{index:05d}",
+            log_name=f"{official_split}-log-{index % logs:03d}",
             scenario_type=scenario_type,
             family=family,
-            official_split="train",
+            official_split=official_split,
             initial_ego_speed_mps=8.0,
             oracle_enters_corridor_within_4s=True,
             oracle_min_ttc_within_4s=3.5,
@@ -68,7 +74,7 @@ def test_the_evaluation_cohort_is_capped_per_family() -> None:
     """A hundred per family is the plan's budget for the held-out split."""
 
     splits = load_splits_module()
-    candidates = make_candidates(400)
+    candidates = make_candidates(400, official_split="val")
 
     frozen = splits.freeze_family_cohort(candidates, "evaluation", protocol_hash=PROTOCOL_HASH)
 
@@ -79,12 +85,12 @@ def test_a_family_with_fewer_candidates_than_the_cap_uses_all_of_them() -> None:
     """Padding a thin family with anything would fabricate a stratum."""
 
     splits = load_splits_module()
-    candidates = make_candidates(9, logs=1)
+    candidates = make_candidates(9, logs=1) + make_candidates(7, logs=1, official_split="val")
 
     frozen = splits.freeze_family_cohort(candidates, "development", protocol_hash=PROTOCOL_HASH)
     evaluation = splits.freeze_family_cohort(candidates, "evaluation", protocol_hash=PROTOCOL_HASH)
 
-    assert len(frozen) + len(evaluation) == 9
+    assert (len(frozen), len(evaluation)) == (9, 7)
 
 
 def test_the_selection_does_not_depend_on_input_order() -> None:
@@ -133,7 +139,7 @@ def test_the_two_cohorts_never_share_a_scenario() -> None:
     """One scenario in both splits would be tuned on and then reported as held out."""
 
     splits = load_splits_module()
-    candidates = make_candidates(400)
+    candidates = make_candidates(400) + make_candidates(400, official_split="val")
 
     development = splits.freeze_family_cohort(
         candidates, "development", protocol_hash=PROTOCOL_HASH
@@ -148,11 +154,13 @@ def test_the_two_cohorts_never_share_a_log() -> None:
 
     Scenarios from one log are minutes apart on the same road with the same
     traffic. Sharing a log would leak the development split into the evaluation
-    one far more thoroughly than sharing a scenario would.
+    one far more thoroughly than sharing a scenario would. Here it holds because
+    the two halves are drawn from two official splits, which is a fact about the
+    recording rather than a rule this code applies to it.
     """
 
     splits = load_splits_module()
-    candidates = make_candidates(400, logs=12)
+    candidates = make_candidates(400, logs=12) + make_candidates(400, logs=12, official_split="val")
     by_token = {candidate.scenario_token: candidate for candidate in candidates}
 
     development = splits.freeze_family_cohort(
@@ -166,26 +174,29 @@ def test_the_two_cohorts_never_share_a_log() -> None:
     assert development_logs.isdisjoint(evaluation_logs)
 
 
-def test_a_log_keeps_its_split_when_other_logs_are_added() -> None:
-    """Freezing a larger cohort later must not reshuffle what was already frozen.
+def test_a_candidate_cannot_change_cohorts_when_other_logs_are_added() -> None:
+    """A scenario's half is the official split its log was published in, and nothing else.
 
-    The assignment is a property of the log and the protocol alone, so adding
-    logs extends the cohort rather than redefining it.
+    No property of the candidate set can move it. The rule this replaced hashed
+    the log name modulo three, under which a validation log could land in
+    development and a training log in the locked evaluation — which is exactly
+    what the specification forbids, and which no later freeze would have shown.
     """
 
     splits = load_splits_module()
-    small = make_candidates(60, logs=6)
-    large = make_candidates(200, logs=20)
+    small = make_candidates(60, logs=6) + make_candidates(60, logs=6, official_split="val")
+    large = make_candidates(200, logs=20) + make_candidates(200, logs=20, official_split="val")
 
-    def logs_for(candidates: tuple[Any, ...]) -> set[str]:
-        by_token = {candidate.scenario_token: candidate for candidate in candidates}
-        frozen = splits.freeze_family_cohort(candidates, "development", protocol_hash=PROTOCOL_HASH)
-        return {by_token[token].log_name for token in frozen}
-
-    small_logs = logs_for(small)
-    large_logs = logs_for(large)
-
-    assert small_logs <= large_logs
+    for candidates in (small, large):
+        development = splits.freeze_family_cohort(
+            candidates, "development", protocol_hash=PROTOCOL_HASH
+        )
+        evaluation = splits.freeze_family_cohort(
+            candidates, "evaluation", protocol_hash=PROTOCOL_HASH
+        )
+        assert development and evaluation
+        assert all(token.startswith("train-") for token in development)
+        assert all(token.startswith("val-") for token in evaluation)
 
 
 def test_each_family_is_capped_on_its_own() -> None:
@@ -200,8 +211,8 @@ def test_each_family_is_capped_on_its_own() -> None:
 
     assert len(frozen_lead) == 50
     assert len(frozen_bikes) == 50
-    assert all(token.startswith("lead_or_stopping") for token in frozen_lead)
-    assert all(token.startswith("bicycle_or_vru") for token in frozen_bikes)
+    assert all("lead_or_stopping" in token for token in frozen_lead)
+    assert all("bicycle_or_vru" in token for token in frozen_bikes)
 
 
 def test_candidates_from_several_families_are_refused() -> None:
@@ -235,7 +246,7 @@ def test_candidates_that_fail_the_prefilter_are_refused() -> None:
         *make_candidates(10),
         CorridorCandidate(
             scenario_token="too-slow",
-            log_name="log-000",
+            log_name="train-log-000",
             scenario_type="following_lane_with_lead",
             family="lead_or_stopping",
             official_split="train",

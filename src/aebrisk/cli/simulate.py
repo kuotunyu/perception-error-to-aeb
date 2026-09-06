@@ -15,6 +15,17 @@ The scenario source is named on the command line rather than inferred. The
 synthetic source exercises the pipeline without a licensed dataset; the nuPlan
 source reads the real split, and refuses with the path it looked for when none
 is mounted. Naming the missing root beats a driver error three layers down.
+
+ONE CELL IS NEVER RUN ALONE. `--config-id` names the cell under test and the
+oracle is added to the run, because a missed intervention is defined by the
+comparison with it. `--config-id all` runs the whole matrix in one pass, which
+is the cheaper path: the reference is then computed once per token instead of
+once per cell. Only the cell that was asked for is written, so no cell's results
+are produced twice.
+
+`--dry-run` stops after the run context. It is what an operator uses to check
+the arguments, the mount and the manifest in a second, rather than by starting a
+job that takes hours to reach its first refusal.
 """
 
 # This module deliberately does NOT use `from __future__ import annotations`.
@@ -25,7 +36,6 @@ is mounted. Naming the missing root beats a driver error three layers down.
 # use `Optional[X]`, never `X | None`.
 
 import hashlib
-import json
 import os
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass
@@ -36,7 +46,15 @@ import typer
 
 from aebrisk.artifacts.envelope import canonical_json_bytes
 from aebrisk.attribution.factorial import formal_configurations
+from aebrisk.cohort.manifest import load_manifest, membership_sha256
 from aebrisk.nuplan_adapter.database import resolve_installation
+from aebrisk.simulation.orchestrate import (
+    configurations_for,
+    resolve_cohort,
+    run_cohort,
+    summarize,
+    write_cohort_results,
+)
 
 #: Where the mounted nuPlan split is named. Read from the environment rather than
 #: taken as an option so one operator decision cannot disagree with another.
@@ -47,6 +65,9 @@ IMAGE_DIGEST_VAR = "AEBRISK_IMAGE_DIGEST"
 UNKNOWN_DIGEST = "unknown"
 
 SCENARIO_SOURCES: tuple[str, ...] = ("synthetic", "nuplan")
+
+#: Asks for every cell of the committed matrix in one pass.
+ALL_CONFIGURATIONS = "all"
 
 app = typer.Typer(add_completion=False, help="Run one configuration over the cohort.")
 
@@ -72,22 +93,6 @@ class RunContext:
             raise ValueError("container_digest must not be empty; use 'unknown' instead")
 
 
-def cohort_sha256(tokens: tuple[str, ...]) -> str:
-    """Hash a cohort as the set it is.
-
-    Sorted before hashing, because a cohort is a set and two orderings of it are
-    the same cohort; a hash that depended on order would make one study look
-    like two.
-    """
-
-    if not tokens:
-        raise ValueError(
-            "the cohort is empty; hashing it would give a stable value for 'nothing was run'"
-        )
-    payload = canonical_json_bytes(sorted(set(tokens)))
-    return hashlib.sha256(payload).hexdigest()
-
-
 def container_digest(environment: Optional[Mapping[str, str]] = None) -> str:
     """The image this run happened in, or an honest admission that it is unknown."""
 
@@ -106,11 +111,20 @@ def write_run_context(context: RunContext, path: Path) -> None:
 
 def _known_configuration(configuration_id: str) -> None:
     known = {config.configuration_id for config in formal_configurations()}
+    if configuration_id == ALL_CONFIGURATIONS:
+        return
     if configuration_id not in known:
         raise typer.BadParameter(
             f"{configuration_id!r} is not one of the {len(known)} configurations in the "
-            "committed experiment matrix"
+            f"committed experiment matrix, and is not {ALL_CONFIGURATIONS!r}"
         )
+
+
+def _refuse(message: str) -> None:
+    """End the command with a diagnostic, not a traceback."""
+
+    typer.echo(message)
+    raise typer.Exit(code=1)
 
 
 @app.callback(invoke_without_command=True)
@@ -125,6 +139,10 @@ def simulate(
     split: Annotated[
         str, typer.Option("--split", help="Which nuPlan split the scenarios come from.")
     ] = "val",
+    dry_run: Annotated[
+        bool,
+        typer.Option("--dry-run", help="Check the inputs and the mount, and run nothing."),
+    ] = False,
 ) -> None:
     """Run one configuration and write its results and run context."""
 
@@ -153,13 +171,70 @@ def simulate(
                 "--scenario-source synthetic to exercise the pipeline without one"
             ) from error
 
-    tokens = tuple(json.loads(manifest.read_text(encoding="utf-8"))["scenario_tokens"])
+    try:
+        cohort_manifest = load_manifest(manifest)
+    except Exception as error:
+        raise typer.BadParameter(
+            f"{str(manifest)!r} is not a cohort manifest this project can read: {error}"
+        ) from error
+
+    protocol_sha256 = hashlib.sha256(protocol.read_bytes()).hexdigest()
+    cohort_manifest_sha256 = membership_sha256(cohort_manifest)
     context = RunContext(
         configuration_id=config_id,
-        protocol_sha256=hashlib.sha256(protocol.read_bytes()).hexdigest(),
-        cohort_sha256=cohort_sha256(tokens),
+        protocol_sha256=protocol_sha256,
+        cohort_sha256=cohort_manifest_sha256,
         container_digest=container_digest(),
         commit=os.environ.get("AEBRISK_COMMIT", "0" * 40),
     )
     write_run_context(context, output_dir / "run_context.json")
     typer.echo(f"wrote the run context for {config_id} to {output_dir}")
+
+    if dry_run or scenario_source != "nuplan":
+        # The synthetic source has no cohort to resolve: it exists to exercise
+        # the command line where no licensed data may be read.
+        typer.echo(f"nothing was simulated ({scenario_source}, dry-run={dry_run})")
+        return
+
+    chosen = configurations_for(
+        formal_configurations(),
+        None if config_id == ALL_CONFIGURATIONS else config_id,
+    )
+    written_configurations = (
+        tuple(configuration.configuration_id for configuration in formal_configurations())
+        if config_id == ALL_CONFIGURATIONS
+        else (config_id,)
+    )
+    try:
+        cohort = resolve_cohort(
+            cohort_manifest,
+            resolve_installation(Path(os.environ.get(DATA_ROOT_VAR, "")), split=split),
+        )
+        typer.echo(f"resolved {len(cohort)} tokens from {len(cohort_manifest.log_names)} logs")
+        runs = run_cohort(
+            cohort,
+            chosen,
+            protocol_hash=protocol_sha256,
+            protocol=cohort_manifest,
+            on_token=lambda run: typer.echo(
+                f"  {run.token} {run.family} "
+                f"{'ok' if run.invalid is None else 'INVALID ' + run.invalid.reason}"
+            ),
+        )
+        paths = write_cohort_results(
+            runs,
+            cohort_manifest,
+            output_dir,
+            written_configurations=written_configurations,
+            protocol_sha256=protocol_sha256,
+            cohort_manifest_sha256=cohort_manifest_sha256,
+        )
+    except (ValueError, FileNotFoundError) as error:
+        _refuse(str(error))
+        return
+
+    counts = summarize(runs)
+    typer.echo(
+        f"wrote {len(paths)} result documents: {counts['tokens']} tokens, "
+        f"{counts['valid']} valid, {counts['invalid']} invalid, {counts['records']} records"
+    )

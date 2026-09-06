@@ -202,34 +202,6 @@ def test_the_run_context_refuses_an_unnamed_input() -> None:
         )
 
 
-def test_the_cohort_hash_is_order_independent() -> None:
-    """A cohort is a set; two orderings of it are the same cohort.
-
-    If the hash depended on order, the same study would look like two.
-    """
-
-    from aebrisk.cli.simulate import cohort_sha256
-
-    assert cohort_sha256(("s-2", "s-1")) == cohort_sha256(("s-1", "s-2"))
-
-
-def test_the_cohort_hash_changes_with_the_cohort() -> None:
-    """The pair to the test above; a constant hash would satisfy it alone."""
-
-    from aebrisk.cli.simulate import cohort_sha256
-
-    assert cohort_sha256(("s-1",)) != cohort_sha256(("s-1", "s-2"))
-
-
-def test_an_empty_cohort_has_no_hash() -> None:
-    """Hashing an empty set would give a stable value for "nothing was run"."""
-
-    from aebrisk.cli.simulate import cohort_sha256
-
-    with pytest.raises(ValueError, match=r"^the cohort is empty; "):
-        cohort_sha256(())
-
-
 def test_the_container_digest_is_read_from_the_environment() -> None:
     """The image is part of the environment a result was produced in.
 
@@ -400,3 +372,168 @@ def test_a_census_of_a_missing_installation_is_refused(tmp_path: Path) -> None:
 
     assert result.exit_code == 1
     assert "census failed" in result.output
+
+
+def _full_protocol(path: Path) -> Path:
+    """A protocol naming all four families, which is what a manifest requires."""
+
+    path.write_text(
+        "scenario_families:\n"
+        "  lead_or_stopping:\n"
+        "    - stopping_with_lead\n"
+        "  cut_in_or_crossing:\n"
+        "    - changing_lane\n"
+        "  pedestrian_or_crosswalk:\n"
+        "    - waiting_for_pedestrian_to_cross\n"
+        "  bicycle_or_vru:\n"
+        "    - behind_bike\n",
+        encoding="utf-8",
+    )
+    return path
+
+
+def _frozen(split: Any = "development") -> Any:
+    """A frozen cohort, so the command's own wiring can be tested without recordings."""
+
+    from aebrisk.cohort.freeze import FrozenSplit
+    from aebrisk.cohort.manifest import CohortManifestV1
+    from aebrisk.cohort.prefilter import Eligibility
+
+    manifest = CohortManifestV1(
+        schema_version="aeb-cohort-manifest/v1",
+        split=split,
+        protocol_sha256="a" * 64,
+        families={
+            "lead_or_stopping": ("t-0001",),
+            "cut_in_or_crossing": (),
+            "pedestrian_or_crosswalk": (),
+            "bicycle_or_vru": (),
+        },
+        log_names=("log0.db",),
+    )
+    return FrozenSplit(
+        split=split,
+        manifest=manifest,
+        eligibility=(
+            Eligibility(
+                scenario_token="t-0001",
+                log_name="log0.db",
+                scenario_type="stopping_with_lead",
+                family="lead_or_stopping",
+                official_split="train",
+                accepted=True,
+                reason="",
+                initial_ego_speed_mps=8.0,
+                oracle_enters_corridor_within_4s=True,
+                oracle_min_ttc_within_4s=1.2,
+            ),
+        ),
+        scenarios_in_split_by_family={
+            "lead_or_stopping": 12,
+            "cut_in_or_crossing": 0,
+            "pedestrian_or_crosswalk": 0,
+            "bicycle_or_vru": 0,
+        },
+    )
+
+
+def test_the_freeze_writes_a_manifest_and_the_evidence_beside_it(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The manifest is what a published number is checked against; the evidence says why.
+
+    The cohort itself is built in `tests/unit/cohort/test_freeze.py` over fake
+    recordings. What is under test here is the command: that it derives the
+    official split from the cohort, writes both documents, and reports the
+    counts an operator needs.
+    """
+
+    monkeypatch.setattr("aebrisk.cli.data.freeze_split", lambda *args, **keywords: _frozen())
+    root = _installation(tmp_path / "root", split="train")
+    output = tmp_path / "manifests"
+
+    result = invoke(
+        "data",
+        "freeze",
+        "--db-root",
+        str(root),
+        "--protocol",
+        str(_full_protocol(tmp_path / "protocol.yaml")),
+        "--output-dir",
+        str(output),
+        "--split",
+        "development",
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "freezing development from 2 'train' databases" in result.output
+    assert "lead_or_stopping: 1 frozen of 12 in the split" in result.output
+    assert (output / "development.json").is_file()
+    evidence = json.loads((output / "development-eligibility.json").read_text(encoding="utf-8"))
+    assert evidence["examined"][0]["scenario_token"] == "t-0001"
+
+
+def test_refreezing_a_cohort_that_exists_is_refused(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A freeze that can be silently redone invalidates every result that cited it."""
+
+    monkeypatch.setattr("aebrisk.cli.data.freeze_split", lambda *args, **keywords: _frozen())
+    root = _installation(tmp_path / "root", split="train")
+    output = tmp_path / "manifests"
+    arguments = (
+        "data",
+        "freeze",
+        "--db-root",
+        str(root),
+        "--protocol",
+        str(_full_protocol(tmp_path / "protocol.yaml")),
+        "--output-dir",
+        str(output),
+        "--split",
+        "development",
+    )
+
+    assert invoke(*arguments).exit_code == 0
+    second = invoke(*arguments)
+
+    assert second.exit_code == 1
+    assert "refusing to overwrite" in second.output
+
+
+def test_a_freeze_of_a_missing_installation_is_refused(tmp_path: Path) -> None:
+    """Hours of reading recordings must not start against a root that is not there."""
+
+    result = invoke(
+        "data",
+        "freeze",
+        "--db-root",
+        str(tmp_path / "absent"),
+        "--protocol",
+        str(_full_protocol(tmp_path / "protocol.yaml")),
+        "--output-dir",
+        str(tmp_path / "manifests"),
+    )
+
+    assert result.exit_code == 1
+    assert "freeze failed" in result.output
+
+
+def test_a_cohort_name_that_is_not_a_cohort_is_refused(tmp_path: Path) -> None:
+    """Only two cohorts exist, and a third name would silently freeze neither."""
+
+    result = invoke(
+        "data",
+        "freeze",
+        "--db-root",
+        str(_installation(tmp_path / "root", split="train")),
+        "--protocol",
+        str(_full_protocol(tmp_path / "protocol.yaml")),
+        "--output-dir",
+        str(tmp_path / "manifests"),
+        "--split",
+        "holdout",
+    )
+
+    assert result.exit_code != 0
+    assert "holdout" in result.output

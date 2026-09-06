@@ -27,6 +27,23 @@ def run(*arguments: str):
     return CliRunner().invoke(app, list(arguments))
 
 
+def cohort_document(tokens: tuple[str, ...]) -> dict:
+    """A frozen cohort manifest, which is what `simulate` reads."""
+
+    return {
+        "schema_version": "aeb-cohort-manifest/v1",
+        "split": "evaluation",
+        "protocol_sha256": "a" * 64,
+        "families": {
+            "lead_or_stopping": list(tokens),
+            "cut_in_or_crossing": [],
+            "pedestrian_or_crosswalk": [],
+            "bicycle_or_vru": [],
+        },
+        "log_names": ["one.db"],
+    }
+
+
 @pytest.fixture()
 def workspace(tmp_path: Path) -> Path:
     """A protocol, a cohort manifest, an evaluation and a claims file."""
@@ -35,7 +52,7 @@ def workspace(tmp_path: Path) -> Path:
     protocol.write_text("protocol: nuplan_aeb_v2\n", encoding="utf-8")
 
     manifest = tmp_path / "cohort.json"
-    manifest.write_text(json.dumps({"scenario_tokens": ["s-0002", "s-0001"]}), encoding="utf-8")
+    manifest.write_text(json.dumps(cohort_document(("s-0002", "s-0001"))), encoding="utf-8")
 
     artifacts = tmp_path / "artifacts"
     artifacts.mkdir()
@@ -115,7 +132,7 @@ def test_the_cohort_hash_does_not_depend_on_the_manifest_order(workspace: Path) 
 
     reversed_manifest = workspace / "reversed.json"
     reversed_manifest.write_text(
-        json.dumps({"scenario_tokens": ["s-0001", "s-0002"]}), encoding="utf-8"
+        json.dumps(cohort_document(("s-0001", "s-0002"))), encoding="utf-8"
     )
 
     for name, manifest in (("a", "cohort.json"), ("b", "reversed.json")):
@@ -169,19 +186,65 @@ def test_the_nuplan_source_refuses_when_no_split_is_mounted(
     assert "order gate" not in result.output
 
 
-def test_the_nuplan_source_is_accepted_when_a_split_is_mounted(
-    workspace: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    """The source the study actually uses must be reachable, not permanently refused."""
+def mounted_split(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, name: str = "one.db") -> Path:
+    """An installation with one empty database, which is all CI may have."""
 
     root = tmp_path / "root"
     split = root / "nuplan-v1.1" / "splits" / "mini"
-    split.mkdir(parents=True)
-    (split / "one.db").write_bytes(b"")
+    split.mkdir(parents=True, exist_ok=True)
+    (split / name).write_bytes(b"")
     # The installation is a split AND its maps; the resolver checks both, so a
-    # fixture that made only the split would pass this test for the wrong reason.
-    (root / "maps").mkdir()
+    # fixture that made only the split would pass for the wrong reason.
+    (root / "maps").mkdir(exist_ok=True)
     monkeypatch.setenv("NUPLAN_DATA_ROOT", str(root))
+    return root
+
+
+def test_the_nuplan_source_is_accepted_when_a_split_is_mounted(
+    workspace: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """The source the study actually uses must be reachable, not permanently refused.
+
+    `--dry-run` is what stops here: no licensed data may be read in CI, and the
+    empty database this fixture mounts holds no scenario to run. What is checked
+    is that the command accepted the mount, the manifest and the cell, and wrote
+    the context the later stages read.
+    """
+
+    mounted_split(tmp_path, monkeypatch)
+
+    result = run(
+        "simulate",
+        "--protocol",
+        str(workspace / "protocol.yaml"),
+        "--manifest",
+        str(workspace / "cohort.json"),
+        "--config-id",
+        "oracle_aeb",
+        "--output-dir",
+        str(workspace / "runs"),
+        "--split",
+        "mini",
+        "--dry-run",
+    )
+
+    assert result.exit_code == 0, result.output
+    context = json.loads((workspace / "runs" / "run_context.json").read_text(encoding="utf-8"))
+    assert context["configuration_id"] == "oracle_aeb"
+    assert "nothing was simulated" in result.output
+
+
+def test_a_manifest_the_split_cannot_supply_stops_the_run(
+    workspace: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Without `--dry-run` the command resolves the cohort, and says which log is absent.
+
+    The manifest names `one.db`; this installation has `other.db`. Running the
+    tokens that happened to resolve would measure a cohort nobody chose, and the
+    manifest hash beside the results would still match.
+    """
+
+    mounted_split(tmp_path, monkeypatch, name="other.db")
 
     result = run(
         "simulate",
@@ -197,9 +260,55 @@ def test_the_nuplan_source_is_accepted_when_a_split_is_mounted(
         "mini",
     )
 
+    assert result.exit_code != 0
+    assert "does not have" in result.output
+    assert not (workspace / "runs" / "oracle_aeb").exists()
+
+
+def test_a_manifest_that_is_not_a_frozen_cohort_is_refused(workspace: Path, tmp_path: Path) -> None:
+    """A document with the right name and the wrong shape must not reach the runner."""
+
+    manifest = tmp_path / "not-a-cohort.json"
+    manifest.write_text(json.dumps({"scenario_tokens": ["s-0001"]}), encoding="utf-8")
+
+    result = run(
+        "simulate",
+        "--protocol",
+        str(workspace / "protocol.yaml"),
+        "--manifest",
+        str(manifest),
+        "--config-id",
+        "oracle_aeb",
+        "--output-dir",
+        str(workspace / "runs"),
+        "--scenario-source",
+        "synthetic",
+    )
+
+    assert result.exit_code != 0
+    assert "cohort manifest" in result.output
+
+
+def test_the_whole_matrix_can_be_asked_for_in_one_pass(workspace: Path) -> None:
+    """`all` is the cheaper path: the reference is computed once per token."""
+
+    result = run(
+        "simulate",
+        "--protocol",
+        str(workspace / "protocol.yaml"),
+        "--manifest",
+        str(workspace / "cohort.json"),
+        "--config-id",
+        "all",
+        "--output-dir",
+        str(workspace / "runs"),
+        "--scenario-source",
+        "synthetic",
+    )
+
     assert result.exit_code == 0, result.output
     context = json.loads((workspace / "runs" / "run_context.json").read_text(encoding="utf-8"))
-    assert context["configuration_id"] == "oracle_aeb"
+    assert context["configuration_id"] == "all"
 
 
 # --------------------------------------------------------------------------
@@ -594,3 +703,82 @@ def test_a_claim_outside_the_registry_vocabulary_is_refused(
 
     assert result.exit_code != 0
     assert "registry" in result.output
+
+
+def test_a_resolved_cohort_is_run_and_written(
+    workspace: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """The command's own wiring: resolve, run, write, and say what it wrote.
+
+    The cohort and the simulation are replaced here because CI has no licensed
+    log to read; what is under test is that `simulate` joins them, writes
+    through the real writer, and reports the counts an operator reads off the
+    end of a run that took hours. The join over a real recording is exercised by
+    `tests/integration/test_nuplan_mini_adapter.py`, which skips without data.
+    """
+
+    from aebrisk.artifacts.results import AEBScenarioResultV1
+    from aebrisk.simulation.orchestrate import TokenRun
+
+    mounted_split(tmp_path, monkeypatch)
+
+    def record(token: str) -> AEBScenarioResultV1:
+        return AEBScenarioResultV1(
+            schema_version="aeb-scenario-result/v1",
+            scenario_token=token,
+            family="lead_or_stopping",
+            configuration_id="oracle_aeb",
+            replicate=0,
+            valid=True,
+            invalid_reason=None,
+            collision_vru=0,
+            collision_vehicle=0,
+            collision_object=0,
+            collision_energy=0.0,
+            min_ttc_s=2.0,
+            min_clearance_m=1.0,
+            missed_interventions=0,
+            false_interventions=0,
+            matched_delay_s=(),
+            stop_distance_m=None,
+            max_deceleration_mps2=3.0,
+            max_abs_jerk_mps3=4.0,
+            intervention_duration_s=0.5,
+        )
+
+    monkeypatch.setattr("aebrisk.cli.simulate.resolve_cohort", lambda manifest, layout: ("a", "b"))
+    monkeypatch.setattr(
+        "aebrisk.cli.simulate.run_cohort",
+        lambda cohort, configurations, protocol_hash, protocol, on_token: tuple(
+            on_token(run) or run
+            for run in (
+                TokenRun(
+                    token=token,
+                    family="lead_or_stopping",
+                    results=(record(token),),
+                    invalid=None,
+                )
+                for token in ("s-0001", "s-0002")
+            )
+        ),
+    )
+
+    result = run(
+        "simulate",
+        "--protocol",
+        str(workspace / "protocol.yaml"),
+        "--manifest",
+        str(workspace / "cohort.json"),
+        "--config-id",
+        "oracle_aeb",
+        "--output-dir",
+        str(workspace / "runs"),
+        "--split",
+        "mini",
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "resolved 2 tokens" in result.output
+    assert "s-0001 lead_or_stopping ok" in result.output
+    assert "wrote 2 result documents: 2 tokens, 2 valid, 0 invalid, 2 records" in result.output
+    assert (workspace / "runs" / "oracle_aeb" / "s-0001.json").is_file()

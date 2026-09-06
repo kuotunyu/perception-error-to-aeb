@@ -139,15 +139,37 @@ def types_in_family(family: str) -> tuple[str, ...]:
     return FAMILY_TYPES[family]
 
 
+def prefilter_refusal(candidate: CorridorCandidate) -> str:
+    """Say WHY one recorded scenario is not worth simulating, or "" if it is.
+
+    A reason rather than a bool, because the eligibility record written beside a
+    frozen cohort has to say what was rejected and on which rule. "Fewer
+    scenarios than the cap" is a sentence a reader can check; a column of
+    `false` is not.
+    """
+
+    if _TYPE_TO_FAMILY.get(candidate.scenario_type) != candidate.family:
+        return (
+            f"type {candidate.scenario_type!r} does not belong to the {candidate.family!r} family"
+        )
+    if candidate.initial_ego_speed_mps < MINIMUM_INITIAL_EGO_SPEED_MPS:
+        return (
+            f"initial ego speed {candidate.initial_ego_speed_mps:.3f} m/s is below "
+            f"{MINIMUM_INITIAL_EGO_SPEED_MPS} m/s, so no braking decision was available"
+        )
+    if not candidate.oracle_enters_corridor_within_4s:
+        return "no observed object enters the ego corridor within 4 s"
+    if candidate.oracle_min_ttc_within_4s is None:
+        return "no observed object is on a collision course within 4 s"
+    if candidate.oracle_min_ttc_within_4s >= MAXIMUM_ORACLE_MIN_TTC_S:
+        return (
+            f"minimum time to collision {candidate.oracle_min_ttc_within_4s:.3f} s is not "
+            f"below {MAXIMUM_ORACLE_MIN_TTC_S} s, so the scenario is not a near miss"
+        )
+    return ""
+
+
 def passes_prefilter(candidate: CorridorCandidate) -> bool:
     """Say whether one recorded scenario is worth the cost of simulating it."""
 
-    if _TYPE_TO_FAMILY.get(candidate.scenario_type) != candidate.family:
-        return False
-    if candidate.initial_ego_speed_mps < MINIMUM_INITIAL_EGO_SPEED_MPS:
-        return False
-    if not candidate.oracle_enters_corridor_within_4s:
-        return False
-    if candidate.oracle_min_ttc_within_4s is None:
-        return False
-    return candidate.oracle_min_ttc_within_4s < MAXIMUM_ORACLE_MIN_TTC_S
+    return not prefilter_refusal(candidate)

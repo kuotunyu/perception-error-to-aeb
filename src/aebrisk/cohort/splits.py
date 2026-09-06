@@ -4,15 +4,27 @@ Two properties carry the design.
 
 The selection cannot depend on the order candidates arrive in. Scenarios come
 off a filesystem, and a cohort that changed when the directory listing changed
-would not be reproducible by anyone else.
+would not be reproducible by anyone else. Within a family the order is a hash of
+the protocol and the token, so it is fixed before any scenario is looked at.
 
 Development and evaluation cannot share a log. Scenarios cut from one nuPlan log
 are the same road, the same traffic and often the same agents a minute apart, so
 a shared log leaks the split that thresholds were chosen on into the one
 reported as held out. Splitting by scenario alone would look disjoint and not be.
 
-Log assignment therefore depends only on the log name and the protocol hash.
-Adding logs later extends a cohort instead of reshuffling the one already frozen.
+**The split a scenario belongs to is the official split its log was published
+in**: development comes from nuPlan's training logs and locked evaluation from
+its validation logs, which is what the specification requires and what makes the
+two halves disjoint by construction rather than by arithmetic.
+
+An earlier version of this module assigned logs to cohorts by hashing the log
+name modulo three, because at that point everything was expected to come from
+one pool — the mini split. That rule survived into a design where the two halves
+already come from different official splits, where it would have silently
+discarded two thirds of the training logs and one third of the validation logs,
+and could have emptied a thin family for no reason anybody could defend. It is
+gone; the official split decides, and nothing here needs to reshuffle when logs
+are added.
 """
 
 from __future__ import annotations
@@ -27,10 +39,10 @@ SPLITS: tuple[str, ...] = ("development", "evaluation")
 #: The plan's budget per family, per split.
 PER_FAMILY_CAP: dict[str, int] = {"development": 50, "evaluation": 100}
 
-#: One log in three goes to development. The ratio follows the caps above, and
-#: taking it modulo a small number rather than by sorting is what keeps a log's
-#: assignment stable as the candidate set grows.
-DEVELOPMENT_LOG_MODULUS = 3
+#: Which official nuPlan split each cohort is drawn from. Development scenarios
+#: come from the training logs and locked evaluation from the validation logs,
+#: so the two can never share a log, a road or an agent.
+OFFICIAL_SPLIT_FOR: dict[str, str] = {"development": "train", "evaluation": "val"}
 
 
 def _digest(protocol_hash: str, value: str) -> str:
@@ -46,13 +58,6 @@ def selection_key(protocol_hash: str, scenario_token: str) -> tuple[str, str]:
     """
 
     return (_digest(protocol_hash, scenario_token), scenario_token)
-
-
-def log_split(protocol_hash: str, log_name: str) -> str:
-    """Say which cohort a log belongs to, from the log and the protocol alone."""
-
-    bucket = int(_digest(protocol_hash, log_name), 16) % DEVELOPMENT_LOG_MODULUS
-    return "development" if bucket == 0 else "evaluation"
 
 
 def freeze_family_cohort(
@@ -86,7 +91,7 @@ def freeze_family_cohort(
                 "freeze only what has already been filtered"
             )
         families.add(candidate.family)
-        if log_split(protocol_hash, candidate.log_name) == split:
+        if candidate.official_split == OFFICIAL_SPLIT_FOR[split]:
             selected.append(candidate)
 
     if len(families) > 1:
