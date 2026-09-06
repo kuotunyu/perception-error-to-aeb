@@ -45,6 +45,15 @@ COALITION_SEVERITY = "medium"
 
 #: Every cell runs the same number of replicates. Unequal counts would weight
 #: some cells more than others in every mean taken over the matrix.
+#:
+#: THREE, decided from measurement rather than from taste, on 2026-09-06. A
+#: 150-step run of a corrupted cell takes 5.5 s on this machine and a baseline
+#: cell 1.2 s, so one token's twenty-six cells at three replicates is 403 s.
+#: Over an evaluation cohort of 400 tokens that is 45 hours on one core and
+#: about 6 across eight, which is the budget the plan allows; ten replicates
+#: would be 150 hours and 19. The measurement is in the plan document beside the
+#: profile that produced it, and the committed matrix file carries the same
+#: number, which a contract test holds to this one.
 REPLICATE_COUNT = 3
 
 EMPTY_COALITION_ID = "coalition-none"
