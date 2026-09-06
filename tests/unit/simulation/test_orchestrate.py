@@ -10,8 +10,8 @@ RESULTS ARE WRITTEN ONLY FOR THE WHOLE COHORT. A partial run whose files are on
 disk is indistinguishable from a complete one to everything downstream, so the
 token set is compared with the manifest's before the first byte is written.
 
-Nothing here opens a log database or runs a real simulation: the query layer and
-the token adapter are replaced, and what is under test is the join between them.
+The recording tests replace the query layer and token adapter. The pool parity
+test runs the production synthetic simulation in actual child processes.
 """
 
 from __future__ import annotations
@@ -485,3 +485,252 @@ def test_the_summary_counts_what_the_operator_needs(
         "invalid": 0,
         "records": 12,
     }
+
+
+def synthetic_manifest() -> Any:
+    return manifest(
+        split="smoke",
+        families={
+            "lead_or_stopping": ("synthetic-lead-0001",),
+            "cut_in_or_crossing": (),
+            "pedestrian_or_crosswalk": (),
+            "bicycle_or_vru": (),
+        },
+        log_names=("synthetic",),
+    )
+
+
+def test_the_same_cohort_through_one_worker_and_through_two_is_byte_identical(
+    tmp_path: Path,
+) -> None:
+    """Core count must not change any simulation number or artifact byte."""
+    from dataclasses import replace
+
+    from aebrisk.cohort.manifest import membership_sha256
+    from aebrisk.simulation import orchestrate
+    from aebrisk.simulation.synthetic import synthetic_cohort
+
+    cohort = synthetic_cohort()
+    document = synthetic_manifest()
+    cells = (
+        *matrix()[:2],
+        replace(
+            matrix()[2],
+            severity_by_channel={**dict.fromkeys(CHANNELS, "zero"), "dropout": "high"},
+            replicate_count=3,
+        ),
+    )
+    outputs = {}
+    for workers in (1, 2):
+        runs = orchestrate.run_cohort(
+            cohort, cells, protocol_hash=PROTOCOL_HASH, protocol=document, workers=workers
+        )
+        assert len(runs) == 1 and runs[0].invalid is None
+        assert len(runs[0].results) == 5
+        target = tmp_path / f"workers-{workers}"
+        orchestrate.write_cohort_results(
+            runs,
+            document,
+            target,
+            written_configurations=("oracle_aeb", "dropout-high"),
+            protocol_sha256=PROTOCOL_SHA,
+            cohort_manifest_sha256=membership_sha256(document),
+        )
+        outputs[workers] = {
+            path.relative_to(target): path.read_bytes() for path in sorted(target.rglob("*.json"))
+        }
+    assert outputs[1] == outputs[2]
+
+
+def test_each_token_is_written_when_it_finishes_and_the_marker_names_the_cohort(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A crash midway must leave the finished token, but no completion claim."""
+    import json
+
+    module, document, runs = run_everything(monkeypatch, tmp_path)
+    output = tmp_path / "results"
+    first = module.write_token_run(
+        runs[0],
+        document,
+        output,
+        written_configurations=("oracle_aeb",),
+        protocol_sha256=PROTOCOL_SHA,
+        cohort_manifest_sha256=MEMBERSHIP_SHA,
+    )
+    assert [path.name for path in first] == ["t-lead.json"]
+    assert not (output / "run_complete.json").exists()
+    with pytest.raises(ValueError, match=r"the run covered 1 tokens and the evaluation"):
+        module.write_run_complete(runs[:1], document, output, cohort_manifest_sha256=MEMBERSHIP_SHA)
+    assert not (output / "run_complete.json").exists()
+    for run in runs[1:]:
+        module.write_token_run(
+            run,
+            document,
+            output,
+            written_configurations=("oracle_aeb",),
+            protocol_sha256=PROTOCOL_SHA,
+            cohort_manifest_sha256=MEMBERSHIP_SHA,
+        )
+    marker = module.write_run_complete(
+        runs, document, output, cohort_manifest_sha256=MEMBERSHIP_SHA
+    )
+    assert json.loads(marker.read_text(encoding="utf-8")) == {
+        "schema_version": "aeb-run-complete/v1",
+        "cohort_manifest_sha256": MEMBERSHIP_SHA,
+        "tokens": ["t-bike", "t-cut", "t-lead", "t-ped"],
+    }
+
+
+def test_finished_tokens_are_the_ones_whose_every_file_exists(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A partly written token still needs a run, including when a path is a directory."""
+    module, document, runs = run_everything(monkeypatch, tmp_path)
+    finished_tokens = module.finished_tokens
+    output = tmp_path / "results"
+    module.write_token_run(
+        runs[0],
+        document,
+        output,
+        written_configurations=("oracle_aeb", "dropout-high"),
+        protocol_sha256=PROTOCOL_SHA,
+        cohort_manifest_sha256=MEMBERSHIP_SHA,
+    )
+    module.write_token_run(
+        runs[1],
+        document,
+        output,
+        written_configurations=("oracle_aeb",),
+        protocol_sha256=PROTOCOL_SHA,
+        cohort_manifest_sha256=MEMBERSHIP_SHA,
+    )
+    (output / "dropout-high" / "t-cut.json").mkdir()
+    assert finished_tokens(
+        output, ("oracle_aeb", "dropout-high"), [r.token for r in runs]
+    ) == frozenset({"t-lead"})
+
+
+@pytest.mark.parametrize("workers", [True, 0, -1, 1.5, "2"])
+def test_workers_must_be_a_positive_integer(workers: Any) -> None:
+    module = load_module()
+    cohort = (module.CohortScenario(reference("t-lead"), "lead_or_stopping"),)
+    with pytest.raises(ValueError, match="workers must be a positive integer"):
+        module.run_cohort(
+            cohort, matrix(), protocol_hash=PROTOCOL_HASH, protocol=object(), workers=workers
+        )
+
+
+def test_pool_persists_a_finished_token_before_a_slower_predecessor(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A blocked first worker must not delay saving later completed workers."""
+    from concurrent.futures import Future
+    from threading import Event, Thread
+
+    module, document, runs = run_everything(monkeypatch, tmp_path)
+    cohort = tuple(module.CohortScenario(reference(r.token), r.family) for r in runs[:2])
+    fast_written = Event()
+    futures: list[Future[Any]] = [Future(), Future()]
+    futures[1].set_result(runs[1])
+    background: list[Thread] = []
+
+    class ControlledPool:
+        def __init__(self, max_workers: int) -> None:
+            self.index = 0
+
+        def __enter__(self) -> Any:
+            def finish_slow() -> None:
+                fast_written.wait(timeout=5)
+                futures[0].set_result(runs[0])
+
+            background.append(Thread(target=finish_slow))
+            background[0].start()
+            return self
+
+        def __exit__(self, *args: Any) -> None:
+            background[0].join()
+
+        def submit(self, *args: Any) -> Future[Any]:
+            future = futures[self.index]
+            self.index += 1
+            return future
+
+    monkeypatch.setattr(module, "ProcessPoolExecutor", ControlledPool, raising=False)
+    seen = []
+
+    def persist(run: Any) -> None:
+        module.write_token_run(
+            run,
+            document,
+            tmp_path / "results",
+            written_configurations=("oracle_aeb",),
+            protocol_sha256=PROTOCOL_SHA,
+            cohort_manifest_sha256=MEMBERSHIP_SHA,
+        )
+        seen.append(run.token)
+        if run.token == "t-cut":
+            assert not futures[0].done()
+            assert (tmp_path / "results" / "oracle_aeb" / "t-cut.json").is_file()
+            fast_written.set()
+
+    returned = module.run_cohort(
+        cohort,
+        matrix(),
+        protocol_hash=PROTOCOL_HASH,
+        protocol=object(),
+        workers=2,
+        on_token=persist,
+    )
+    assert seen == ["t-cut", "t-lead"]
+    assert returned == runs[:2]
+
+
+@pytest.mark.parametrize("artifact", ["token", "marker"])
+@pytest.mark.parametrize("existing", [False, True])
+def test_interrupted_publication_never_exposes_truncated_final_evidence(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, artifact: str, existing: bool
+) -> None:
+    """Resume's final-file check must never mistake an interrupted write for completion."""
+    import json
+
+    module, document, runs = run_everything(monkeypatch, tmp_path)
+    output = tmp_path / "results"
+    target = output / ("oracle_aeb/t-lead.json" if artifact == "token" else "run_complete.json")
+    target.parent.mkdir(parents=True)
+    if existing:
+        target.write_bytes(b"previous complete evidence")
+    write_bytes = Path.write_bytes
+
+    def interrupt_write(path: Path, payload: bytes) -> int:
+        write_bytes(path, payload[:10])
+        raise OSError("write interrupted")
+
+    def publish() -> None:
+        if artifact == "token":
+            module.write_token_run(
+                runs[0],
+                document,
+                output,
+                written_configurations=("oracle_aeb",),
+                protocol_sha256=PROTOCOL_SHA,
+                cohort_manifest_sha256=MEMBERSHIP_SHA,
+            )
+        else:
+            module.write_run_complete(runs, document, output, cohort_manifest_sha256=MEMBERSHIP_SHA)
+
+    monkeypatch.setattr(Path, "write_bytes", interrupt_write)
+    with pytest.raises(OSError, match="write interrupted"):
+        publish()
+    if existing:
+        assert target.read_bytes() == b"previous complete evidence"
+    else:
+        assert not target.exists()
+        assert module.finished_tokens(output, ("oracle_aeb",), ("t-lead",)) == frozenset()
+
+    monkeypatch.setattr(Path, "write_bytes", write_bytes)
+    publish()
+    assert json.loads(target.read_bytes())["schema_version"] == (
+        "aeb-token-results/v1" if artifact == "token" else "aeb-run-complete/v1"
+    )
+    assert not list(output.rglob("*.tmp"))

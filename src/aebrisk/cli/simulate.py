@@ -49,12 +49,16 @@ from aebrisk.attribution.factorial import formal_configurations
 from aebrisk.cohort.manifest import load_manifest, membership_sha256
 from aebrisk.nuplan_adapter.database import resolve_installation
 from aebrisk.simulation.orchestrate import (
+    TokenRun,
     configurations_for,
+    finished_tokens,
     resolve_cohort,
     run_cohort,
     summarize,
-    write_cohort_results,
+    write_run_complete,
+    write_token_run,
 )
+from aebrisk.simulation.synthetic import synthetic_cohort
 
 #: Where the mounted nuPlan split is named. Read from the environment rather than
 #: taken as an option so one operator decision cannot disagree with another.
@@ -143,10 +147,20 @@ def simulate(
         bool,
         typer.Option("--dry-run", help="Check the inputs and the mount, and run nothing."),
     ] = False,
+    workers: Annotated[
+        int, typer.Option("--workers", min=1, help="Number of token worker processes.")
+    ] = 1,
+    resume: Annotated[
+        bool, typer.Option("--resume", help="Skip tokens with every requested result file.")
+    ] = False,
 ) -> None:
     """Run one configuration and write its results and run context."""
 
     _known_configuration(config_id)
+    if resume and (output_dir / "run_complete.json").exists():
+        _refuse(
+            "this run is already complete; a second run into the same directory would overwrite evidence"
+        )
 
     if scenario_source not in SCENARIO_SOURCES:
         raise typer.BadParameter(
@@ -187,12 +201,11 @@ def simulate(
         container_digest=container_digest(),
         commit=os.environ.get("AEBRISK_COMMIT", "0" * 40),
     )
-    write_run_context(context, output_dir / "run_context.json")
+    if not resume or not (output_dir / "run_context.json").exists():
+        write_run_context(context, output_dir / "run_context.json")
     typer.echo(f"wrote the run context for {config_id} to {output_dir}")
 
-    if dry_run or scenario_source != "nuplan":
-        # The synthetic source has no cohort to resolve: it exists to exercise
-        # the command line where no licensed data may be read.
+    if dry_run:
         typer.echo(f"nothing was simulated ({scenario_source}, dry-run={dry_run})")
         return
 
@@ -206,27 +219,62 @@ def simulate(
         else (config_id,)
     )
     try:
-        cohort = resolve_cohort(
-            cohort_manifest,
-            resolve_installation(Path(os.environ.get(DATA_ROOT_VAR, "")), split=split),
+        cohort = (
+            synthetic_cohort()
+            if scenario_source == "synthetic"
+            else resolve_cohort(
+                cohort_manifest,
+                resolve_installation(Path(os.environ.get(DATA_ROOT_VAR, "")), split=split),
+            )
         )
         typer.echo(f"resolved {len(cohort)} tokens from {len(cohort_manifest.log_names)} logs")
-        runs = run_cohort(
-            cohort,
-            chosen,
-            protocol_hash=protocol_sha256,
-            protocol=cohort_manifest,
-            on_token=lambda run: typer.echo(
+        finished = (
+            finished_tokens(output_dir, written_configurations, (s.reference.token for s in cohort))
+            if resume
+            else frozenset()
+        )
+        pending = tuple(s for s in cohort if s.reference.token not in finished)
+        paths: list[Path] = []
+
+        def persist(run: TokenRun) -> None:
+            paths.extend(
+                write_token_run(
+                    run,
+                    cohort_manifest,
+                    output_dir,
+                    written_configurations=written_configurations,
+                    protocol_sha256=protocol_sha256,
+                    cohort_manifest_sha256=cohort_manifest_sha256,
+                )
+            )
+            typer.echo(
                 f"  {run.token} {run.family} "
                 f"{'ok' if run.invalid is None else 'INVALID ' + run.invalid.reason}"
-            ),
+            )
+
+        runs = (
+            run_cohort(
+                pending,
+                chosen,
+                protocol_hash=protocol_sha256,
+                protocol=cohort_manifest,
+                on_token=persist,
+                workers=workers,
+            )
+            if pending
+            else ()
         )
-        paths = write_cohort_results(
-            runs,
+        # These entries account only for membership; persisted results are not
+        # rewritten or counted as simulations performed by this invocation.
+        earlier = tuple(
+            TokenRun(s.reference.token, s.family, (), None)
+            for s in cohort
+            if s.reference.token in finished
+        )
+        write_run_complete(
+            (*earlier, *runs),
             cohort_manifest,
             output_dir,
-            written_configurations=written_configurations,
-            protocol_sha256=protocol_sha256,
             cohort_manifest_sha256=cohort_manifest_sha256,
         )
     except (ValueError, FileNotFoundError) as error:

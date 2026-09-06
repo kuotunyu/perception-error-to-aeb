@@ -17,10 +17,19 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass
 
-from aebrisk.artifacts.results import AEBScenarioResultV1
+from aebrisk.artifacts.results import AEBScenarioResultV1, ScenarioFamily
 from aebrisk.errors.pipeline import ERROR_CHANNELS, SEVERITIES
+from aebrisk.nuplan_adapter.query_scenario import ScenarioReference
 
 OBSERVATION_MODES: tuple[str, ...] = ("oracle", "corrupted")
+
+
+@dataclass(frozen=True)
+class CohortScenario:
+    """One token of a frozen cohort, and where its recording is."""
+
+    reference: ScenarioReference
+    family: ScenarioFamily
 
 
 @dataclass(frozen=True)

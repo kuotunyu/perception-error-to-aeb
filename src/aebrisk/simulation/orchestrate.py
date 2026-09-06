@@ -11,10 +11,10 @@ simulated, and a token that cannot be found there stops the run with its name in
 the message. Silently running the tokens that resolved would publish a number
 measured over a cohort nobody chose, and the manifest hash would still match.
 
-RESULTS ARE WRITTEN ONLY FOR THE COHORT THAT WAS ASKED FOR. The token set of
-what is about to be written is compared with the manifest's before a byte is
-written, so a run that drifted — a filter changed, a log re-read, a resume that
-lost half the list — cannot leave an artifact that looks complete.
+FINISHED TOKENS ARE SAVED IMMEDIATELY. A completion marker is written only when
+the run covers the manifest's token set. The whole-cohort convenience writer
+also compares membership before writing any token, preserving its fail-closed
+contract for callers that already hold every result.
 
 The oracle configuration is always part of a run even when one cell is under
 test, because missed and false interventions are defined by comparison with it
@@ -25,7 +25,8 @@ directory is written twice.
 from __future__ import annotations
 
 import json
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal, Optional, get_args
@@ -38,13 +39,24 @@ from aebrisk.cohort.manifest import CohortManifestV1
 from aebrisk.nuplan_adapter.database import NuPlanInstallation
 from aebrisk.nuplan_adapter.nuplan_scenario import NuPlanScenario
 from aebrisk.nuplan_adapter.query_scenario import ScenarioReference, scenarios_of_type
-from aebrisk.simulation.common_cohort import ExperimentConfiguration
+from aebrisk.simulation.common_cohort import CohortScenario, ExperimentConfiguration
 from aebrisk.simulation.runner import REFERENCE_OBSERVATION_MODE, run_common_scenario
+from aebrisk.simulation.synthetic import SYNTHETIC_LOG, SyntheticLeadScenario
 from aebrisk.simulation.validity import InvalidScenario
 
 #: Named so a test can resolve a cohort without a log database.
 QUERY_SCENARIOS = scenarios_of_type
-BUILD_TOKEN = NuPlanScenario
+
+
+def build_token(reference: ScenarioReference, family: ScenarioFamily, protocol_hash: str) -> Any:
+    """The scenario object for one cohort entry: recording or synthetic source."""
+
+    if reference.log_file == SYNTHETIC_LOG:
+        return SyntheticLeadScenario()
+    return NuPlanScenario(reference, family, protocol_hash)
+
+
+BUILD_TOKEN = build_token
 
 #: Every scenario type any family claims, which is what a log is searched for.
 PINNED_TYPES: tuple[str, ...] = tuple(
@@ -55,14 +67,6 @@ TOKEN_RESULTS_SCHEMA_VERSION = "aeb-token-results/v1"
 
 #: The four strata, as the `ScenarioFamily` literals the records are typed with.
 FAMILIES: tuple[ScenarioFamily, ...] = get_args(ScenarioFamily)
-
-
-@dataclass(frozen=True)
-class CohortScenario:
-    """One token of a frozen cohort, and where its recording is."""
-
-    reference: ScenarioReference
-    family: ScenarioFamily
 
 
 @dataclass(frozen=True)
@@ -178,6 +182,18 @@ def configurations_for(
     return tuple(picked)
 
 
+def _run_one(
+    scenario: CohortScenario,
+    configurations: tuple[ExperimentConfiguration, ...],
+    protocol_hash: str,
+    protocol: Any,
+) -> TokenRun:
+    results, invalid = run_common_scenario(
+        BUILD_TOKEN(scenario.reference, scenario.family, protocol_hash), configurations, protocol
+    )
+    return TokenRun(scenario.reference.token, scenario.family, results, invalid)
+
+
 def run_cohort(
     cohort: Sequence[CohortScenario],
     configurations: Sequence[ExperimentConfiguration],
@@ -185,29 +201,37 @@ def run_cohort(
     protocol_hash: str,
     protocol: Any,
     on_token: Optional[Callable[[TokenRun], None]] = None,
+    workers: int = 1,
 ) -> tuple[TokenRun, ...]:
-    """Drive every token of a cohort through every configuration of a run."""
+    """Save via callbacks in completion order and return results in cohort order."""
 
     if not cohort:
         raise ValueError("the cohort is empty; a run over nothing produces nothing to compare")
 
+    if isinstance(workers, bool) or not isinstance(workers, int) or workers < 1:
+        raise ValueError(f"workers must be a positive integer, got {workers!r}")
+    cells = tuple(configurations)
     runs: list[TokenRun] = []
-    for scenario in cohort:
-        results, invalid = run_common_scenario(
-            BUILD_TOKEN(scenario.reference, scenario.family, protocol_hash),
-            tuple(configurations),
-            protocol,
-        )
-        run = TokenRun(
-            token=scenario.reference.token,
-            family=scenario.family,
-            results=results,
-            invalid=invalid,
-        )
-        runs.append(run)
-        if on_token is not None:
-            on_token(run)
-    return tuple(runs)
+    if workers == 1:
+        for scenario in cohort:
+            run = _run_one(scenario, cells, protocol_hash, protocol)
+            runs.append(run)
+            if on_token is not None:
+                on_token(run)
+        return tuple(runs)
+
+    indexed: dict[int, TokenRun] = {}
+    with ProcessPoolExecutor(max_workers=workers) as pool:
+        futures = {
+            pool.submit(_run_one, scenario, cells, protocol_hash, protocol): index
+            for index, scenario in enumerate(cohort)
+        }
+        for future in as_completed(futures):
+            run = future.result()
+            indexed[futures[future]] = run
+            if on_token is not None:
+                on_token(run)
+    return tuple(indexed[index] for index in range(len(cohort)))
 
 
 def token_results_bytes(document: TokenResultsV1) -> bytes:
@@ -258,6 +282,87 @@ def documents_for(
     )
 
 
+def _check_run_membership(runs: Sequence[TokenRun], manifest: CohortManifestV1) -> None:
+    expected = {token for family in FAMILIES for token in manifest.families[family]}
+    produced = {run.token for run in runs}
+    if produced != expected:
+        missing = sorted(expected - produced)
+        extra = sorted(produced - expected)
+        raise ValueError(
+            f"the run covered {len(produced)} tokens and the {manifest.split} manifest names "
+            f"{len(expected)}; missing {missing[:3]}, unexpected {extra[:3]}. "
+            "The requested write is refused because the token sets differ"
+        )
+
+
+def _publish_bytes(path: Path, payload: bytes) -> None:
+    """Expose a final filename only after its complete bytes have been written."""
+
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_bytes(payload)
+    temporary.replace(path)
+
+
+def write_token_run(
+    run: TokenRun,
+    manifest: CohortManifestV1,
+    output_dir: Path,
+    *,
+    written_configurations: Sequence[str],
+    protocol_sha256: str,
+    cohort_manifest_sha256: str,
+) -> tuple[Path, ...]:
+    """Persist one finished token without waiting for the rest of its cohort."""
+
+    written: list[Path] = []
+    for document in documents_for(
+        run,
+        split=manifest.split,
+        written_configurations=written_configurations,
+        protocol_sha256=protocol_sha256,
+        cohort_manifest_sha256=cohort_manifest_sha256,
+    ):
+        directory = output_dir / document.configuration_id
+        directory.mkdir(parents=True, exist_ok=True)
+        path = directory / f"{run.token}.json"
+        _publish_bytes(path, token_results_bytes(document))
+        written.append(path)
+    return tuple(written)
+
+
+def write_run_complete(
+    runs: Sequence[TokenRun],
+    manifest: CohortManifestV1,
+    output_dir: Path,
+    *,
+    cohort_manifest_sha256: str,
+) -> Path:
+    """Mark a cohort complete only when every manifest token is accounted for."""
+
+    _check_run_membership(runs, manifest)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    path = output_dir / "run_complete.json"
+    payload = {
+        "schema_version": "aeb-run-complete/v1",
+        "cohort_manifest_sha256": cohort_manifest_sha256,
+        "tokens": sorted({run.token for run in runs}),
+    }
+    _publish_bytes(path, (json.dumps(payload, indent=2, sort_keys=True) + "\n").encode("utf-8"))
+    return path
+
+
+def finished_tokens(
+    output_dir: Path, written_configurations: Sequence[str], tokens: Iterable[str]
+) -> frozenset[str]:
+    """Resume only tokens whose every requested configuration file exists."""
+
+    return frozenset(
+        token
+        for token in tokens
+        if all((output_dir / name / f"{token}.json").is_file() for name in written_configurations)
+    )
+
+
 def write_cohort_results(
     runs: Sequence[TokenRun],
     manifest: CohortManifestV1,
@@ -269,37 +374,25 @@ def write_cohort_results(
 ) -> tuple[Path, ...]:
     """Write every token's records, or refuse if the run is not the cohort.
 
-    The comparison is made before the first byte is written. A partial run whose
-    files were already on disk would be indistinguishable from a complete one to
-    anything downstream, and the manifest hash beside it would still match.
+    Membership is checked before the first byte; the completion marker follows
+    all token writes. Call write_token_run for incremental persistence instead.
     """
 
-    expected = {token for family in FAMILIES for token in manifest.families[family]}
-    produced = {run.token for run in runs}
-    if produced != expected:
-        missing = sorted(expected - produced)
-        extra = sorted(produced - expected)
-        raise ValueError(
-            f"the run covered {len(produced)} tokens and the {manifest.split} manifest names "
-            f"{len(expected)}; missing {missing[:3]}, unexpected {extra[:3]}. Nothing is "
-            "written, because a partial cohort on disk is indistinguishable from a whole one"
-        )
+    _check_run_membership(runs, manifest)
 
     written: list[Path] = []
     for run in runs:
-        documents = documents_for(
-            run,
-            split=manifest.split,
-            written_configurations=written_configurations,
-            protocol_sha256=protocol_sha256,
-            cohort_manifest_sha256=cohort_manifest_sha256,
+        written.extend(
+            write_token_run(
+                run,
+                manifest,
+                output_dir,
+                written_configurations=written_configurations,
+                protocol_sha256=protocol_sha256,
+                cohort_manifest_sha256=cohort_manifest_sha256,
+            )
         )
-        for document in documents:
-            directory = output_dir / document.configuration_id
-            directory.mkdir(parents=True, exist_ok=True)
-            path = directory / f"{run.token}.json"
-            path.write_bytes(token_results_bytes(document))
-            written.append(path)
+    write_run_complete(runs, manifest, output_dir, cohort_manifest_sha256=cohort_manifest_sha256)
     return tuple(written)
 
 

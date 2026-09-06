@@ -107,6 +107,7 @@ def workspace(tmp_path: Path) -> Path:
 def test_simulate_writes_a_run_context(workspace: Path) -> None:
     """The first stage names what it ran, which every later stage depends on."""
 
+    synthetic_manifest(workspace)
     result = run(
         "simulate",
         "--protocol",
@@ -125,6 +126,7 @@ def test_simulate_writes_a_run_context(workspace: Path) -> None:
     context = json.loads((workspace / "runs" / "run_context.json").read_text(encoding="utf-8"))
     assert context["configuration_id"] == "oracle_aeb"
     assert len(context["cohort_sha256"]) == 64
+    assert (workspace / "runs" / "oracle_aeb" / "synthetic-lead-0001.json").is_file()
 
 
 def test_the_cohort_hash_does_not_depend_on_the_manifest_order(workspace: Path) -> None:
@@ -148,6 +150,7 @@ def test_the_cohort_hash_does_not_depend_on_the_manifest_order(workspace: Path) 
             str(workspace / name),
             "--scenario-source",
             "synthetic",
+            "--dry-run",
         )
 
     first = json.loads((workspace / "a" / "run_context.json").read_text(encoding="utf-8"))
@@ -292,6 +295,7 @@ def test_a_manifest_that_is_not_a_frozen_cohort_is_refused(workspace: Path, tmp_
 def test_the_whole_matrix_can_be_asked_for_in_one_pass(workspace: Path) -> None:
     """`all` is the cheaper path: the reference is computed once per token."""
 
+    synthetic_manifest(workspace)
     result = run(
         "simulate",
         "--protocol",
@@ -705,8 +709,9 @@ def test_a_claim_outside_the_registry_vocabulary_is_refused(
     assert "registry" in result.output
 
 
+@pytest.mark.parametrize("resume", [False, True])
 def test_a_resolved_cohort_is_run_and_written(
-    workspace: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    workspace: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, resume: bool
 ) -> None:
     """The command's own wiring: resolve, run, write, and say what it wrote.
 
@@ -718,7 +723,8 @@ def test_a_resolved_cohort_is_run_and_written(
     """
 
     from aebrisk.artifacts.results import AEBScenarioResultV1
-    from aebrisk.simulation.orchestrate import TokenRun
+    from aebrisk.cohort.manifest import load_manifest
+    from aebrisk.simulation.orchestrate import TokenRun, write_token_run
 
     mounted_split(tmp_path, monkeypatch)
 
@@ -747,10 +753,30 @@ def test_a_resolved_cohort_is_run_and_written(
             intervention_duration_s=0.5,
         )
 
-    monkeypatch.setattr("aebrisk.cli.simulate.resolve_cohort", lambda manifest, layout: ("a", "b"))
+    from aebrisk.nuplan_adapter.query_scenario import ScenarioReference
+    from aebrisk.simulation.orchestrate import CohortScenario
+
+    cohort = tuple(
+        CohortScenario(
+            ScenarioReference("one.db", token, "stopping_with_lead", 123), "lead_or_stopping"
+        )
+        for token in ("s-0001", "s-0002")
+    )
+    monkeypatch.setattr("aebrisk.cli.simulate.resolve_cohort", lambda manifest, layout: cohort)
+    preserved = b""
+    if resume:
+        write_token_run(
+            TokenRun("s-0001", "lead_or_stopping", (record("s-0001"),), None),
+            load_manifest(workspace / "cohort.json"),
+            workspace / "runs",
+            written_configurations=("oracle_aeb",),
+            protocol_sha256="a" * 64,
+            cohort_manifest_sha256="b" * 64,
+        )
+        preserved = (workspace / "runs" / "oracle_aeb" / "s-0001.json").read_bytes()
     monkeypatch.setattr(
         "aebrisk.cli.simulate.run_cohort",
-        lambda cohort, configurations, protocol_hash, protocol, on_token: tuple(
+        lambda cohort, configurations, protocol_hash, protocol, on_token, workers=1: tuple(
             on_token(run) or run
             for run in (
                 TokenRun(
@@ -759,7 +785,7 @@ def test_a_resolved_cohort_is_run_and_written(
                     results=(record(token),),
                     invalid=None,
                 )
-                for token in ("s-0001", "s-0002")
+                for token in (scenario.reference.token for scenario in cohort)
             )
         ),
     )
@@ -776,10 +802,107 @@ def test_a_resolved_cohort_is_run_and_written(
         str(workspace / "runs"),
         "--split",
         "mini",
+        *(("--resume",) if resume else ()),
     )
 
     assert result.exit_code == 0, result.output
     assert "resolved 2 tokens" in result.output
-    assert "s-0001 lead_or_stopping ok" in result.output
-    assert "wrote 2 result documents: 2 tokens, 2 valid, 0 invalid, 2 records" in result.output
+    if resume:
+        assert "s-0001 lead_or_stopping ok" not in result.output
+        assert "wrote 1 result documents: 1 tokens, 1 valid, 0 invalid, 1 records" in result.output
+        assert (workspace / "runs" / "oracle_aeb" / "s-0001.json").read_bytes() == preserved
+    else:
+        assert "s-0001 lead_or_stopping ok" in result.output
+        assert "wrote 2 result documents: 2 tokens, 2 valid, 0 invalid, 2 records" in result.output
     assert (workspace / "runs" / "oracle_aeb" / "s-0001.json").is_file()
+    assert json.loads((workspace / "runs" / "run_complete.json").read_text())["tokens"] == [
+        "s-0001",
+        "s-0002",
+    ]
+
+
+def synthetic_manifest(workspace: Path) -> None:
+    document = cohort_document(("synthetic-lead-0001",))
+    document.update(split="smoke", log_names=["synthetic"])
+    (workspace / "cohort.json").write_text(json.dumps(document), encoding="utf-8")
+
+
+def simulate_synthetic(workspace: Path, *extra: str):
+    return run(
+        "simulate",
+        "--protocol",
+        str(workspace / "protocol.yaml"),
+        "--manifest",
+        str(workspace / "cohort.json"),
+        "--config-id",
+        "oracle_aeb",
+        "--output-dir",
+        str(workspace / "runs"),
+        "--scenario-source",
+        "synthetic",
+        *extra,
+    )
+
+
+def test_cli_writes_a_token_before_the_runner_returns(
+    workspace: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from aebrisk.simulation.orchestrate import run_cohort
+
+    synthetic_manifest(workspace)
+
+    def checked_runner(*args, **kwargs):
+        results = run_cohort(*args, **kwargs)
+        assert (workspace / "runs" / "oracle_aeb" / "synthetic-lead-0001.json").is_file()
+        assert not (workspace / "runs" / "run_complete.json").exists()
+        return results
+
+    monkeypatch.setattr("aebrisk.cli.simulate.run_cohort", checked_runner)
+    result = simulate_synthetic(workspace, "--workers", "2")
+    assert result.exit_code == 0, result.exception
+
+
+def test_resume_refuses_completed_run_without_overwriting_context(workspace: Path) -> None:
+    synthetic_manifest(workspace)
+    output = workspace / "runs"
+    output.mkdir()
+    (output / "run_complete.json").write_bytes(b"completion evidence")
+    (output / "run_context.json").write_bytes(b"original context")
+    result = simulate_synthetic(workspace, "--resume")
+    assert result.exit_code != 0
+    assert "this run is already complete" in result.output
+    assert (output / "run_context.json").read_bytes() == b"original context"
+    assert (output / "run_complete.json").read_bytes() == b"completion evidence"
+
+
+def test_resume_with_all_files_present_only_finishes_marker(
+    workspace: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    synthetic_manifest(workspace)
+    assert simulate_synthetic(workspace).exit_code == 0
+    output = workspace / "runs"
+    (output / "run_complete.json").unlink(missing_ok=True)
+    evidence = {p.relative_to(output): p.read_bytes() for p in output.rglob("*.json")}
+
+    def unexpected_run(*args, **kwargs):
+        pytest.fail("a finished token must not be simulated again")
+
+    monkeypatch.setattr("aebrisk.cli.simulate.run_cohort", unexpected_run)
+    result = simulate_synthetic(workspace, "--resume")
+    assert result.exit_code == 0, result.exception
+    assert (output / "run_complete.json").is_file()
+    assert {p: (output / p).read_bytes() for p in evidence} == evidence
+
+
+def test_resume_runs_tokens_missing_any_configuration(workspace: Path) -> None:
+    synthetic_manifest(workspace)
+    result = simulate_synthetic(workspace, "--resume")
+    assert result.exit_code == 0, result.exception
+    assert (workspace / "runs" / "oracle_aeb" / "synthetic-lead-0001.json").is_file()
+    assert (workspace / "runs" / "run_complete.json").is_file()
+
+
+def test_workers_zero_is_refused_even_for_dry_run(workspace: Path) -> None:
+    result = simulate_synthetic(workspace, "--workers", "0", "--dry-run")
+    assert result.exit_code != 0
+    assert not (workspace / "runs").exists()
