@@ -477,3 +477,142 @@ def test_a_body_that_cannot_be_the_closest_does_not_change_the_clearance() -> No
     assert crowded.min_clearance_m == alone.min_clearance_m
     assert crowded.collisions == alone.collisions
     assert crowded.states == alone.states
+
+
+# --------------------------------------------------------------------------
+# A contact is not the same thing as a collision the ego caused
+# --------------------------------------------------------------------------
+
+
+def approaching_from_behind(speed_mps: float = 6.0, start_m: float = -12.0) -> Any:
+    """A body overtaking the ego along its own heading, as a log replay does."""
+
+    def frame_at_step(step: int) -> tuple[int, tuple[TrackState, ...]]:
+        timestamp_us = FIRST_TIMESTAMP_US + step * round(DT_S * 1_000_000)
+        return timestamp_us, (
+            TrackState(
+                track_id="follower",
+                category="vehicle",
+                center_xy_m=(start_m + speed_mps * step * DT_S, 0.0),
+                yaw_rad=0.0,
+                size_lw_m=EGO_SIZE,
+                velocity_xy_mps=(speed_mps, 0.0),
+                visible=True,
+                source_timestamp_us=timestamp_us,
+                covariance_xy=(0.0, 0.0, 0.0, 0.0),
+            ),
+        )
+
+    return frame_at_step
+
+
+def test_a_stopped_ego_struck_from_behind_is_not_a_collision_it_caused() -> None:
+    """This inverted the study's headline before it was measured.
+
+    The agents replay the recording and never react, so an ego that brakes for a
+    pedestrian is then driven into by the vehicle that was following it. The
+    first smoke over real nuPlan scenarios, on 2026-09-06, put `oracle_aeb` at
+    twelve collisions against `no_aeb`'s three, every one of them at an ego speed
+    of 0.00 m/s with the striking body five metres behind at 6.2 m/s.
+    """
+
+    module = load_step_loop_module()
+
+    outcome = run(
+        module,
+        steps=40,
+        initial_speed_mps=0.0,
+        config=configuration("no_aeb", aeb=False),
+        source=approaching_from_behind(),
+    )
+
+    assert outcome.collisions == {"vru": 0, "vehicle": 0, "object": 0}
+    assert outcome.contacts_not_at_fault == 1
+    assert outcome.collision_energy_j == 0.0
+
+
+def test_a_contact_the_ego_did_not_cause_does_not_end_the_run() -> None:
+    """Ending it would give the braking configurations less exposure than the rest.
+
+    That is the same bias one level down: a configuration that brakes gets
+    rear-ended sooner, is truncated sooner, and meets fewer of the hazards it
+    would have been measured on.
+    """
+
+    module = load_step_loop_module()
+
+    outcome = run(
+        module,
+        steps=40,
+        initial_speed_mps=0.0,
+        config=configuration("no_aeb", aeb=False),
+        source=approaching_from_behind(),
+    )
+
+    assert len(outcome.states) == 40
+
+
+def test_one_body_is_counted_once_however_long_it_overlaps() -> None:
+    """A rear-ended ego stays overlapped for as long as the recording drives through it."""
+
+    module = load_step_loop_module()
+
+    outcome = run(
+        module,
+        steps=90,
+        initial_speed_mps=0.0,
+        config=configuration("no_aeb", aeb=False),
+        source=approaching_from_behind(speed_mps=1.0, start_m=-8.0),
+    )
+
+    assert outcome.contacts_not_at_fault == 1
+
+
+def test_an_ego_that_drove_into_a_body_is_at_fault() -> None:
+    """The measurement the study exists to make must survive the exclusion above."""
+
+    module = load_step_loop_module()
+
+    outcome = run(module, lead_at(30.0), steps=60, config=configuration("no_aeb", aeb=False))
+
+    assert outcome.collisions["vehicle"] == 1
+    assert outcome.contacts_not_at_fault == 0
+    assert outcome.collision_energy_j > 0.0
+
+
+def test_a_moving_ego_is_at_fault_for_what_is_in_front_of_it() -> None:
+    """Only a body BEHIND the ego and closing is the follower's responsibility."""
+
+    module = load_step_loop_module()
+    ahead = TrackState(
+        track_id="lead",
+        category="vehicle",
+        center_xy_m=(20.0, 0.0),
+        yaw_rad=0.0,
+        size_lw_m=EGO_SIZE,
+        velocity_xy_mps=(30.0, 0.0),
+        visible=True,
+        source_timestamp_us=FIRST_TIMESTAMP_US,
+        covariance_xy=(0.0, 0.0, 0.0, 0.0),
+    )
+
+    assert module.ego_at_fault((0.0, 0.0), 0.0, 10.0, ahead) is True
+
+
+def test_a_body_behind_but_slower_than_the_ego_is_the_ego_s_fault() -> None:
+    """Reversing into something is not being rear-ended by it."""
+
+    module = load_step_loop_module()
+    behind = TrackState(
+        track_id="parked",
+        category="vehicle",
+        center_xy_m=(-6.0, 0.0),
+        yaw_rad=0.0,
+        size_lw_m=EGO_SIZE,
+        velocity_xy_mps=(0.0, 0.0),
+        visible=True,
+        source_timestamp_us=FIRST_TIMESTAMP_US,
+        covariance_xy=(0.0, 0.0, 0.0, 0.0),
+    )
+
+    assert module.ego_at_fault((0.0, 0.0), 0.0, 10.0, behind) is True

@@ -58,10 +58,18 @@ class AEBScenarioResultV1(BaseModel):
     valid: bool
     invalid_reason: Optional[str] = None
 
+    #: Collisions the ego is at fault for. A contact it could not have avoided —
+    #: it was stopped, or it was struck from behind by something faster — is not
+    #: one of these. The agents replay the recording and cannot react to an ego
+    #: that braked, so counting those would report braking as harmful; see
+    #: `simulation/step_loop.py` for the measurement that showed it.
     collision_vru: int = Field(ge=0)
     collision_vehicle: int = Field(ge=0)
     collision_object: int = Field(ge=0)
     collision_energy: float = Field(ge=0.0)
+
+    #: The contacts excluded above, counted rather than dropped.
+    contacts_not_at_fault: int = Field(ge=0)
 
     #: ``None`` where no object was ever on a collision course. Zero would mean
     #: a collision was imminent, which is the opposite claim.

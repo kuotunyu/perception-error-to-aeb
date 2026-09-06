@@ -67,6 +67,7 @@ def make_outcome(token: str, configuration_id: str, replicate: int, **overrides:
         "nominal_accelerations_mps2": (),
         "collisions": {"vru": 0, "vehicle": 0, "object": 0},
         "collision_energy_j": 0.0,
+        "contacts_not_at_fault": 0,
         "min_ttc_s": 2.0,
         "min_clearance_m": 1.0,
         "max_deceleration_mps2": 3.0,

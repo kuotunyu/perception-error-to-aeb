@@ -46,6 +46,7 @@ def valid_values(**overrides: Any) -> dict[str, Any]:
         "collision_vehicle": 0,
         "collision_object": 0,
         "collision_energy": 0.0,
+        "contacts_not_at_fault": 0,
         "min_ttc_s": 2.5,
         "min_clearance_m": 1.75,
         "missed_interventions": 0,

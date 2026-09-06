@@ -11,7 +11,24 @@ Until 2026-09-06 this loop existed solely inside
 the study rests on that lives in a test file has no production twin, and the
 synthetic scenario was therefore evidence about itself. It now drives this.
 
-Five decisions here would be wrong silently, so each is stated where it is made:
+A CONTACT IS NOT THE SAME THING AS A COLLISION THE EGO CAUSED, and getting that
+wrong inverts the study. The agents replay the log and never react, so an ego
+that brakes — correctly, for a pedestrian — is then driven into by the vehicle
+that was following it in the recording. The first smoke over real nuPlan
+scenarios, on 2026-09-06, showed `oracle_aeb` with twelve collisions against
+`no_aeb`'s three, and every one of them happened at an ego speed of 0.00 m/s
+with the striking body five metres BEHIND the ego at 6.2 m/s. Counting those
+would report the AEB as harmful, which is the opposite of what happened.
+
+So a contact is attributed the way nuPlan's own `ego_at_fault_collisions`
+attributes it: a stopped ego is not at fault, and neither is one struck from
+behind by something faster. A contact that is not the ego's fault is COUNTED
+SEPARATELY AND DOES NOT END THE RUN, because ending it would give the braking
+configurations less exposure than the others and bias the comparison the same way
+again, one level down.
+
+Five more decisions here would be wrong silently, so each is stated where it is
+made:
 the channels are bound once per run because two of them carry state between
 steps; the oracle mode never touches the error pipeline at all, because the
 reference must not pass through the thing being measured; a collision ends the
@@ -91,6 +108,11 @@ class StepLoopOutcome:
     max_deceleration_mps2: float
     max_abs_jerk_mps3: float
     intervention_duration_s: float
+    #: Contacts the ego could not have avoided: it was stopped, or it was struck
+    #: from behind by something faster. Reported rather than dropped, because a
+    #: run that was rear-ended by the recording is a fact about the simulation
+    #: and a reader has to be able to see how often it happened.
+    contacts_not_at_fault: int
     distance_travelled_m: float
     final_speed_mps: float
     final_pose_xy_m: tuple[float, float]
@@ -108,6 +130,39 @@ COLLISION_COLUMN_BY_CATEGORY: dict[str, str] = {
     "vehicle": "vehicle",
     "object": "object",
 }
+
+
+def ego_at_fault(
+    pose_xy_m: tuple[float, float],
+    yaw_rad: float,
+    ego_speed_mps: float,
+    track: TrackState,
+) -> bool:
+    """Whether a contact is one the ego's braking could have changed.
+
+    Two exclusions, both nuPlan's own and both about the same artefact: the
+    agents replay the recording and cannot react to an ego that is no longer
+    where the recording put it.
+
+    A STOPPED EGO IS NOT AT FAULT. There is nothing left for perception or
+    braking to do; the vehicle is already at rest.
+
+    AN EGO STRUCK FROM BEHIND BY SOMETHING FASTER IS NOT AT FAULT. The body is
+    behind the ego's centre and closing on it, which is the follower's
+    responsibility in every jurisdiction and, here, an artefact of the follower
+    replaying a recording in which the ego kept moving.
+
+    Everything else is the ego's: it drove into a body, and whether it should
+    have braked sooner is exactly what this study measures.
+    """
+
+    if ego_speed_mps <= STOPPED_SPEED_MPS:
+        return False
+    ahead = (track.center_xy_m[0] - pose_xy_m[0]) * math.cos(yaw_rad) + (
+        track.center_xy_m[1] - pose_xy_m[1]
+    ) * math.sin(yaw_rad)
+    closing = math.hypot(track.velocity_xy_mps[0], track.velocity_xy_mps[1]) > ego_speed_mps
+    return not (ahead < 0.0 and closing)
 
 
 def _category_column(category: str) -> str:
@@ -177,6 +232,9 @@ def run_steps(
     max_deceleration = 0.0
     max_jerk = 0.0
     intervention_steps = 0
+    not_at_fault = 0
+    contacted: set[str] = set()
+    struck: Optional[TrackState] = None
 
     memory = AEBMemory(
         state=AEBState.MONITOR,
@@ -277,22 +335,28 @@ def run_steps(
         pose, yaw = pose_at_distance(route_xy, travelled)
 
         ego_polygon = oriented_box_polygon(pose, yaw, ego_size_lw_m)
-        struck: Optional[TrackState] = None
         for track in history[-1].tracks:
             # Arithmetic before geometry. The bound is never above the true
-            # clearance, so a track whose bound already exceeds the closest
-            # approach seen so far cannot be the closest and cannot be touching:
-            # skipping it leaves the reported minimum exactly what it was. A real
-            # urban frame carries over two hundred tracks and two of them matter.
+            # clearance, so a body is measured exactly only when it could be the
+            # closest approach or could be touching; a positive bound rules
+            # contact out. A real urban frame carries over two hundred tracks and
+            # two of them matter.
             at_least = separation_at_least(pose, ego_size_lw_m, track.center_xy_m, track.size_lw_m)
-            if at_least < min_clearance:
+            if at_least <= 0.0 or at_least < min_clearance:
                 clearance = polygon_clearance(
                     ego_polygon,
                     oriented_box_polygon(track.center_xy_m, track.yaw_rad, track.size_lw_m),
                 )
                 min_clearance = min(min_clearance, clearance)
-                if clearance == 0.0 and struck is None:
-                    struck = track
+                # Each body is counted once. A rear-ended ego stays overlapped
+                # for as long as the recording drives through it, and counting
+                # every step of that would report one contact as forty.
+                if clearance == 0.0 and track.track_id not in contacted:
+                    contacted.add(track.track_id)
+                    if ego_at_fault(pose, yaw, speed, track):
+                        struck = track if struck is None else struck
+                    else:
+                        not_at_fault += 1
 
         if struck is not None:
             collisions[_category_column(struck.category)] += 1
@@ -315,6 +379,7 @@ def run_steps(
         max_deceleration_mps2=max(0.0, max_deceleration),
         max_abs_jerk_mps3=max_jerk,
         intervention_duration_s=intervention_steps * dt_s,
+        contacts_not_at_fault=not_at_fault,
         distance_travelled_m=travelled,
         final_speed_mps=speed,
         final_pose_xy_m=pose,

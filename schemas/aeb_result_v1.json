@@ -28,6 +28,11 @@
       "title": "Configuration Id",
       "type": "string"
     },
+    "contacts_not_at_fault": {
+      "minimum": 0,
+      "title": "Contacts Not At Fault",
+      "type": "integer"
+    },
     "false_interventions": {
       "minimum": 0,
       "title": "False Interventions",
@@ -144,6 +149,7 @@
     "collision_vehicle",
     "collision_object",
     "collision_energy",
+    "contacts_not_at_fault",
     "min_clearance_m",
     "missed_interventions",
     "false_interventions",

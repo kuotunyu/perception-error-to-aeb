@@ -51,6 +51,7 @@ def result(token: str, **overrides: Any) -> Any:
         "collision_vehicle": 0,
         "collision_object": 0,
         "collision_energy": 0.0,
+        "contacts_not_at_fault": 0,
         "min_ttc_s": 2.0,
         "min_clearance_m": 1.5,
         "missed_interventions": 0,
