@@ -838,3 +838,112 @@ def test_two_bodies_that_never_approach_are_skipped_on_the_first_step() -> None:
 
     assert assessment.ttc_s is None
     assert assessment.min_clearance_m > 0.0
+
+
+def walked_rollout(
+    threat: ModuleType,
+    ego: Any,
+    track: Any,
+    horizon_s: float = 4.0,
+    step_s: float = 0.1,
+    corridor_margin_m: float = 0.5,
+) -> tuple[Any, bool]:
+    """The rollout as it was written before it was computed all at once.
+
+    One polygon pair per step, one separating-axis test per step, and the first
+    step that overlaps. This is the reference the fast version must reproduce,
+    kept here rather than in the module so that a future edit to one cannot
+    quietly change the other.
+    """
+
+    import math
+
+    steps = math.floor(horizon_s / step_s + 1e-9)
+    for index in range(steps + 1):
+        elapsed = index * step_s
+        corridor = threat.oriented_box_polygon(
+            (
+                ego.center_xy_m[0] + ego.velocity_xy_mps[0] * elapsed,
+                ego.center_xy_m[1] + ego.velocity_xy_mps[1] * elapsed,
+            ),
+            ego.yaw_rad,
+            ego.size_lw_m,
+            margin_m=corridor_margin_m,
+        )
+        body = threat.oriented_box_polygon(
+            (
+                track.center_xy_m[0] + track.velocity_xy_mps[0] * elapsed,
+                track.center_xy_m[1] + track.velocity_xy_mps[1] * elapsed,
+            ),
+            track.yaw_rad,
+            track.size_lw_m,
+        )
+        if threat.polygons_overlap(corridor, body):
+            return elapsed, True
+    return None, False
+
+
+def test_the_batched_rollout_finds_the_same_first_overlap_as_a_walked_one() -> None:
+    """A rewrite for speed has to reproduce the slow version it replaced, exactly.
+
+    The fast rollout projects one pair of shapes onto their separating axes and
+    shifts the projections, instead of building forty-one polygon pairs. That is
+    the same arithmetic only if neither body rotates while it rolls forward, so
+    the two are compared over a spread of headings, speeds and offsets — crossing,
+    following, overtaking, receding and passing clear.
+    """
+
+    import math
+
+    threat = load_threat_module()
+    checked = 0
+    for ego_speed in (0.0, 4.0, 11.0):
+        for heading in (0.0, 0.7, math.pi / 2, 2.6):
+            for distance in (6.0, 12.0, 25.0, 60.0):
+                for track_speed in (0.0, 3.0, 9.0):
+                    for track_heading in (0.0, math.pi / 2, math.pi, 4.0):
+                        ego = make_ego(
+                            speed=ego_speed,
+                            yaw=heading,
+                            velocity=(
+                                ego_speed * math.cos(heading),
+                                ego_speed * math.sin(heading),
+                            ),
+                        )
+                        track = make_track(
+                            center=(
+                                distance * math.cos(heading) + 1.5,
+                                distance * math.sin(heading) - 2.0,
+                            ),
+                            yaw=track_heading,
+                            velocity=(
+                                track_speed * math.cos(track_heading),
+                                track_speed * math.sin(track_heading),
+                            ),
+                        )
+                        assessment = threat.assess_threat(ego, track)
+                        expected_ttc, expected_overlap = walked_rollout(threat, ego, track)
+                        assert assessment.predicted_overlap == expected_overlap, (
+                            ego_speed,
+                            heading,
+                            distance,
+                            track_speed,
+                            track_heading,
+                        )
+                        if expected_overlap:
+                            # Within one sample, not to the bit. Floating-point
+                            # addition is not associative, so shifting a
+                            # projection and translating a polygon before
+                            # projecting it differ in the last place, and at an
+                            # exact graze that decides which of two adjacent
+                            # steps first reports contact. One sample is 0.1 s,
+                            # below the resolution of anything reported, and a
+                            # graze is the only place it can happen: away from
+                            # the boundary the sign of the separation is not in
+                            # doubt at 1e-15.
+                            assert assessment.ttc_s is not None
+                            assert abs(assessment.ttc_s - expected_ttc) <= 0.1 + 1e-9
+                        else:
+                            assert assessment.ttc_s is None
+                        checked += 1
+    assert checked == 3 * 4 * 4 * 3 * 4

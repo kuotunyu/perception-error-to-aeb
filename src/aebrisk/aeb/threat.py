@@ -16,6 +16,11 @@ velocity is a deliberate under-model: a real AEB does not know what the other
 driver is about to do either, and giving the simulated one a better predictor
 than the real one has would flatter every result.
 
+The rollout is computed for all of its steps at once. Neither body rotates while
+it rolls forward, so the whole prediction is one pair of shapes under a linearly
+growing displacement, and a separating axis of two shapes does not care where
+they are: see ``first_overlap_step``.
+
 Required deceleration is ``v^2 / (2 d)`` on the longitudinal gap between the two
 bodies. It is a magnitude, so a receding object requires zero rather than a
 negative amount, and it saturates rather than diverging when the gap has closed.
@@ -85,11 +90,12 @@ class ThreatAssessment:
     ttc_s: Optional[float]
     required_deceleration_mps2: float
     predicted_overlap: bool
-    #: A LOWER BOUND on how close the rollout came. It is the exact sampled
-    #: minimum whenever the rollout was walked, and the provable bound when the
-    #: body was far enough away that walking it could not have changed anything.
-    #: Nothing in this study consumes it — the clearance a run reports is
-    #: measured on the true geometry by the step loop — so it is diagnostic.
+    #: How close the rollout came. Where an overlap was predicted this is zero;
+    #: where none was, it is the exact clearance at the step whose centres are
+    #: nearest, and where the body was culled before the rollout it is the bound
+    #: that culled it. Nothing in this study consumes it — the clearance a run
+    #: reports is measured on the true geometry by the step loop — so it is
+    #: diagnostic, and a near miss must not read as zero the way a contact does.
     min_clearance_m: float
 
 
@@ -213,6 +219,51 @@ def polygon_clearance(first_n2: Float64Array, second_n2: Float64Array) -> float:
         float(_point_segment_distances(first_n2, second_n2).min()),
         float(_point_segment_distances(second_n2, first_n2).min()),
     )
+
+
+def first_overlap_step(
+    first_n2: Float64Array,
+    second_n2: Float64Array,
+    relative_velocity_xy_mps: tuple[float, float],
+    step_s: float,
+    steps: int,
+) -> Optional[int]:
+    """The first sampled step at which two shapes overlap under linear motion.
+
+    The rollout translates both bodies and rotates neither, so the whole of it is
+    ONE pair of shapes separated by a displacement that grows linearly. A
+    separating axis is a property of the shapes, and translating a polygon shifts
+    its projection onto an axis by the projection of the translation — so every
+    step is a row of a matrix rather than a polygon to build and a test to run.
+
+    Forty-one steps used to be forty-one polygon constructions and forty-one
+    separating-axis tests, and with a hundred and thirty tracked objects in a real
+    frame that was ninety percent of a simulated scenario's time.
+
+    The answer can differ from a step-by-step walk by ONE SAMPLE, and only where
+    two bodies graze exactly. Floating-point addition is not associative, so
+    shifting a projection and translating a polygon before projecting it disagree
+    in the last place, which at a tangent decides which of two adjacent steps
+    first reports contact. A test compares the two over a spread of headings,
+    speeds and offsets and holds them to that bound.
+    """
+
+    axes = np.concatenate([_axes(first_n2), _axes(second_n2)])
+    first = first_n2 @ axes.T
+    second = second_n2 @ axes.T
+    first_low, first_high = first.min(axis=0), first.max(axis=0)
+    second_low, second_high = second.min(axis=0), second.max(axis=0)
+
+    elapsed = np.arange(steps + 1, dtype=np.float64) * step_s
+    shift = np.outer(elapsed, np.asarray(relative_velocity_xy_mps, dtype=np.float64)) @ axes.T
+
+    # Exactly touching counts as overlapping, so separation is strict on both
+    # sides, as it is in `polygons_overlap`.
+    separated = (first_high[None, :] < second_low[None, :] + shift) | (
+        second_high[None, :] + shift < first_low[None, :]
+    )
+    overlapping = np.flatnonzero(~separated.any(axis=1))
+    return int(overlapping[0]) if overlapping.size else None
 
 
 def half_diagonal_m(size_lw_m: tuple[float, float], margin_m: float = 0.0) -> float:
@@ -351,43 +402,49 @@ def assess_threat(
         )
 
     steps = math.floor(horizon_s / step_s + 1e-9)
-    closest = math.inf
-    for index in range(steps + 1):
-        elapsed = index * step_s
-        corridor = oriented_box_polygon(
-            (
-                ego_state.center_xy_m[0] + ego_state.velocity_xy_mps[0] * elapsed,
-                ego_state.center_xy_m[1] + ego_state.velocity_xy_mps[1] * elapsed,
-            ),
-            ego_state.yaw_rad,
-            ego_state.size_lw_m,
-            margin_m=corridor_margin_m,
+    corridor = oriented_box_polygon(
+        ego_state.center_xy_m,
+        ego_state.yaw_rad,
+        ego_state.size_lw_m,
+        margin_m=corridor_margin_m,
+    )
+    body = oriented_box_polygon(track.center_xy_m, track.yaw_rad, track.size_lw_m)
+    relative_velocity = (
+        track.velocity_xy_mps[0] - ego_state.velocity_xy_mps[0],
+        track.velocity_xy_mps[1] - ego_state.velocity_xy_mps[1],
+    )
+
+    first = first_overlap_step(corridor, body, relative_velocity, step_s, steps)
+    if first is not None:
+        return ThreatAssessment(
+            track_id=track.track_id,
+            ttc_s=first * step_s,
+            required_deceleration_mps2=_required_deceleration(ego_state, track),
+            predicted_overlap=True,
+            min_clearance_m=0.0,
         )
-        body = oriented_box_polygon(
-            (
-                track.center_xy_m[0] + track.velocity_xy_mps[0] * elapsed,
-                track.center_xy_m[1] + track.velocity_xy_mps[1] * elapsed,
-            ),
-            track.yaw_rad,
-            track.size_lw_m,
-        )
-        clearance = polygon_clearance(corridor, body)
-        if clearance == 0.0:
-            return ThreatAssessment(
-                track_id=track.track_id,
-                ttc_s=elapsed,
-                required_deceleration_mps2=_required_deceleration(ego_state, track),
-                predicted_overlap=True,
-                min_clearance_m=0.0,
-            )
-        closest = min(closest, clearance)
+
+    # How close the rollout came, measured exactly ONCE, at the step where the
+    # two centres are nearest. Measuring every step exactly is the rollout this
+    # function was rewritten to avoid, and a bound would report a near miss as
+    # zero — which is what a contact reports, and the two must not read alike.
+    elapsed = np.arange(steps + 1, dtype=np.float64) * step_s
+    offsets = np.asarray(
+        [
+            track.center_xy_m[0] - ego_state.center_xy_m[0],
+            track.center_xy_m[1] - ego_state.center_xy_m[1],
+        ],
+        dtype=np.float64,
+    ) + np.outer(elapsed, np.asarray(relative_velocity, dtype=np.float64))
+    nearest = int(np.argmin(np.hypot(offsets[:, 0], offsets[:, 1])))
+    displacement = np.asarray(relative_velocity, dtype=np.float64) * elapsed[nearest]
 
     return ThreatAssessment(
         track_id=track.track_id,
         ttc_s=None,
         required_deceleration_mps2=_required_deceleration(ego_state, track),
         predicted_overlap=False,
-        min_clearance_m=closest,
+        min_clearance_m=polygon_clearance(corridor, body + displacement),
     )
 
 
