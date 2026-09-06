@@ -29,6 +29,7 @@ import hashlib
 import json
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Callable, Optional
 
@@ -143,6 +144,7 @@ def _canonical_key(key: ErrorKey) -> bytes:
     return json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
 
 
+@lru_cache(maxsize=4096)
 def keyed_seed(key: ErrorKey) -> int:
     """Derive this key's 64-bit seed.
 
@@ -150,6 +152,12 @@ def keyed_seed(key: ErrorKey) -> int:
     canonical form is pinned by a test that recomputes it independently, because
     a change to the serialization would still look deterministic while producing
     a different experiment.
+
+    Memoised because it is asked the same question hundreds of thousands of times
+    in a single run — once per track, per field, per step — and the answer depends
+    only on the key, which is one object for the whole run. The cache changes no
+    byte of the result: an `ErrorKey` is frozen, so two equal keys are the same
+    question.
     """
 
     return int.from_bytes(hashlib.sha256(_canonical_key(key)).digest()[:8], "big")
