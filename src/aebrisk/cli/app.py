@@ -31,6 +31,8 @@ app.add_typer(data.app, name="data")
 app.add_typer(simulate.app, name="simulate")
 app.add_typer(evaluate.app, name="evaluate")
 app.add_typer(report.app, name="report")
+app.command("audit-claims")(report.audit_claims_command)
+app.command("generate-claims")(report.generate_claims_command)
 
 
 @app.callback()

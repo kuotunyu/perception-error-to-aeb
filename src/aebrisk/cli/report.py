@@ -16,10 +16,55 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
+import yaml
 
+from aebrisk.analysis.claims import (
+    audit_claims,
+    evidence_provenance,
+    generate_claims,
+)
 from aebrisk.report.builder import build_site
 
 app = typer.Typer(add_completion=False, help="Build the static report.")
+
+
+def audit_claims_command(
+    claims: Annotated[Path, typer.Option("--claims", help="The claim registry to audit.")],
+) -> None:
+    """Audit every stated number against its exact committed artifact."""
+
+    violations = audit_claims(claims, Path.cwd())
+    if violations:
+        for violation in violations:
+            typer.echo(violation, err=True)
+        raise typer.Exit(code=1)
+    typer.echo("audit-claims: 0 violations")
+
+
+def generate_claims_command(
+    evidence_dir: Annotated[
+        Path, typer.Option("--evidence-dir", help="Directory of published analysis evidence.")
+    ],
+    output: Annotated[Path, typer.Option("--output", help="Claim registry to write.")],
+) -> None:
+    """Generate exact observed claims from the four analysis documents."""
+
+    try:
+        protocol_sha256, cohort_manifest_sha256 = evidence_provenance(evidence_dir)
+        registry = generate_claims(evidence_dir, protocol_sha256, cohort_manifest_sha256)
+    except (OSError, UnicodeDecodeError, ValueError) as error:
+        typer.echo(f"generate-claims failed: {error}", err=True)
+        raise typer.Exit(code=1) from error
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with output.open("w", encoding="utf-8", newline="\n") as handle:
+        yaml.safe_dump(
+            registry.model_dump(mode="json"),
+            handle,
+            allow_unicode=True,
+            sort_keys=False,
+            width=100,
+        )
+    typer.echo(f"generated {len(registry.claims)} claims in {output}")
 
 
 @app.callback(invoke_without_command=True)

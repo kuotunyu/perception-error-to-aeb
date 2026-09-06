@@ -162,14 +162,15 @@ def test_the_claims_registry_carries_the_shared_vocabulary() -> None:
 
     assert tuple(registry["allowed_evidence_types"]) == results.ALLOWED_EVIDENCE_TYPES
     assert tuple(registry["allowed_statuses"]) == results.ALLOWED_STATUSES
-    assert registry["claims"] == []
+    assert registry["claims"]
 
 
-def test_the_claims_registry_starts_empty() -> None:
-    """No simulation has run, so a claim here would be a number nobody measured."""
+def test_the_claims_registry_contains_only_observed_verified_claims() -> None:
+    """The formal simulation has run, so its generated claims are observed and verified."""
 
     import yaml
 
     registry = yaml.safe_load((REPO_ROOT / "docs" / "claims.yaml").read_text(encoding="utf-8"))
 
-    assert registry["claims"] == []
+    assert all(claim["evidence_type"] == "observed" for claim in registry["claims"])
+    assert all(claim["status"] == "verified" for claim in registry["claims"])
