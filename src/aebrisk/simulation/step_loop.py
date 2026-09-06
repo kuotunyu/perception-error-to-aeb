@@ -11,12 +11,15 @@ Until 2026-09-06 this loop existed solely inside
 the study rests on that lives in a test file has no production twin, and the
 synthetic scenario was therefore evidence about itself. It now drives this.
 
-Four decisions here would be wrong silently, so each is stated where it is made:
+Five decisions here would be wrong silently, so each is stated where it is made:
 the channels are bound once per run because two of them carry state between
 steps; the oracle mode never touches the error pipeline at all, because the
 reference must not pass through the thing being measured; a collision ends the
-run rather than integrating through a body; and running past the end of the
-recording ends the run rather than inventing road.
+run rather than integrating through a body; running past the end of the
+recording ends the run rather than inventing road; and THE WORLD SOURCE OWNS THE
+CLOCK — a frame carries the timestamp the recording gave it, not one the loop
+counted out, because a frame stamped on a synthetic grid while its tracks carry
+the log's own microseconds would put two clocks inside one observation.
 
 What comes back is deliberately NOT a result record. Missed and false
 interventions are found by comparing a run's braking against the oracle run's
@@ -127,9 +130,8 @@ def run_steps(
     *,
     token: str,
     route_xy: Float64Array,
-    tracks_at_step: Callable[[int, int], Sequence[TrackState]],
+    frame_at_step: Callable[[int], tuple[int, Sequence[TrackState]]],
     steps: int,
-    first_timestamp_us: int,
     initial_speed_mps: float,
     ego_size_lw_m: tuple[float, float],
     configuration: ExperimentConfiguration,
@@ -189,8 +191,15 @@ def run_steps(
     ran_out = False
 
     for step in range(steps):
-        stamp = first_timestamp_us + step * round(dt_s * 1_000_000)
-        tracks = tuple(tracks_at_step(step, stamp))
+        stamp, observed_tracks = frame_at_step(step)
+        if history and stamp < history[-1].timestamp_us:
+            raise ValueError(
+                f"the world source went backwards in time at step {step}: {stamp} is "
+                f"before {history[-1].timestamp_us}; every latency selection out of a "
+                "history assembled in that order depends on the order rather than on "
+                "the recording"
+            )
+        tracks = tuple(observed_tracks)
         history.append(
             WorldFrame(
                 scenario_token=token,

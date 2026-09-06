@@ -90,8 +90,8 @@ def test_no_sensor_root_is_configured_for_the_real_dataset() -> None:
     assert not os.environ.get("NUPLAN_SENSOR_ROOT")
 
 
-def _first_scenario(layout: Any) -> Any:
-    """Build one real scenario from the first log that has a pinned scenario type.
+def _first_eligible(layout: Any) -> tuple[Any, Any, Any]:
+    """Find one real scenario a pinned family claims, with enough frames to run.
 
     Through the query module rather than the devkit's scenario builder, which
     cannot be imported here: it pulls in the map stack and the observation types,
@@ -106,16 +106,16 @@ def _first_scenario(layout: Any) -> Any:
         PROTOCOL_SCENARIO_DURATION_S,
     )
 
-    wanted = sorted(
-        scenario_type
-        for scenario_types in FAMILY_TYPES.values()
+    family_of = {
+        scenario_type: family
+        for family, scenario_types in FAMILY_TYPES.items()
         for scenario_type in scenario_types
-    )
+    }
     for database in sorted(layout.log_databases):
-        references = scenarios_of_type(str(database), wanted)
+        references = scenarios_of_type(str(database), sorted(family_of))
         for reference in references:
             try:
-                return build_scenario(
+                scenario = build_scenario(
                     reference.log_file,
                     reference.token,
                     duration_s=PROTOCOL_SCENARIO_DURATION_S,
@@ -125,10 +125,18 @@ def _first_scenario(layout: Any) -> Any:
                 # Too close to the end of its recording to run the full duration.
                 # That is an eligibility fact, not a failure; try the next one.
                 continue
+            return scenario, reference, family_of[reference.scenario_type]
     raise pytest.skip(
         "no log in the mounted split holds a scenario of a pinned type with enough "
         "frames after it to run the protocol's duration"
     )
+
+
+def _first_scenario(layout: Any) -> Any:
+    """The built scenario of `_first_eligible`, for the tests that need only that."""
+
+    scenario, _reference, _family = _first_eligible(layout)
+    return scenario
 
 
 @requires_dataset
@@ -181,3 +189,56 @@ def test_a_real_scenario_reads_only_the_members_the_adapter_is_allowed_to_touch(
     assert len({track.track_id for track in frame.tracks}) == len(frame.tracks)
     assert all(track.visible for track in frame.tracks)
     assert all(track.covariance_xy == (0.0, 0.0, 0.0, 0.0) for track in frame.tracks)
+
+
+@requires_dataset
+def test_a_real_scenario_runs_through_the_common_cohort_runner() -> None:
+    """The whole path on a real recording: read once, drive twice, compare, record.
+
+    Every other test of this path fakes the log, which proves the wiring but not
+    that a real scenario survives it. This is where the adapter, the production
+    step loop and the cohort runner meet the dataset, and it is the reason the
+    fakes elsewhere can be trusted.
+
+    It asserts that both configurations produced a valid record over one reading
+    of the recording. It asserts NOTHING about the outcome: no number this test
+    could check would be a finding, and a scenario is not a result.
+    """
+
+    from aebrisk.errors.pipeline import ERROR_CHANNELS
+    from aebrisk.nuplan_adapter.database import resolve_installation
+    from aebrisk.nuplan_adapter.nuplan_scenario import NuPlanScenario
+    from aebrisk.simulation.common_cohort import ExperimentConfiguration
+    from aebrisk.simulation.runner import run_common_scenario
+
+    root = dataset_root()
+    assert root is not None
+    _scenario, reference, family = _first_eligible(resolve_installation(root))
+
+    severities = dict.fromkeys(ERROR_CHANNELS, "zero")
+    configurations = (
+        ExperimentConfiguration(
+            configuration_id="oracle_aeb",
+            aeb_enabled=True,
+            observation_mode="oracle",
+            severity_by_channel=severities,
+            replicate_count=1,
+        ),
+        ExperimentConfiguration(
+            configuration_id="dropout-high",
+            aeb_enabled=True,
+            observation_mode="corrupted",
+            severity_by_channel={**severities, "dropout": "high"},
+            replicate_count=1,
+        ),
+    )
+
+    results, invalid = run_common_scenario(
+        NuPlanScenario(reference, family, "e" * 64), configurations, protocol=object()
+    )
+
+    assert invalid is None, invalid
+    assert [record.configuration_id for record in results] == ["oracle_aeb", "dropout-high"]
+    assert all(record.valid for record in results)
+    assert all(record.family == family for record in results)
+    assert all(record.scenario_token == reference.token for record in results)

@@ -40,6 +40,7 @@ DT_S = 0.1
 EGO_SIZE = (4.0, 2.0)
 TOKEN = "loop-0001"
 PROTOCOL_HASH = "c" * 64
+FIRST_TIMESTAMP_US = 1_600_000_000_000_000
 CHANNELS = ("dropout", "localization_shape", "latency", "track_instability")
 
 
@@ -94,6 +95,16 @@ def empty_road(step: int, timestamp_us: int) -> tuple[TrackState, ...]:
     return ()
 
 
+def stamped(tracks: Any, dt_s: float = DT_S) -> Any:
+    """A world source on the log-like clock: one frame per step, stamped by the source."""
+
+    def frame_at_step(step: int) -> tuple[int, Any]:
+        timestamp_us = FIRST_TIMESTAMP_US + step * round(dt_s * 1_000_000)
+        return timestamp_us, tracks(step, timestamp_us)
+
+    return frame_at_step
+
+
 def run(
     module: ModuleType,
     tracks: Any = empty_road,
@@ -103,13 +114,13 @@ def run(
     initial_speed_mps: float = 10.0,
     replicate: int = 0,
     dt_s: float = DT_S,
+    source: Optional[Any] = None,
 ) -> Any:
     return module.run_steps(
         token=TOKEN,
         route_xy=np.array([[0.0, 0.0], [400.0, 0.0]], dtype=np.float64),
-        tracks_at_step=tracks,
+        frame_at_step=stamped(tracks, dt_s) if source is None else source,
         steps=steps,
-        first_timestamp_us=1_600_000_000_000_000,
         initial_speed_mps=initial_speed_mps,
         ego_size_lw_m=EGO_SIZE,
         configuration=config if config is not None else configuration(),
@@ -301,9 +312,8 @@ def test_the_ego_follows_the_route_rather_than_a_straight_line() -> None:
     outcome = module.run_steps(
         token=TOKEN,
         route_xy=np.array([[0.0, 0.0], [10.0, 0.0], [10.0, 90.0]], dtype=np.float64),
-        tracks_at_step=empty_road,
+        frame_at_step=stamped(empty_road),
         steps=30,
-        first_timestamp_us=1_600_000_000_000_000,
         initial_speed_mps=10.0,
         ego_size_lw_m=EGO_SIZE,
         configuration=configuration("no_aeb", aeb=False),
@@ -325,9 +335,8 @@ def test_running_out_of_route_ends_the_run_rather_than_inventing_road() -> None:
     outcome = module.run_steps(
         token=TOKEN,
         route_xy=np.array([[0.0, 0.0], [12.0, 0.0]], dtype=np.float64),
-        tracks_at_step=empty_road,
+        frame_at_step=stamped(empty_road),
         steps=90,
-        first_timestamp_us=1_600_000_000_000_000,
         initial_speed_mps=10.0,
         ego_size_lw_m=EGO_SIZE,
         configuration=configuration("no_aeb", aeb=False),
@@ -392,3 +401,37 @@ def test_an_impossible_step_length_is_refused(bad_dt: float) -> None:
 
     with pytest.raises(ValueError, match=r"^dt_s must be finite and positive"):
         run(module, dt_s=bad_dt)
+
+
+def test_the_world_source_owns_the_clock(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A frame the loop stamped itself would carry a clock its tracks do not share."""
+
+    module = load_step_loop_module()
+    seen: list[int] = []
+    original = module.APPLY_ERRORS
+
+    def capturing(history: Any, index: int, *arguments: Any, **keywords: Any) -> Any:
+        seen.append(history[index].timestamp_us)
+        return original(history, index, *arguments, **keywords)
+
+    monkeypatch.setattr(module, "APPLY_ERRORS", capturing)
+    stamps = [7_000_000 + step * 99_986 for step in range(5)]
+
+    run(
+        module,
+        config=configuration("corrupted", mode="corrupted"),
+        steps=5,
+        source=lambda step: (stamps[step], ()),
+    )
+
+    assert seen == stamps
+
+
+def test_a_world_source_that_goes_backwards_is_refused() -> None:
+    """A history assembled out of order decides every latency selection by that order."""
+
+    module = load_step_loop_module()
+    stamps = [7_000_000, 7_100_000, 7_050_000]
+
+    with pytest.raises(ValueError, match=r"^the world source went backwards in time at step 2"):
+        run(module, steps=3, source=lambda step: (stamps[step], ()))

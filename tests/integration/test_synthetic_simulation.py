@@ -65,10 +65,11 @@ def lead_track(timestamp_us: int) -> TrackState:
     )
 
 
-def lead_vehicle(step: int, timestamp_us: int) -> tuple[TrackState, ...]:
-    """The world at one step: one stationary vehicle, wherever the ego has reached."""
+def lead_vehicle(step: int) -> tuple[int, tuple[TrackState, ...]]:
+    """The world at one step: one stationary vehicle, on the recording's own clock."""
 
-    return (lead_track(timestamp_us),)
+    timestamp_us = FIRST_TIMESTAMP_US + step * round(DT_S * 1_000_000)
+    return timestamp_us, (lead_track(timestamp_us),)
 
 
 class SyntheticLeadScenario:
@@ -106,9 +107,8 @@ class SyntheticLeadScenario:
         return run_steps(
             token=TOKEN,
             route_xy=ROUTE_XY,
-            tracks_at_step=lead_vehicle,
+            frame_at_step=lead_vehicle,
             steps=STEPS,
-            first_timestamp_us=FIRST_TIMESTAMP_US,
             initial_speed_mps=setup.initial_speed_mps,
             ego_size_lw_m=EGO_SIZE,
             configuration=configuration,
