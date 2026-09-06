@@ -94,6 +94,40 @@ had already finished were measured correctly, but the comparison they would be
 scored by never happened, and a record carrying zeros for those two fields would
 be a fabricated result rather than a partial one.
 
+## A contact is not the same thing as a collision the ego caused
+
+The agents replay the recording and never react. An ego that brakes — correctly,
+for a pedestrian — is therefore driven into by the vehicle that was following it
+in the log, which had a moving ego ahead of it and has one standing still.
+
+This is not a hypothesis. The first smoke over real nuPlan scenarios, on
+2026-09-06, put `oracle_aeb` at twelve collisions against `no_aeb`'s three. Every
+one of the twelve happened at an ego speed of 0.00 m/s, and the striking body in
+the case examined was 4.97 m BEHIND the ego's centre, 0.01 m off its axis, moving
+at 6.22 m/s. **Counting those would have reported the AEB as harmful, and the
+study's headline would have been backwards.**
+
+So a contact is attributed the way nuPlan's own `ego_at_fault_collisions`
+attributes it, and `ego_at_fault` in `simulation/step_loop.py` is the whole rule:
+
+- **A stopped ego is not at fault.** There is nothing left for perception or
+  braking to have done differently.
+- **An ego struck from behind by something faster is not at fault.** The body is
+  behind the ego's centre and closing on it.
+- **Everything else is.** The ego drove into a body, and whether it should have
+  braked sooner is exactly what this study measures.
+
+Two consequences are deliberate. A contact that is not the ego's fault is
+**counted, in `contacts_not_at_fault`, rather than dropped** — a run that the
+recording rear-ended is a fact about the simulation and a reader has to see how
+often it happens. And it **does not end the run**: ending it would give the
+braking configurations less exposure than the others and bias the comparison the
+same way again, one level down. Each body is counted once however long the
+overlap lasts.
+
+An at-fault collision does end the run, because integrating a vehicle through a
+body it has hit is not a simulation of anything.
+
 ## Invalidity
 
 Infrastructure-invalid scenarios are removed from **all** configurations before

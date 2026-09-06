@@ -52,6 +52,31 @@ therefore unfreezable:
 | `cut_in_or_crossing` | 0 | 0 | empty; every pinned type absent |
 | `bicycle_or_vru` | 1 | 2 | one log cannot be split log-disjointly |
 
+## What the official splits hold under protocol v2
+
+The census was re-run over both official splits once they were fetched. Every
+type v2 pins is present in each, and every family spans enough logs to be
+divided; the counts and the commands are in
+[the preflight record](verification/nuplan-preflight.md).
+
+| Family | `train` scenarios | `train` logs | `val` scenarios | `val` logs |
+| --- | ---: | ---: | ---: | ---: |
+| `lead_or_stopping` | 37,209 | 743 | 25,098 | 436 |
+| `cut_in_or_crossing` | 29,858 | 1,595 | 12,032 | 633 |
+| `pedestrian_or_crosswalk` | 337,456 | 1,329 | 677,553 | 812 |
+| `bicycle_or_vru` | 4,849 | 49 | 729 | 29 |
+
+`bicycle_or_vru` is thin in mini and ordinary in the official splits, which is
+what the gate existed to find out. Nothing was dropped and no fallback city was
+needed.
+
+A family's scenario count is an upper bound on its cohort rather than a
+prediction of it. Measured on mini, only 3.8 percent of `lead_or_stopping`
+candidates pass the prefilter, and almost every refusal is `initial ego speed
+below 2.0 m/s`: `stopping_with_lead` tags the moment the ego HAS stopped behind a
+lead, and a stopped ego had no braking decision for a perception error to
+change.
+
 **Protocol v1 never produced a result, so nothing published changes.** It was
 replaced by [`../configs/protocols/nuplan_aeb_v2.yaml`](../configs/protocols/nuplan_aeb_v2.yaml),
 whose types all come from
@@ -86,8 +111,10 @@ and imposes none, so the adapter and `compose.yaml` simply agree on one.
 
 - No count here is a result. The scenario counts above describe the recording,
   not any model or controller.
-- The census is a floor rather than a ceiling: a type present only in `train` or
-  `val` would be absent from a mini-only vocabulary. The census is re-run over
-  both splits at the cohort freeze and the vocabulary extended if one appears.
+- The census over the official splits found no type outside the vocabulary that
+  any family claims, so nothing was added to it. The `unmapped_present` list in
+  each census document names the tags nuPlan carries that no family maps, which
+  is a different fact and is left as it is: this study measures four families,
+  not every situation nuPlan labelled.
 - No cohort is frozen by this document. Freezing, with its eligibility record for
   every accepted and rejected token, is a separate step with its own evidence.
