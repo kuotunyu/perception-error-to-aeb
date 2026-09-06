@@ -20,9 +20,18 @@ import os
 from pathlib import Path
 
 import pytest
+from pydantic import BaseModel
 from typer.testing import CliRunner
 
+from aebrisk.artifacts.documents import (
+    AEBEvaluationV1,
+    AEBExclusionsV1,
+    AEBIntervalsV1,
+    AEBShapleyV1,
+)
+from aebrisk.attribution.factorial import formal_configurations
 from aebrisk.cli.app import app
+from aebrisk.cohort.manifest import CohortManifestV1, membership_sha256
 
 PROTOCOL_TEXT = "protocol: nuplan_aeb_v2\n"
 PROTOCOL_SHA = hashlib.sha256(PROTOCOL_TEXT.encode()).hexdigest()
@@ -330,28 +339,185 @@ def test_the_whole_matrix_can_be_asked_for_in_one_pass(workspace: Path) -> None:
 # --------------------------------------------------------------------------
 
 
-def test_evaluate_reads_a_run_index_and_writes_a_summary(workspace: Path) -> None:
-    """Reading an index rather than scanning a directory makes what ran a decision."""
+def _formal_record(configuration: str, token: str, replicate: int, collision: int) -> dict:
+    return {
+        "schema_version": "aeb-scenario-result/v2",
+        "scenario_token": token,
+        "family": "lead_or_stopping",
+        "configuration_id": configuration,
+        "replicate": replicate,
+        "valid": True,
+        "invalid_reason": None,
+        "collision_vru": collision,
+        "collision_vehicle": 0,
+        "collision_object": 0,
+        "collision_energy": float(collision),
+        "contacts_not_at_fault": 0,
+        "min_ttc_s": None,
+        "min_clearance_m": 2.0,
+        "missed_interventions": 0,
+        "false_interventions": 0,
+        "matched_delay_s": [],
+        "stop_distance_m": None,
+        "max_deceleration_mps2": 1.0,
+        "max_abs_jerk_mps3": 2.0,
+        "intervention_duration_s": float(collision),
+        "simulated_duration_s": 2.0,
+    }
 
-    index = workspace / "runs.json"
-    index.write_text(json.dumps({"runs": ["oracle_aeb", "no_aeb"]}), encoding="utf-8")
 
-    result = run("evaluate", "--run-index", str(index), "--output-dir", str(workspace / "metrics"))
+def formal_evaluation_fixture(workspace: Path) -> tuple[Path, Path]:
+    """A complete 26-cell set; the strict reader never gets a reduced test matrix."""
+
+    manifest = CohortManifestV1.model_validate(cohort_document(("s-0001", "s-0002")))
+    manifest_directory = workspace / "manifests"
+    manifest_directory.mkdir()
+    manifest_path = manifest_directory / "evaluation.json"
+    for split in ("smoke", "development", "evaluation"):
+        split_manifest = manifest.model_copy(update={"split": split})
+        (manifest_directory / f"{split}.json").write_text(
+            json.dumps(split_manifest.model_dump(mode="json")), encoding="utf-8"
+        )
+    eligibility = {
+        "schema_version": "aeb-cohort-eligibility/v1",
+        "examined": [],
+        "scenarios_in_split_by_family": {},
+    }
+    for split in ("development", "evaluation"):
+        (manifest_directory / f"{split}-eligibility.json").write_text(
+            json.dumps(eligibility), encoding="utf-8"
+        )
+    cohort_hash = membership_sha256(manifest)
+    results = workspace / "formal"
+    for configuration in formal_configurations():
+        directory = results / configuration.configuration_id
+        directory.mkdir(parents=True)
+        for token in ("s-0001", "s-0002"):
+            collision = int(
+                configuration.configuration_id == "dropout-medium" and token == "s-0002"
+            )
+            payload = {
+                "schema_version": "aeb-token-results/v1",
+                "scenario_token": token,
+                "family": "lead_or_stopping",
+                "split": "evaluation",
+                "configuration_id": configuration.configuration_id,
+                "protocol_sha256": PROTOCOL_SHA,
+                "cohort_manifest_sha256": cohort_hash,
+                "valid": True,
+                "invalid_reason": None,
+                "invalid_phase": None,
+                "results": [
+                    _formal_record(configuration.configuration_id, token, index, collision)
+                    for index in range(3)
+                ],
+            }
+            (directory / f"{token}.json").write_text(json.dumps(payload), encoding="utf-8")
+    (results / "run_complete.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "aeb-run-complete/v1",
+                "cohort_manifest_sha256": cohort_hash,
+                "tokens": ["s-0001", "s-0002"],
+            }
+        ),
+        encoding="utf-8",
+    )
+    return results, manifest_path
+
+
+def test_evaluate_validates_a_complete_matrix_and_writes_four_documents(workspace: Path) -> None:
+    results, manifest = formal_evaluation_fixture(workspace)
+    output = workspace / "metrics"
+
+    result = run(
+        "evaluate",
+        "--results-dir",
+        str(results),
+        "--manifest",
+        str(manifest),
+        "--output-dir",
+        str(output),
+    )
 
     assert result.exit_code == 0, result.output
-    written = json.loads((workspace / "metrics" / "evaluation.json").read_text(encoding="utf-8"))
-    assert written["evaluated_runs"] == ["no_aeb", "oracle_aeb"]
+    models: dict[str, type[BaseModel]] = {
+        "evaluation.json": AEBEvaluationV1,
+        "intervals.json": AEBIntervalsV1,
+        "shapley.json": AEBShapleyV1,
+        "exclusions.json": AEBExclusionsV1,
+    }
+    for name, model in models.items():
+        model.model_validate_json((output / name).read_text(encoding="utf-8"))
+    for name in (
+        "smoke.json",
+        "development.json",
+        "evaluation.json",
+        "development-eligibility.json",
+        "evaluation-eligibility.json",
+    ):
+        assert (output / "cohort" / name).read_bytes() == (manifest.parent / name).read_bytes()
+    evaluation = json.loads((output / "evaluation.json").read_text(encoding="utf-8"))
+    assert len(evaluation["configurations"]) == 26
+    assert evaluation["common_valid_tokens"] == 2
 
 
-def test_an_index_naming_no_runs_is_refused(workspace: Path) -> None:
-    """An empty evaluation would produce a report with no data and no error."""
+def test_evaluate_refuses_a_completion_marker_for_another_manifest(workspace: Path) -> None:
+    results, manifest = formal_evaluation_fixture(workspace)
+    marker = json.loads((results / "run_complete.json").read_text(encoding="utf-8"))
+    marker["cohort_manifest_sha256"] = "f" * 64
+    (results / "run_complete.json").write_text(json.dumps(marker), encoding="utf-8")
 
-    index = workspace / "empty.json"
-    index.write_text(json.dumps({"runs": []}), encoding="utf-8")
-
-    result = run("evaluate", "--run-index", str(index), "--output-dir", str(workspace / "metrics"))
+    result = run(
+        "evaluate",
+        "--results-dir",
+        str(results),
+        "--manifest",
+        str(manifest),
+        "--output-dir",
+        str(workspace / "metrics"),
+    )
 
     assert result.exit_code != 0
+    assert "completion marker cohort hash" in result.output
+
+
+def test_evaluate_refuses_corrupt_cohort_metadata_before_writing_output(workspace: Path) -> None:
+    results, manifest = formal_evaluation_fixture(workspace)
+    (manifest.parent / "development-eligibility.json").write_text("{}", encoding="utf-8")
+    output = workspace / "metrics"
+
+    result = run(
+        "evaluate",
+        "--results-dir",
+        str(results),
+        "--manifest",
+        str(manifest),
+        "--output-dir",
+        str(output),
+    )
+
+    assert result.exit_code != 0
+    assert "invalid cohort eligibility document" in result.output
+    assert not output.exists()
+
+
+def test_evaluate_requires_every_published_cohort_metadata_file(workspace: Path) -> None:
+    results, manifest = formal_evaluation_fixture(workspace)
+    (manifest.parent / "smoke.json").unlink()
+
+    result = run(
+        "evaluate",
+        "--results-dir",
+        str(results),
+        "--manifest",
+        str(manifest),
+        "--output-dir",
+        str(workspace / "metrics"),
+    )
+
+    assert result.exit_code != 0
+    assert "required cohort metadata" in result.output
 
 
 # --------------------------------------------------------------------------

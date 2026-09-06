@@ -1,0 +1,28 @@
+{
+  "families": {
+    "bicycle_or_vru": [],
+    "cut_in_or_crossing": [
+      "046061c6955f5d76",
+      "b8d925e54e6f5a8f"
+    ],
+    "lead_or_stopping": [
+      "2c0d5d6c083a5238",
+      "d47571151d425fc1"
+    ],
+    "pedestrian_or_crosswalk": [
+      "0c600e517fcd5fa8",
+      "991ccaefbae25456"
+    ]
+  },
+  "log_names": [
+    "2021.06.14.18.42.45_veh-12_03445_03902.db",
+    "2021.07.09.17.06.37_veh-35_00258_00748.db",
+    "2021.07.09.20.59.12_veh-38_01208_01692.db",
+    "2021.07.16.20.45.29_veh-35_00600_01084.db",
+    "2021.10.01.19.16.42_veh-28_02011_02410.db",
+    "2021.10.11.02.57.41_veh-50_00352_00535.db"
+  ],
+  "protocol_sha256": "bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9",
+  "schema_version": "aeb-cohort-manifest/v1",
+  "split": "smoke"
+}

@@ -17,6 +17,10 @@ from pathlib import Path
 from typing import Callable
 from urllib.parse import unquote, urlsplit
 
+from pydantic import ValidationError
+
+from aebrisk.artifacts.documents import DOCUMENT_MODELS
+
 VERIFY_STAGES: tuple[str, ...] = (
     "private_guard",
     "format_check",
@@ -82,7 +86,7 @@ def verify_repository(repo_root: Path, runner: StageRunner = subprocess_runner) 
 
 
 def verify_schema_contracts(repo_root: Path) -> int:
-    """Parse every JSON schema and report all malformed files."""
+    """Parse schemas and validate every registered published evidence document."""
 
     invalid: list[Path] = []
     for path in sorted((repo_root / "schemas").glob("**/*.json")):
@@ -91,12 +95,28 @@ def verify_schema_contracts(repo_root: Path) -> int:
         except (OSError, UnicodeDecodeError, json.JSONDecodeError):
             invalid.append(path)
 
+    invalid_evidence: list[Path] = []
+    for path in sorted((repo_root / "docs" / "evidence").glob("**/*.json")):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            version = payload.get("schema_version") if isinstance(payload, dict) else None
+            model = DOCUMENT_MODELS.get(version) if isinstance(version, str) else None
+            if model is not None:
+                model.model_validate(payload)
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValidationError):
+            invalid_evidence.append(path)
+
     for path in invalid:
         print(
             f"invalid JSON schema: {path.relative_to(repo_root).as_posix()}",
             file=sys.stderr,
         )
-    return 1 if invalid else 0
+    for path in invalid_evidence:
+        print(
+            f"invalid evidence document: {path.relative_to(repo_root).as_posix()}",
+            file=sys.stderr,
+        )
+    return 1 if invalid or invalid_evidence else 0
 
 
 def _iter_markdown_files(repo_root: Path) -> list[Path]:

@@ -1,0 +1,89 @@
+{
+  "$defs": {
+    "AEBExclusionV1": {
+      "additionalProperties": false,
+      "properties": {
+        "exception_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Exception Type"
+        },
+        "phase": {
+          "minLength": 1,
+          "title": "Phase",
+          "type": "string"
+        },
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "scenario_token": {
+          "minLength": 1,
+          "title": "Scenario Token",
+          "type": "string"
+        }
+      },
+      "required": [
+        "scenario_token",
+        "phase",
+        "reason",
+        "exception_type"
+      ],
+      "title": "AEBExclusionV1",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "cohort_manifest_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Cohort Manifest Sha256",
+      "type": "string"
+    },
+    "cohort_size": {
+      "minimum": 0,
+      "title": "Cohort Size",
+      "type": "integer"
+    },
+    "common_valid_tokens": {
+      "minimum": 0,
+      "title": "Common Valid Tokens",
+      "type": "integer"
+    },
+    "excluded": {
+      "items": {
+        "$ref": "#/$defs/AEBExclusionV1"
+      },
+      "title": "Excluded",
+      "type": "array"
+    },
+    "protocol_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Protocol Sha256",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "aeb-exclusions/v1",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "protocol_sha256",
+    "cohort_manifest_sha256",
+    "cohort_size",
+    "common_valid_tokens",
+    "excluded"
+  ],
+  "title": "AEBExclusionsV1",
+  "type": "object"
+}

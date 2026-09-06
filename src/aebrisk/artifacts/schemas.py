@@ -16,6 +16,12 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from aebrisk.artifacts.documents import (
+    AEBEvaluationV1,
+    AEBExclusionsV1,
+    AEBIntervalsV1,
+    AEBShapleyV1,
+)
 from aebrisk.artifacts.envelope import PortfolioArtifactEnvelopeV1
 from aebrisk.artifacts.results import AEBScenarioResultV1, AEBScenarioResultV2
 from aebrisk.artifacts.run_record import RunRecordV1
@@ -26,6 +32,10 @@ SCHEMA_MODELS: tuple[tuple[str, type[BaseModel]], ...] = (
     ("run_record_v1", RunRecordV1),
     ("aeb_result_v1", AEBScenarioResultV1),
     ("aeb_result_v2", AEBScenarioResultV2),
+    ("aeb_evaluation_v1", AEBEvaluationV1),
+    ("aeb_intervals_v1", AEBIntervalsV1),
+    ("aeb_shapley_v1", AEBShapleyV1),
+    ("aeb_exclusions_v1", AEBExclusionsV1),
 )
 
 
@@ -34,6 +44,21 @@ def schema_document(model: type[BaseModel]) -> dict[str, Any]:
 
     document: dict[str, Any] = {"$schema": "https://json-schema.org/draft/2020-12/schema"}
     document.update(model.model_json_schema())
+    if model is AEBScenarioResultV2:
+        document["allOf"] = [
+            {
+                "if": {"properties": {"valid": {"const": True}}, "required": ["valid"]},
+                "then": {
+                    "properties": {
+                        "simulated_duration_s": {
+                            "exclusiveMinimum": 0.0,
+                            "type": "number",
+                        }
+                    },
+                    "required": ["simulated_duration_s"],
+                },
+            }
+        ]
     return document
 
 

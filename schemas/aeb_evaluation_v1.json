@@ -1,0 +1,246 @@
+{
+  "$defs": {
+    "AEBConfigurationEvaluationV1": {
+      "additionalProperties": false,
+      "properties": {
+        "collision_energy_total": {
+          "minimum": 0.0,
+          "title": "Collision Energy Total",
+          "type": "number"
+        },
+        "collisions": {
+          "minimum": 0,
+          "title": "Collisions",
+          "type": "integer"
+        },
+        "collisions_object": {
+          "minimum": 0,
+          "title": "Collisions Object",
+          "type": "integer"
+        },
+        "collisions_per_1000_scenarios": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Collisions Per 1000 Scenarios"
+        },
+        "collisions_per_100km": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Collisions Per 100Km"
+        },
+        "collisions_per_hour": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Collisions Per Hour"
+        },
+        "collisions_vehicle": {
+          "minimum": 0,
+          "title": "Collisions Vehicle",
+          "type": "integer"
+        },
+        "collisions_vru": {
+          "minimum": 0,
+          "title": "Collisions Vru",
+          "type": "integer"
+        },
+        "configuration_id": {
+          "minLength": 1,
+          "title": "Configuration Id",
+          "type": "string"
+        },
+        "contacts_not_at_fault": {
+          "minimum": 0,
+          "title": "Contacts Not At Fault",
+          "type": "integer"
+        },
+        "false_interventions": {
+          "minimum": 0,
+          "title": "False Interventions",
+          "type": "integer"
+        },
+        "group": {
+          "enum": [
+            "baseline",
+            "single_channel",
+            "coalition",
+            "imported"
+          ],
+          "title": "Group",
+          "type": "string"
+        },
+        "max_abs_jerk_mps3": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Max Abs Jerk Mps3"
+        },
+        "max_deceleration_mps2": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Max Deceleration Mps2"
+        },
+        "mean_intervention_duration_s": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Mean Intervention Duration S"
+        },
+        "min_clearance_m": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Min Clearance M"
+        },
+        "min_ttc_s": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Min Ttc S"
+        },
+        "missed_interventions": {
+          "minimum": 0,
+          "title": "Missed Interventions",
+          "type": "integer"
+        },
+        "scenarios": {
+          "minimum": 0,
+          "title": "Scenarios",
+          "type": "integer"
+        },
+        "simulated_seconds": {
+          "minimum": 0.0,
+          "title": "Simulated Seconds",
+          "type": "number"
+        }
+      },
+      "required": [
+        "configuration_id",
+        "group",
+        "scenarios",
+        "simulated_seconds",
+        "collisions",
+        "collisions_vru",
+        "collisions_vehicle",
+        "collisions_object",
+        "contacts_not_at_fault",
+        "collision_energy_total",
+        "missed_interventions",
+        "false_interventions",
+        "mean_intervention_duration_s",
+        "max_deceleration_mps2",
+        "max_abs_jerk_mps3",
+        "min_ttc_s",
+        "min_clearance_m",
+        "collisions_per_1000_scenarios",
+        "collisions_per_hour",
+        "collisions_per_100km"
+      ],
+      "title": "AEBConfigurationEvaluationV1",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "cohort_manifest_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Cohort Manifest Sha256",
+      "type": "string"
+    },
+    "cohort_size": {
+      "minimum": 0,
+      "title": "Cohort Size",
+      "type": "integer"
+    },
+    "common_valid_tokens": {
+      "minimum": 0,
+      "title": "Common Valid Tokens",
+      "type": "integer"
+    },
+    "configurations": {
+      "items": {
+        "$ref": "#/$defs/AEBConfigurationEvaluationV1"
+      },
+      "title": "Configurations",
+      "type": "array"
+    },
+    "protocol_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Protocol Sha256",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "aeb-evaluation/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "simulated_seconds": {
+      "minimum": 0.0,
+      "title": "Simulated Seconds",
+      "type": "number"
+    }
+  },
+  "required": [
+    "schema_version",
+    "protocol_sha256",
+    "cohort_manifest_sha256",
+    "cohort_size",
+    "common_valid_tokens",
+    "simulated_seconds",
+    "configurations"
+  ],
+  "title": "AEBEvaluationV1",
+  "type": "object"
+}

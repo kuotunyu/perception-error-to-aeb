@@ -37,6 +37,10 @@ def test_every_committed_schema_has_a_model() -> None:
         "run_record_v1",
         "aeb_result_v1",
         "aeb_result_v2",
+        "aeb_evaluation_v1",
+        "aeb_intervals_v1",
+        "aeb_shapley_v1",
+        "aeb_exclusions_v1",
     ]
 
 
@@ -85,8 +89,12 @@ def test_writing_schemas_produces_the_declared_files(tmp_path: Path) -> None:
     written = schemas.write_schemas(tmp_path)
 
     assert sorted(path.name for path in written) == [
+        "aeb_evaluation_v1.json",
+        "aeb_exclusions_v1.json",
+        "aeb_intervals_v1.json",
         "aeb_result_v1.json",
         "aeb_result_v2.json",
+        "aeb_shapley_v1.json",
         "portfolio_artifact_envelope_v1.json",
         "run_record_v1.json",
     ]
@@ -104,3 +112,22 @@ def test_writing_schemas_accepts_an_explicit_selection(tmp_path: Path) -> None:
     written = schemas.write_schemas(tmp_path, [("only_one", RunRecordV1)])
 
     assert [path.name for path in written] == ["only_one.json"]
+
+
+def test_v2_schema_rejects_null_exposure_for_a_valid_result() -> None:
+    """Schema-only consumers need the same valid/exposure relationship as Pydantic."""
+
+    from aebrisk.artifacts.results import AEBScenarioResultV2
+
+    schemas = load_schemas_module()
+    conditional = schemas.schema_document(AEBScenarioResultV2)["allOf"]
+
+    assert conditional == [
+        {
+            "if": {"properties": {"valid": {"const": True}}, "required": ["valid"]},
+            "then": {
+                "properties": {"simulated_duration_s": {"exclusiveMinimum": 0.0, "type": "number"}},
+                "required": ["simulated_duration_s"],
+            },
+        }
+    ]

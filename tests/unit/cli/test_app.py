@@ -135,8 +135,10 @@ def test_a_missing_run_index_is_refused(tmp_path: Path) -> None:
 
     result = invoke(
         "evaluate",
-        "--run-index",
+        "--results-dir",
         str(tmp_path / "absent.json"),
+        "--manifest",
+        str(tmp_path / "absent-manifest.json"),
         "--output-dir",
         str(tmp_path / "out"),
     )

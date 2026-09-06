@@ -1,6 +1,31 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "valid": {
+            "const": true
+          }
+        },
+        "required": [
+          "valid"
+        ]
+      },
+      "then": {
+        "properties": {
+          "simulated_duration_s": {
+            "exclusiveMinimum": 0.0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "simulated_duration_s"
+        ]
+      }
+    }
+  ],
   "description": "One simulation's measurements, including its actual executed duration.",
   "properties": {
     "collision_energy": {

@@ -1,0 +1,8 @@
+{
+  "cohort_manifest_sha256": "65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9",
+  "cohort_size": 344,
+  "common_valid_tokens": 344,
+  "excluded": [],
+  "protocol_sha256": "bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9",
+  "schema_version": "aeb-exclusions/v1"
+}

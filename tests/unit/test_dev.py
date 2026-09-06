@@ -113,6 +113,34 @@ def test_schema_contracts_reports_every_malformed_schema(
     assert "invalid JSON schema: schemas/b.json" in error
 
 
+def test_schema_contracts_reports_a_corrupted_published_document(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A hand-edited evidence file must fail the same gate as a stale schema."""
+
+    evidence = tmp_path / "docs" / "evidence"
+    evidence.mkdir(parents=True)
+    (evidence / "bad.json").write_text(
+        json.dumps({"schema_version": "aeb-evaluation/v1", "cohort_size": "two"}),
+        encoding="utf-8",
+    )
+
+    assert dev.verify_schema_contracts(tmp_path) == 1
+    assert "invalid evidence document: docs/evidence/bad.json" in capsys.readouterr().err
+
+
+def test_schema_contracts_ignores_evidence_without_a_registered_version(tmp_path: Path) -> None:
+    """Copied cohort metadata keeps its own contract and is outside D3's registry."""
+
+    evidence = tmp_path / "docs" / "evidence"
+    evidence.mkdir(parents=True)
+    (evidence / "cohort.json").write_text(
+        json.dumps({"schema_version": "aeb-cohort-manifest/v1"}), encoding="utf-8"
+    )
+
+    assert dev.verify_schema_contracts(tmp_path) == 0
+
+
 def markdown(repo_root: Path, name: str, text: str) -> Path:
     path = repo_root / name
     path.parent.mkdir(parents=True, exist_ok=True)

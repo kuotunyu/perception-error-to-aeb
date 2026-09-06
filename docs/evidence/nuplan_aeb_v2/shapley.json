@@ -1,0 +1,29 @@
+{
+  "cohort_manifest_sha256": "65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9",
+  "cohort_size": 344,
+  "common_valid_tokens": 344,
+  "metrics": {
+    "collision_indicator": {
+      "efficiency_max_abs_residual": 2.220446049250313e-16,
+      "scenarios_attributed": 344,
+      "values": {
+        "dropout": -0.0021802325581395357,
+        "latency": 0.002664728682170542,
+        "localization_shape": -0.027374031007751935,
+        "track_instability": 0.0007267441860465114
+      }
+    },
+    "intervention_duration_s": {
+      "efficiency_max_abs_residual": 2.6645352591003757e-15,
+      "scenarios_attributed": 344,
+      "values": {
+        "dropout": -0.10376291989664084,
+        "latency": -0.2667312661498706,
+        "localization_shape": 4.0670219638242875,
+        "track_instability": -0.03422157622739022
+      }
+    }
+  },
+  "protocol_sha256": "bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9",
+  "schema_version": "aeb-shapley/v1"
+}

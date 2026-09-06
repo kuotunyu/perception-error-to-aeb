@@ -23,12 +23,24 @@ The map version is v1.0 rather than v1.1 because the pinned devkit says so:
 
 ## Licence and distribution
 
-nuPlan is licensed to the account holder by Motional and is not redistributed
-here. No database, log, map or extract of one is committed to this repository,
-and no absolute dataset path appears in any tracked file. The archives were
-fetched from Motional's public AWS mirror, which needs no login and no AWS
-account; that is a distribution convenience and changes nothing about the
-licence the data carries.
+nuPlan v1.1 is supplied under Motional's dataset terms and the attached
+Creative Commons Attribution-NonCommercial-ShareAlike 4.0 license. The full
+local license file was checked before publishing the derived evidence: 25,319
+bytes, SHA-256
+`1a218286e733f6d6135fc5698d614cda2be94ea096f6eee280278458e570636a`.
+
+The repository includes compact derived cohort metadata and aggregate analysis
+under `docs/evidence/nuplan_aeb_v2/`: scenario tokens, log names, selection
+measurements and reasons, safety summaries, intervals, attribution, and
+exclusions. Their [evidence-specific notice](evidence/nuplan_aeb_v2-NOTICE.md)
+records the source/version, transformations, CC BY-NC-SA and Motional terms,
+warranty notice, and no-endorsement statement. These derived files are not
+unrestricted MIT content.
+
+No database, map, sensor media, point cloud, trajectory, or model artifact is
+committed. The archives were fetched from Motional's public AWS mirror, which
+needs no login or AWS account; that distribution convenience does not alter the
+dataset terms.
 
 ## The scenario-type vocabulary, and why protocol v1 was retired
 

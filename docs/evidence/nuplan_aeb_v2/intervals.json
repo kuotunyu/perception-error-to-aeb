@@ -1,0 +1,893 @@
+{
+  "cohort_manifest_sha256": "65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9",
+  "cohort_size": 344,
+  "common_valid_tokens": 344,
+  "intervals": {
+    "coalition-dropout+latency": {
+      "collision_indicator": {
+        "confidence": 0.95,
+        "estimate": 0.028100775193798454,
+        "high": 0.045542635658914726,
+        "low": 0.013565891472868215,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "false_interventions": {
+        "confidence": 0.95,
+        "estimate": 2.8953488372093013,
+        "high": 3.130813953488369,
+        "low": 2.671487403100773,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "intervention_duration_s": {
+        "confidence": 0.95,
+        "estimate": 9.275387596899224,
+        "high": 9.599825581395342,
+        "low": 8.940876937984488,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "missed_interventions": {
+        "confidence": 0.95,
+        "estimate": 1.4777131782945725,
+        "high": 1.6424418604651163,
+        "low": 1.325581395348837,
+        "resamples": 5000,
+        "seed": 20260831
+      }
+    },
+    "coalition-dropout+latency+track_instability": {
+      "collision_indicator": {
+        "confidence": 0.95,
+        "estimate": 0.03197674418604652,
+        "high": 0.051356589147286816,
+        "low": 0.015503875968992248,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "false_interventions": {
+        "confidence": 0.95,
+        "estimate": 2.9486434108527124,
+        "high": 3.1686531007751952,
+        "low": 2.7296511627906996,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "intervention_duration_s": {
+        "confidence": 0.95,
+        "estimate": 9.217441860465115,
+        "high": 9.539372577519377,
+        "low": 8.884161821705419,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "missed_interventions": {
+        "confidence": 0.95,
+        "estimate": 1.5184108527131768,
+        "high": 1.6860465116279066,
+        "low": 1.363372093023256,
+        "resamples": 5000,
+        "seed": 20260831
+      }
+    },
+    "coalition-dropout+localization_shape": {
+      "collision_indicator": {
+        "confidence": 0.95,
+        "estimate": 0.0,
+        "high": 0.0,
+        "low": 0.0,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "false_interventions": {
+        "confidence": 0.95,
+        "estimate": 4.880813953488372,
+        "high": 5.427325581395343,
+        "low": 4.331371124031004,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "intervention_duration_s": {
+        "confidence": 0.95,
+        "estimate": 13.559980620155025,
+        "high": 13.735077519379848,
+        "low": 13.380515988372094,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "missed_interventions": {
+        "confidence": 0.95,
+        "estimate": 2.6850775193798455,
+        "high": 3.013565891472868,
+        "low": 2.3788759689922485,
+        "resamples": 5000,
+        "seed": 20260831
+      }
+    },
+    "coalition-dropout+localization_shape+latency": {
+      "collision_indicator": {
+        "confidence": 0.95,
+        "estimate": 0.0,
+        "high": 0.0,
+        "low": 0.0,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "false_interventions": {
+        "confidence": 0.95,
+        "estimate": 4.668604651162792,
+        "high": 5.160852713178293,
+        "low": 4.180208333333331,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "intervention_duration_s": {
+        "confidence": 0.95,
+        "estimate": 13.28934108527131,
+        "high": 13.475586240310067,
+        "low": 13.087582364341076,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "missed_interventions": {
+        "confidence": 0.95,
+        "estimate": 2.6249999999999987,
+        "high": 2.9428536821705427,
+        "low": 2.335271317829459,
+        "resamples": 5000,
+        "seed": 20260831
+      }
+    },
+    "coalition-dropout+localization_shape+latency+track_instability": {
+      "collision_indicator": {
+        "confidence": 0.95,
+        "estimate": 0.0,
+        "high": 0.0,
+        "low": 0.0,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "false_interventions": {
+        "confidence": 0.95,
+        "estimate": 4.729651162790699,
+        "high": 5.2151162790697665,
+        "low": 4.24125484496124,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "intervention_duration_s": {
+        "confidence": 0.95,
+        "estimate": 13.265503875968989,
+        "high": 13.451841085271315,
+        "low": 13.063846899224808,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "missed_interventions": {
+        "confidence": 0.95,
+        "estimate": 2.60174418604651,
+        "high": 2.920566860465119,
+        "low": 2.31296027131783,
+        "resamples": 5000,
+        "seed": 20260831
+      }
+    },
+    "coalition-dropout+localization_shape+track_instability": {
+      "collision_indicator": {
+        "confidence": 0.95,
+        "estimate": 0.0,
+        "high": 0.0,
+        "low": 0.0,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "false_interventions": {
+        "confidence": 0.95,
+        "estimate": 4.953488372093023,
+        "high": 5.505862403100772,
+        "low": 4.400096899224804,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "intervention_duration_s": {
+        "confidence": 0.95,
+        "estimate": 13.534302325581395,
+        "high": 13.711734496124022,
+        "low": 13.352218992248066,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "missed_interventions": {
+        "confidence": 0.95,
+        "estimate": 2.656007751937983,
+        "high": 2.9815891472868206,
+        "low": 2.3536821705426347,
+        "resamples": 5000,
+        "seed": 20260831
+      }
+    },
+    "coalition-dropout+track_instability": {
+      "collision_indicator": {
+        "confidence": 0.95,
+        "estimate": 0.022286821705426358,
+        "high": 0.036821705426356585,
+        "low": 0.010658914728682169,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "false_interventions": {
+        "confidence": 0.95,
+        "estimate": 3.1317829457364366,
+        "high": 3.359520348837211,
+        "low": 2.903100775193797,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "intervention_duration_s": {
+        "confidence": 0.95,
+        "estimate": 9.478585271317828,
+        "high": 9.793510174418607,
+        "low": 9.158619186046508,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "missed_interventions": {
+        "confidence": 0.95,
+        "estimate": 1.2713178294573644,
+        "high": 1.4379844961240307,
+        "low": 1.117223837209302,
+        "resamples": 5000,
+        "seed": 20260831
+      }
+    },
+    "coalition-latency+track_instability": {
+      "collision_indicator": {
+        "confidence": 0.95,
+        "estimate": 0.030038759689922482,
+        "high": 0.04844961240310078,
+        "low": 0.014534883720930232,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "false_interventions": {
+        "confidence": 0.95,
+        "estimate": 2.477713178294574,
+        "high": 2.7209302325581395,
+        "low": 2.25,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "intervention_duration_s": {
+        "confidence": 0.95,
+        "estimate": 9.304651162790702,
+        "high": 9.633045058139535,
+        "low": 8.963650678294576,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "missed_interventions": {
+        "confidence": 0.95,
+        "estimate": 1.4525193798449607,
+        "high": 1.6289001937984493,
+        "low": 1.2877906976744184,
+        "resamples": 5000,
+        "seed": 20260831
+      }
+    },
+    "coalition-localization_shape+latency": {
+      "collision_indicator": {
+        "confidence": 0.95,
+        "estimate": 0.0,
+        "high": 0.0,
+        "low": 0.0,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "false_interventions": {
+        "confidence": 0.95,
+        "estimate": 4.165697674418604,
+        "high": 4.646342054263564,
+        "low": 3.69670542635659,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "intervention_duration_s": {
+        "confidence": 0.95,
+        "estimate": 13.410755813953486,
+        "high": 13.59012112403101,
+        "low": 13.216375968992258,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "missed_interventions": {
+        "confidence": 0.95,
+        "estimate": 2.7393410852713163,
+        "high": 3.0620397286821706,
+        "low": 2.4418362403100766,
+        "resamples": 5000,
+        "seed": 20260831
+      }
+    },
+    "coalition-localization_shape+latency+track_instability": {
+      "collision_indicator": {
+        "confidence": 0.95,
+        "estimate": 0.0,
+        "high": 0.0,
+        "low": 0.0,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "false_interventions": {
+        "confidence": 0.95,
+        "estimate": 4.262596899224805,
+        "high": 4.7412790697674385,
+        "low": 3.791666666666669,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "intervention_duration_s": {
+        "confidence": 0.95,
+        "estimate": 13.380426356589153,
+        "high": 13.559324127906983,
+        "low": 13.182843992248063,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "missed_interventions": {
+        "confidence": 0.95,
+        "estimate": 2.696705426356588,
+        "high": 3.019404069767441,
+        "low": 2.3992248062015507,
+        "resamples": 5000,
+        "seed": 20260831
+      }
+    },
+    "coalition-localization_shape+track_instability": {
+      "collision_indicator": {
+        "confidence": 0.95,
+        "estimate": 0.0,
+        "high": 0.0,
+        "low": 0.0,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "false_interventions": {
+        "confidence": 0.95,
+        "estimate": 4.598837209302325,
+        "high": 5.123086240310078,
+        "low": 4.066836240310077,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "intervention_duration_s": {
+        "confidence": 0.95,
+        "estimate": 13.677616279069776,
+        "high": 13.846712693798452,
+        "low": 13.510234980620165,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "missed_interventions": {
+        "confidence": 0.95,
+        "estimate": 2.838178294573644,
+        "high": 3.1695736434108506,
+        "low": 2.5329215116279067,
+        "resamples": 5000,
+        "seed": 20260831
+      }
+    },
+    "coalition-none": {
+      "collision_indicator": {
+        "confidence": 0.95,
+        "estimate": 0.02616279069767442,
+        "high": 0.0436046511627907,
+        "low": 0.011627906976744186,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "false_interventions": {
+        "confidence": 0.95,
+        "estimate": 2.497093023255814,
+        "high": 2.741279069767442,
+        "low": 2.255813953488372,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "intervention_duration_s": {
+        "confidence": 0.95,
+        "estimate": 9.6031976744186,
+        "high": 9.922398255813956,
+        "low": 9.278466569767444,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "missed_interventions": {
+        "confidence": 0.95,
+        "estimate": 1.1715116279069768,
+        "high": 1.3372093023255813,
+        "low": 1.0145348837209303,
+        "resamples": 5000,
+        "seed": 20260831
+      }
+    },
+    "dropout-high": {
+      "collision_indicator": {
+        "confidence": 0.95,
+        "estimate": 0.018410852713178293,
+        "high": 0.031007751937984496,
+        "low": 0.007751937984496124,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "false_interventions": {
+        "confidence": 0.95,
+        "estimate": 3.35658914728682,
+        "high": 3.5988614341085285,
+        "low": 3.1191860465116292,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "intervention_duration_s": {
+        "confidence": 0.95,
+        "estimate": 9.414244186046517,
+        "high": 9.725019379844953,
+        "low": 9.100968992248063,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "missed_interventions": {
+        "confidence": 0.95,
+        "estimate": 1.3507751937984496,
+        "high": 1.524224806201549,
+        "low": 1.196705426356589,
+        "resamples": 5000,
+        "seed": 20260831
+      }
+    },
+    "dropout-low": {
+      "collision_indicator": {
+        "confidence": 0.95,
+        "estimate": 0.025193798449612403,
+        "high": 0.04069767441860465,
+        "low": 0.011627906976744186,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "false_interventions": {
+        "confidence": 0.95,
+        "estimate": 2.7374031007751958,
+        "high": 2.964147286821706,
+        "low": 2.512572674418605,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "intervention_duration_s": {
+        "confidence": 0.95,
+        "estimate": 9.571608527131776,
+        "high": 9.881310562015507,
+        "low": 9.257063953488368,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "missed_interventions": {
+        "confidence": 0.95,
+        "estimate": 1.1908914728682176,
+        "high": 1.3527131782945743,
+        "low": 1.039728682170543,
+        "resamples": 5000,
+        "seed": 20260831
+      }
+    },
+    "dropout-medium": {
+      "collision_indicator": {
+        "confidence": 0.95,
+        "estimate": 0.018410852713178293,
+        "high": 0.0310077519379845,
+        "low": 0.007751937984496124,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "false_interventions": {
+        "confidence": 0.95,
+        "estimate": 3.02519379844961,
+        "high": 3.257751937984497,
+        "low": 2.79263565891473,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "intervention_duration_s": {
+        "confidence": 0.95,
+        "estimate": 9.526937984496117,
+        "high": 9.84050629844962,
+        "low": 9.206678779069765,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "missed_interventions": {
+        "confidence": 0.95,
+        "estimate": 1.2529069767441863,
+        "high": 1.4176598837209298,
+        "low": 1.0978439922480607,
+        "resamples": 5000,
+        "seed": 20260831
+      }
+    },
+    "latency-high": {
+      "collision_indicator": {
+        "confidence": 0.95,
+        "estimate": 0.029069767441860465,
+        "high": 0.046511627906976744,
+        "low": 0.011627906976744186,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "false_interventions": {
+        "confidence": 0.95,
+        "estimate": 2.494186046511628,
+        "high": 2.7297238372093013,
+        "low": 2.261627906976744,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "intervention_duration_s": {
+        "confidence": 0.95,
+        "estimate": 9.134011627906974,
+        "high": 9.483466569767435,
+        "low": 8.773524709302317,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "missed_interventions": {
+        "confidence": 0.95,
+        "estimate": 2.671511627906977,
+        "high": 2.863372093023256,
+        "low": 2.494186046511628,
+        "resamples": 5000,
+        "seed": 20260831
+      }
+    },
+    "latency-low": {
+      "collision_indicator": {
+        "confidence": 0.95,
+        "estimate": 0.029069767441860465,
+        "high": 0.046511627906976744,
+        "low": 0.011627906976744186,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "false_interventions": {
+        "confidence": 0.95,
+        "estimate": 2.383720930232558,
+        "high": 2.633720930232558,
+        "low": 2.1424418604651163,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "intervention_duration_s": {
+        "confidence": 0.95,
+        "estimate": 9.453488372093029,
+        "high": 9.779963662790708,
+        "low": 9.114818313953492,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "missed_interventions": {
+        "confidence": 0.95,
+        "estimate": 1.3662790697674418,
+        "high": 1.5436046511627908,
+        "low": 1.2005813953488371,
+        "resamples": 5000,
+        "seed": 20260831
+      }
+    },
+    "latency-medium": {
+      "collision_indicator": {
+        "confidence": 0.95,
+        "estimate": 0.029069767441860465,
+        "high": 0.04941860465116279,
+        "low": 0.011627906976744186,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "false_interventions": {
+        "confidence": 0.95,
+        "estimate": 2.395348837209302,
+        "high": 2.6482558139534884,
+        "low": 2.1598837209302326,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "intervention_duration_s": {
+        "confidence": 0.95,
+        "estimate": 9.353488372093029,
+        "high": 9.685188953488378,
+        "low": 9.01190406976744,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "missed_interventions": {
+        "confidence": 0.95,
+        "estimate": 1.441860465116279,
+        "high": 1.622093023255814,
+        "low": 1.2761627906976745,
+        "resamples": 5000,
+        "seed": 20260831
+      }
+    },
+    "localization_shape-high": {
+      "collision_indicator": {
+        "confidence": 0.95,
+        "estimate": 0.0,
+        "high": 0.0,
+        "low": 0.0,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "false_interventions": {
+        "confidence": 0.95,
+        "estimate": 1.3905038759689916,
+        "high": 1.7025436046511626,
+        "low": 1.092054263565891,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "intervention_duration_s": {
+        "confidence": 0.95,
+        "estimate": 14.727810077519381,
+        "high": 14.79002180232558,
+        "low": 14.657843992248067,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "missed_interventions": {
+        "confidence": 0.95,
+        "estimate": 3.822674418604652,
+        "high": 4.162790697674419,
+        "low": 3.492248062015505,
+        "resamples": 5000,
+        "seed": 20260831
+      }
+    },
+    "localization_shape-low": {
+      "collision_indicator": {
+        "confidence": 0.95,
+        "estimate": 0.003875968992248062,
+        "high": 0.008745155038759337,
+        "low": 0.0,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "false_interventions": {
+        "confidence": 0.95,
+        "estimate": 4.301356589147288,
+        "high": 4.7219234496124,
+        "low": 3.8904554263565876,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "intervention_duration_s": {
+        "confidence": 0.95,
+        "estimate": 12.919767441860472,
+        "high": 13.137027616279068,
+        "low": 12.702117248062008,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "missed_interventions": {
+        "confidence": 0.95,
+        "estimate": 2.3304263565891468,
+        "high": 2.622117248062013,
+        "low": 2.0532461240310083,
+        "resamples": 5000,
+        "seed": 20260831
+      }
+    },
+    "localization_shape-medium": {
+      "collision_indicator": {
+        "confidence": 0.95,
+        "estimate": 0.0,
+        "high": 0.0,
+        "low": 0.0,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "false_interventions": {
+        "confidence": 0.95,
+        "estimate": 4.501937984496124,
+        "high": 5.027156007751936,
+        "low": 3.9757509689922452,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "intervention_duration_s": {
+        "confidence": 0.95,
+        "estimate": 13.709108527131782,
+        "high": 13.876574612403108,
+        "low": 13.540113856589157,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "missed_interventions": {
+        "confidence": 0.95,
+        "estimate": 2.8837209302325584,
+        "high": 3.2170784883720933,
+        "low": 2.5745881782945728,
+        "resamples": 5000,
+        "seed": 20260831
+      }
+    },
+    "no_aeb": {
+      "collision_indicator": {
+        "confidence": 0.95,
+        "estimate": 0.19767441860465115,
+        "high": 0.23837209302325582,
+        "low": 0.1569767441860465,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "false_interventions": {
+        "confidence": 0.95,
+        "estimate": 0.0,
+        "high": 0.0,
+        "low": 0.0,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "intervention_duration_s": {
+        "confidence": 0.95,
+        "estimate": 0.0,
+        "high": 0.0,
+        "low": 0.0,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "missed_interventions": {
+        "confidence": 0.95,
+        "estimate": 0.0,
+        "high": 0.0,
+        "low": 0.0,
+        "resamples": 5000,
+        "seed": 20260831
+      }
+    },
+    "oracle_aeb": {
+      "collision_indicator": {
+        "confidence": 0.95,
+        "estimate": 0.0377906976744186,
+        "high": 0.05813953488372093,
+        "low": 0.020348837209302327,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "false_interventions": {
+        "confidence": 0.95,
+        "estimate": 0.0,
+        "high": 0.0,
+        "low": 0.0,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "intervention_duration_s": {
+        "confidence": 0.95,
+        "estimate": 9.150872093023258,
+        "high": 9.48664244186046,
+        "low": 8.820922965116274,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "missed_interventions": {
+        "confidence": 0.95,
+        "estimate": 0.0,
+        "high": 0.0,
+        "low": 0.0,
+        "resamples": 5000,
+        "seed": 20260831
+      }
+    },
+    "track_instability-high": {
+      "collision_indicator": {
+        "confidence": 0.95,
+        "estimate": 0.02228682170542635,
+        "high": 0.03488372093023257,
+        "low": 0.010658914728682172,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "false_interventions": {
+        "confidence": 0.95,
+        "estimate": 2.682170542635659,
+        "high": 2.9070009689922496,
+        "low": 2.456322674418605,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "intervention_duration_s": {
+        "confidence": 0.95,
+        "estimate": 9.425387596899226,
+        "high": 9.741184593023265,
+        "low": 9.107458817829464,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "missed_interventions": {
+        "confidence": 0.95,
+        "estimate": 1.2529069767441856,
+        "high": 1.409883720930232,
+        "low": 1.1036821705426356,
+        "resamples": 5000,
+        "seed": 20260831
+      }
+    },
+    "track_instability-low": {
+      "collision_indicator": {
+        "confidence": 0.95,
+        "estimate": 0.022286821705426358,
+        "high": 0.0377906976744186,
+        "low": 0.00872093023255814,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "false_interventions": {
+        "confidence": 0.95,
+        "estimate": 2.508720930232558,
+        "high": 2.747117248062016,
+        "low": 2.272262596899225,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "intervention_duration_s": {
+        "confidence": 0.95,
+        "estimate": 9.608042635658913,
+        "high": 9.926269379844964,
+        "low": 9.285065406976747,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "missed_interventions": {
+        "confidence": 0.95,
+        "estimate": 1.1715116279069768,
+        "high": 1.3352713178294573,
+        "low": 1.0174176356589146,
+        "resamples": 5000,
+        "seed": 20260831
+      }
+    },
+    "track_instability-medium": {
+      "collision_indicator": {
+        "confidence": 0.95,
+        "estimate": 0.026162790697674413,
+        "high": 0.04263565891472868,
+        "low": 0.011627906976744186,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "false_interventions": {
+        "confidence": 0.95,
+        "estimate": 2.5629844961240327,
+        "high": 2.800411821705428,
+        "low": 2.323643410852715,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "intervention_duration_s": {
+        "confidence": 0.95,
+        "estimate": 9.57102713178294,
+        "high": 9.889265988372092,
+        "low": 9.24922238372093,
+        "resamples": 5000,
+        "seed": 20260831
+      },
+      "missed_interventions": {
+        "confidence": 0.95,
+        "estimate": 1.2151162790697676,
+        "high": 1.3788759689922476,
+        "low": 1.0600775193798453,
+        "resamples": 5000,
+        "seed": 20260831
+      }
+    }
+  },
+  "protocol_sha256": "bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9",
+  "schema_version": "aeb-intervals/v1"
+}
