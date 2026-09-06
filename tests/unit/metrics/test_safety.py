@@ -409,3 +409,23 @@ def test_a_simulated_distance_that_is_not_a_number_is_refused(bad_value: object)
             simulated_seconds=3600.0,
             simulated_metres=bad_value,  # type: ignore[arg-type]
         )
+
+
+def test_the_contacts_the_rule_excluded_are_summarised_beside_the_collisions() -> None:
+    """A reader judging a collision rate has to see how much the attribution removed.
+
+    The agents replay the recording and never react, so an ego that brakes is
+    driven into by the vehicle that was following it. Those contacts are not
+    counted as collisions the ego caused — and a summary that did not say how
+    many there were would make the exclusion invisible.
+    """
+
+    summary = summarize(
+        (
+            result("s-1", contacts_not_at_fault=2),
+            result("s-2", collision_vehicle=1, contacts_not_at_fault=1),
+        )
+    )
+
+    assert summary.collisions_vehicle == 1
+    assert summary.contacts_not_at_fault == 3

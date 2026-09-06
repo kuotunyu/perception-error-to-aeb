@@ -79,6 +79,13 @@ class SafetySummary:
     missed_interventions: int
     false_interventions: int
 
+    #: Contacts excluded from the collision counts above because the ego could
+    #: not have avoided them: it was stopped, or it was struck from behind by
+    #: something faster. Summarised beside the collisions rather than left in the
+    #: per-scenario records, because a reader judging a collision rate has to be
+    #: able to see how much the attribution rule removed from it.
+    contacts_not_at_fault: int
+
     collisions_per_1000_scenarios: Rate
     collisions_per_hour: Rate
     collisions_per_100km: Optional[Rate]
@@ -154,6 +161,7 @@ def summarize_configuration(
         mean_intervention_duration_s=_mean([record.intervention_duration_s for record in included]),
         missed_interventions=sum(record.missed_interventions for record in included),
         false_interventions=sum(record.false_interventions for record in included),
+        contacts_not_at_fault=sum(record.contacts_not_at_fault for record in included),
         collisions_per_1000_scenarios=_rate(collisions, len(included), 1000.0),
         collisions_per_hour=_rate(collisions, simulated_seconds, SECONDS_PER_HOUR),
         collisions_per_100km=per_distance,

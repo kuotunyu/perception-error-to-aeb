@@ -110,6 +110,13 @@ validation split holds 451 bicycle scenarios and 44 of them pass the prefilter;
 the count is recorded rather than back-filled from another family or another
 split, because a stratum padded to look full is not the stratum it names.
 
+**Both cohorts were frozen a second time, into a fresh directory, and compared
+byte for byte: the two manifests and both eligibility records are identical.** A
+freeze that cannot be reproduced is not frozen, and the eligibility records carry
+measured floats — initial speeds, times to collision — so their agreeing byte for
+byte says the databases were read the same way twice, not merely that the token
+lists sorted the same.
+
 Every one of the 3,861 scenarios examined carries a verdict in the eligibility
 record beside its manifest, with the rule that refused it. The commonest refusal
 is not a defect: `no observed object enters the ego corridor within 4 s` means
