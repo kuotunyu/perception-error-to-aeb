@@ -54,6 +54,7 @@ def test_every_published_version_has_one_registered_model() -> None:
         "aeb-intervals/v1",
         "aeb-shapley/v1",
         "aeb-exclusions/v1",
+        "aeb-family-interventions/v1",
     )
     assert tuple(documents.DOCUMENT_MODELS) == documents.SCHEMA_VERSIONS
 
@@ -180,6 +181,42 @@ def test_all_document_shapes_validate() -> None:
                     "exception_type": None,
                 }
             ],
+        }
+    )
+    from aebrisk.artifacts.family_interventions import FamilyInterventionsV1
+
+    family_rows = [
+        {
+            "family": family,
+            "configuration_id": configuration,
+            "valid_tokens": 0,
+            "replicate_count": 3,
+            "scenario_replicates": 0,
+            "missed_interventions": 0,
+            "false_interventions": 0,
+            "missed_per_1000_scenario_replicates": None,
+            "false_per_1000_scenario_replicates": None,
+        }
+        for family in (
+            "lead_or_stopping",
+            "cut_in_or_crossing",
+            "pedestrian_or_crosswalk",
+            "bicycle_or_vru",
+        )
+        for configuration in (
+            "oracle_aeb",
+            "coalition-none",
+            "coalition-dropout+localization_shape+latency+track_instability",
+        )
+    ]
+    assert FamilyInterventionsV1.model_validate(
+        {
+            "schema_version": "aeb-family-interventions/v1",
+            "protocol_sha256": "a" * 64,
+            "cohort_manifest_sha256": "b" * 64,
+            "common_valid_tokens": 0,
+            "evaluation_per_family": 100,
+            "rows": family_rows,
         }
     )
 

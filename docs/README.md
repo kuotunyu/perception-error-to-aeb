@@ -5,6 +5,8 @@
 | 目的 | 文件 |
 | --- | --- |
 | 看目前的分析證據 | [證據索引](evidence/README.md) |
+| 看研究首頁與雙語結果 | [繁體中文首頁](../README.md)、[English](../README.en.md) |
+| 看圖表與預先固定選樣的回放 | [圖表](figures/)、[衍生回放](evidence/nuplan_aeb_v2/replays/) |
 | 重現聚合結果、查原始雜湊 | [分析重現](verification/analysis-reproduction.md) |
 | 理解模擬上限、終止條件與碰撞分類 | [模擬契約](simulation-contract.md) |
 | 理解資料選擇、限制與授權 | [資料卡](dataset-card.md)、[證據授權](evidence/nuplan_aeb_v2-NOTICE.md) |
@@ -25,4 +27,4 @@
 | 歸因文字審核技能如何測試？ | [RED](verification/skills/auditing-aeb-error-attribution/red.md)、[GREEN](verification/skills/auditing-aeb-error-attribution/green.md) |
 
 施工順序由此 repo 外的工作區主計畫管理，私有 handoff 不放入公開 repository。
-`README.md` 與 `README.zh-TW.md` 的語言命名會在展示交付時統一，避免目前的連結被中途改名打斷。
+repository root 的 `README.md` 是繁體中文首頁，`README.en.md` 是英文版。

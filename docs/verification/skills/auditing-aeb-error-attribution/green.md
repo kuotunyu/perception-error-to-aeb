@@ -180,4 +180,17 @@ through the repaired validator unchanged; it exited 0 with the same 11 passing
 claim traces. Raw evidence is in
 `artifacts/e1-fix2-clean-output-validator.log/.exit`.
 
-The actual Task E2 README audit remains PENDING and is not claimed here.
+## Task E2 forward GREEN
+
+Recorded `2026-09-07T03:00:00Z` (`2026-09-07T11:00:00+08:00`). The actual
+release documents now exist: Traditional Chinese `README.md`, English
+`README.en.md`, and Chinese `docs/release-notes/v1.0.0.md`.
+
+The thin skill entry point ran once over all three files inside the pinned
+container, using the committed registry and repository root. It exited 0 and
+returned 44 passing claim traces. The same contract suite mutates one actual
+README result and removes the Oracle contact binding; both changes are refused.
+Raw output and the immediate exit sidecar are preserved locally as
+`artifacts/e2-forward-audit-attempt1.log/.exit`.
+
+This completes the downstream forward check that E1 left pending.

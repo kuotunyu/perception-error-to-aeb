@@ -43,6 +43,11 @@ STYLE_UNOBSERVED = "unobserved"
 #: Fixed rather than generated, so the written HTML is byte-identical between
 #: builds. Plotly's default is a random UUID.
 REPLAY_DIV_ID = "aeb-replay"
+REPLAY_NOTICE = (
+    "Derived visualization; no sensor pixels or map data. "
+    "nuPlan-derived geometry is shared under CC BY-NC-SA 4.0 and Motional terms. "
+    "Plotly.js is MIT licensed."
+)
 
 
 @dataclass(frozen=True)
@@ -106,7 +111,7 @@ def _frame_title(title: str, frame: ReplayFrame) -> str:
     )
 
 
-def _traces(frame: ReplayFrame) -> list[go.Scatter]:
+def _traces(frame: ReplayFrame, identities: tuple[str, ...]) -> list[go.Scatter]:
     polygons = frame_polygons(frame)
     styles = frame_styles(frame)
 
@@ -119,9 +124,9 @@ def _traces(frame: ReplayFrame) -> list[go.Scatter]:
             name="ego",
         )
     ]
-    for track in frame.tracks:
-        outline = polygons[track.track_id]
-        observed = styles[track.track_id] == STYLE_OBSERVED
+    for identity in identities:
+        outline = polygons.get(identity, ())
+        observed = styles.get(identity) == STYLE_OBSERVED
         traces.append(
             go.Scatter(
                 x=[point[0] for point in outline],
@@ -131,10 +136,22 @@ def _traces(frame: ReplayFrame) -> list[go.Scatter]:
                 # the world, absent from what the controller was given.
                 fill="toself" if observed else None,
                 line={"dash": "solid" if observed else "dash"},
-                name=f"{track.track_id} ({styles[track.track_id]})",
+                name=identity,
             )
         )
     return traces
+
+
+def _axis_range(frames: tuple[ReplayFrame, ...], coordinate: int) -> tuple[float, float]:
+    values = [
+        point[coordinate]
+        for frame in frames
+        for polygon in frame_polygons(frame).values()
+        for point in polygon
+    ]
+    low, high = min(values), max(values)
+    padding = max(2.0, (high - low) * 0.05)
+    return low - padding, high + padding
 
 
 def build_replay_figure(frames: tuple[ReplayFrame, ...], title: str) -> go.Figure:
@@ -145,17 +162,48 @@ def build_replay_figure(frames: tuple[ReplayFrame, ...], title: str) -> go.Figur
     if not title:
         raise ValueError("title must name the scenario and configuration shown")
 
+    identities = tuple(sorted({track.track_id for frame in frames for track in frame.tracks}))
+    slider_steps = [
+        {
+            "args": [[f"{frame.time_s:.1f}"], {"frame": {"duration": 0, "redraw": True}}],
+            "label": f"{frame.time_s:.1f} s",
+            "method": "animate",
+        }
+        for frame in frames
+    ]
     figure = go.Figure(
-        data=_traces(frames[0]),
+        data=_traces(frames[0], identities),
         layout=go.Layout(
             title={"text": _frame_title(title, frames[0])},
-            xaxis={"title": {"text": "x (m)"}, "scaleanchor": "y"},
-            yaxis={"title": {"text": "y (m)"}},
+            xaxis={
+                "title": {"text": "scenario-local x (m)"},
+                "scaleanchor": "y",
+                "range": _axis_range(frames, 0),
+            },
+            yaxis={"title": {"text": "scenario-local y (m)"}, "range": _axis_range(frames, 1)},
             showlegend=True,
+            updatemenus=[
+                {
+                    "type": "buttons",
+                    "buttons": [
+                        {
+                            "label": "Play",
+                            "method": "animate",
+                            "args": [None, {"frame": {"duration": 100, "redraw": True}}],
+                        },
+                        {
+                            "label": "Pause",
+                            "method": "animate",
+                            "args": [[None], {"mode": "immediate", "frame": {"duration": 0}}],
+                        },
+                    ],
+                }
+            ],
+            sliders=[{"active": 0, "currentvalue": {"prefix": "time "}, "steps": slider_steps}],
         ),
         frames=[
             go.Frame(
-                data=_traces(frame),
+                data=_traces(frame, identities),
                 name=f"{frame.time_s:.1f}",
                 layout=go.Layout(title={"text": _frame_title(title, frame)}),
             )
@@ -184,5 +232,7 @@ def write_replay_html(
         div_id=REPLAY_DIV_ID,
         auto_play=False,
     )
+    notice = f'<footer role="contentinfo"><p>{REPLAY_NOTICE}</p></footer>'
+    html = html.replace("</body>", f"{notice}\n</body>")
     with path.open("w", encoding="utf-8", newline="\n") as handle:
         handle.write(html)

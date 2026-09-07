@@ -4,8 +4,10 @@
 
 This repository contains the installable, data-independent simulation core and
 adapters for `perception-error-to-aeb`. Keep nuPlan databases, maps, logs,
-simulation outputs, rendered replays, credentials, and private progress handoffs
-outside this Git repository.
+simulation outputs, credentials, and private progress handoffs outside this Git
+repository. The only replay exception is the audited set of at most twelve
+derived HTML timelines under `docs/evidence/nuplan_aeb_v2/replays/`; every other
+rendered replay or simulation output remains private.
 
 ## Required workflow
 

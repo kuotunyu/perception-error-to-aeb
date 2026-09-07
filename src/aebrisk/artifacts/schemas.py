@@ -23,6 +23,7 @@ from aebrisk.artifacts.documents import (
     AEBShapleyV1,
 )
 from aebrisk.artifacts.envelope import PortfolioArtifactEnvelopeV1
+from aebrisk.artifacts.family_interventions import FamilyInterventionsV1
 from aebrisk.artifacts.results import AEBScenarioResultV1, AEBScenarioResultV2
 from aebrisk.artifacts.run_record import RunRecordV1
 
@@ -36,6 +37,7 @@ SCHEMA_MODELS: tuple[tuple[str, type[BaseModel]], ...] = (
     ("aeb_intervals_v1", AEBIntervalsV1),
     ("aeb_shapley_v1", AEBShapleyV1),
     ("aeb_exclusions_v1", AEBExclusionsV1),
+    ("aeb_family_interventions_v1", FamilyInterventionsV1),
 )
 
 

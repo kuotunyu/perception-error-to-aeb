@@ -1,0 +1,141 @@
+{
+  "cohort_manifest_sha256": "65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9",
+  "common_valid_tokens": 344,
+  "evaluation_per_family": 100,
+  "protocol_sha256": "bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9",
+  "rows": [
+    {
+      "configuration_id": "oracle_aeb",
+      "false_interventions": 0,
+      "false_per_1000_scenario_replicates": 0.0,
+      "family": "lead_or_stopping",
+      "missed_interventions": 0,
+      "missed_per_1000_scenario_replicates": 0.0,
+      "replicate_count": 3,
+      "scenario_replicates": 300,
+      "valid_tokens": 100
+    },
+    {
+      "configuration_id": "coalition-none",
+      "false_interventions": 708,
+      "false_per_1000_scenario_replicates": 2360.0,
+      "family": "lead_or_stopping",
+      "missed_interventions": 225,
+      "missed_per_1000_scenario_replicates": 750.0,
+      "replicate_count": 3,
+      "scenario_replicates": 300,
+      "valid_tokens": 100
+    },
+    {
+      "configuration_id": "coalition-dropout+localization_shape+latency+track_instability",
+      "false_interventions": 815,
+      "false_per_1000_scenario_replicates": 2716.6666666666665,
+      "family": "lead_or_stopping",
+      "missed_interventions": 591,
+      "missed_per_1000_scenario_replicates": 1970.0,
+      "replicate_count": 3,
+      "scenario_replicates": 300,
+      "valid_tokens": 100
+    },
+    {
+      "configuration_id": "oracle_aeb",
+      "false_interventions": 0,
+      "false_per_1000_scenario_replicates": 0.0,
+      "family": "cut_in_or_crossing",
+      "missed_interventions": 0,
+      "missed_per_1000_scenario_replicates": 0.0,
+      "replicate_count": 3,
+      "scenario_replicates": 300,
+      "valid_tokens": 100
+    },
+    {
+      "configuration_id": "coalition-none",
+      "false_interventions": 903,
+      "false_per_1000_scenario_replicates": 3010.0,
+      "family": "cut_in_or_crossing",
+      "missed_interventions": 474,
+      "missed_per_1000_scenario_replicates": 1580.0,
+      "replicate_count": 3,
+      "scenario_replicates": 300,
+      "valid_tokens": 100
+    },
+    {
+      "configuration_id": "coalition-dropout+localization_shape+latency+track_instability",
+      "false_interventions": 1963,
+      "false_per_1000_scenario_replicates": 6543.333333333333,
+      "family": "cut_in_or_crossing",
+      "missed_interventions": 1047,
+      "missed_per_1000_scenario_replicates": 3490.0,
+      "replicate_count": 3,
+      "scenario_replicates": 300,
+      "valid_tokens": 100
+    },
+    {
+      "configuration_id": "oracle_aeb",
+      "false_interventions": 0,
+      "false_per_1000_scenario_replicates": 0.0,
+      "family": "pedestrian_or_crosswalk",
+      "missed_interventions": 0,
+      "missed_per_1000_scenario_replicates": 0.0,
+      "replicate_count": 3,
+      "scenario_replicates": 300,
+      "valid_tokens": 100
+    },
+    {
+      "configuration_id": "coalition-none",
+      "false_interventions": 699,
+      "false_per_1000_scenario_replicates": 2330.0,
+      "family": "pedestrian_or_crosswalk",
+      "missed_interventions": 300,
+      "missed_per_1000_scenario_replicates": 1000.0,
+      "replicate_count": 3,
+      "scenario_replicates": 300,
+      "valid_tokens": 100
+    },
+    {
+      "configuration_id": "coalition-dropout+localization_shape+latency+track_instability",
+      "false_interventions": 776,
+      "false_per_1000_scenario_replicates": 2586.6666666666665,
+      "family": "pedestrian_or_crosswalk",
+      "missed_interventions": 841,
+      "missed_per_1000_scenario_replicates": 2803.3333333333335,
+      "replicate_count": 3,
+      "scenario_replicates": 300,
+      "valid_tokens": 100
+    },
+    {
+      "configuration_id": "oracle_aeb",
+      "false_interventions": 0,
+      "false_per_1000_scenario_replicates": 0.0,
+      "family": "bicycle_or_vru",
+      "missed_interventions": 0,
+      "missed_per_1000_scenario_replicates": 0.0,
+      "replicate_count": 3,
+      "scenario_replicates": 132,
+      "valid_tokens": 44
+    },
+    {
+      "configuration_id": "coalition-none",
+      "false_interventions": 267,
+      "false_per_1000_scenario_replicates": 2022.7272727272727,
+      "family": "bicycle_or_vru",
+      "missed_interventions": 210,
+      "missed_per_1000_scenario_replicates": 1590.909090909091,
+      "replicate_count": 3,
+      "scenario_replicates": 132,
+      "valid_tokens": 44
+    },
+    {
+      "configuration_id": "coalition-dropout+localization_shape+latency+track_instability",
+      "false_interventions": 1327,
+      "false_per_1000_scenario_replicates": 10053.030303030304,
+      "family": "bicycle_or_vru",
+      "missed_interventions": 206,
+      "missed_per_1000_scenario_replicates": 1560.6060606060605,
+      "replicate_count": 3,
+      "scenario_replicates": 132,
+      "valid_tokens": 44
+    }
+  ],
+  "schema_version": "aeb-family-interventions/v1"
+}

@@ -17,6 +17,7 @@ only what succeeded would be reporting a cohort it chose after seeing results.
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -31,6 +32,12 @@ CONFIGURATION_GROUPS: tuple[str, ...] = (
     "single_channel",
     "coalition",
     "imported",
+)
+FEATURED_CONFIGURATION_IDS: tuple[str, ...] = (
+    "no_aeb",
+    "oracle_aeb",
+    "coalition-none",
+    "coalition-dropout+localization_shape+latency+track_instability",
 )
 
 
@@ -121,10 +128,57 @@ def build_site(claims_path: Path, artifacts_dir: Path, output_dir: Path) -> Path
 
     grouped: dict[str, list[dict[str, Any]]] = {group: [] for group in CONFIGURATION_GROUPS}
     summary_path = artifacts_dir / "evaluation.json"
+    evaluation: dict[str, Any] = {}
     if summary_path.is_file():
-        document = json.loads(summary_path.read_text(encoding="utf-8"))
-        for row in document.get("configurations", []):
+        evaluation = json.loads(summary_path.read_text(encoding="utf-8"))
+        for row in evaluation.get("configurations", []):
             grouped[classify_configuration(row["configuration_id"])].append(row)
+
+    family_path = artifacts_dir / "family-interventions.json"
+    family_rows: list[dict[str, Any]] = []
+    family_shortfall: dict[str, int] | None = None
+    if family_path.is_file():
+        family_document = json.loads(family_path.read_text(encoding="utf-8"))
+        family_rows = family_document["rows"]
+        bicycle_oracle = next(
+            (
+                row
+                for row in family_rows
+                if row["family"] == "bicycle_or_vru" and row["configuration_id"] == "oracle_aeb"
+            ),
+            None,
+        )
+        if bicycle_oracle is not None:
+            family_shortfall = {
+                "valid_tokens": bicycle_oracle["valid_tokens"],
+                "evaluation_per_family": family_document["evaluation_per_family"],
+            }
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    figure_names = (
+        "shapley-contributions.svg",
+        "intervention-rates-by-family.svg",
+    )
+    figure_roots = (artifacts_dir.parent / "figures", artifacts_dir.parent.parent / "figures")
+    source_figures = next((root for root in figure_roots if root.is_dir()), None)
+    available_figures: list[str] = []
+    if source_figures is not None:
+        destination = output_dir / "figures"
+        destination.mkdir(exist_ok=True)
+        for name in figure_names:
+            source = source_figures / name
+            if source.is_file():
+                shutil.copyfile(source, destination / name)
+                available_figures.append(name)
+
+    replay_source = artifacts_dir / "replays"
+    replay_names: list[str] = []
+    if replay_source.is_dir():
+        replay_destination = output_dir / "replays"
+        replay_destination.mkdir(exist_ok=True)
+        for source in sorted(replay_source.glob("*.html"), key=lambda path: path.name):
+            shutil.copyfile(source, replay_destination / source.name)
+            replay_names.append(source.name)
 
     environment = Environment(
         loader=FileSystemLoader(str(TEMPLATE_DIR)),
@@ -136,9 +190,19 @@ def build_site(claims_path: Path, artifacts_dir: Path, output_dir: Path) -> Path
         groups=CONFIGURATION_GROUPS,
         grouped=grouped,
         invalid=invalid_summary(artifacts_dir),
+        common_valid_tokens=evaluation.get("common_valid_tokens"),
+        observed=[
+            row
+            for configuration_id in FEATURED_CONFIGURATION_IDS
+            for row in evaluation.get("configurations", [])
+            if row["configuration_id"] == configuration_id
+        ],
+        family_rows=family_rows,
+        family_shortfall=family_shortfall,
+        figures=available_figures,
+        replays=replay_names,
     )
 
-    output_dir.mkdir(parents=True, exist_ok=True)
     page = output_dir / "index.html"
     with page.open("w", encoding="utf-8", newline="\n") as handle:
         handle.write(rendered)

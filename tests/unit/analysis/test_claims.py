@@ -114,6 +114,26 @@ def _write_evidence(root: Path) -> Path:
             },
         },
         "exclusions.json": common | {"schema_version": "aeb-exclusions/v1", "excluded": []},
+        "family-interventions.json": {
+            "schema_version": "aeb-family-interventions/v1",
+            "protocol_sha256": PROTOCOL_SHA256,
+            "cohort_manifest_sha256": COHORT_SHA256,
+            "common_valid_tokens": 2,
+            "evaluation_per_family": 100,
+            "rows": [
+                {
+                    "family": "lead_or_stopping",
+                    "configuration_id": "oracle_aeb",
+                    "valid_tokens": 2,
+                    "replicate_count": 3,
+                    "scenario_replicates": 6,
+                    "missed_interventions": 1,
+                    "false_interventions": 2,
+                    "missed_per_1000_scenario_replicates": 166.66666666666666,
+                    "false_per_1000_scenario_replicates": 333.3333333333333,
+                }
+            ],
+        },
     }
     for name, document in documents.items():
         with (evidence / name).open("w", encoding="utf-8", newline="\n") as handle:
@@ -274,7 +294,7 @@ def test_generation_covers_every_numeric_leaf_verbatim_and_loads_in_the_report(
     registry = generate_claims(evidence, PROTOCOL_SHA256, COHORT_SHA256)
     output = _write_registry(tmp_path, [claim.model_dump(mode="json") for claim in registry.claims])
 
-    assert len(registry.claims) == 19
+    assert len(registry.claims) == 28
     assert registry.claims[0].claim_id == "p3.evaluation.cohort_size"
     collision = next(
         claim
@@ -290,7 +310,14 @@ def test_generation_covers_every_numeric_leaf_verbatim_and_loads_in_the_report(
     assert "2.2e-16" in residual.text
     assert all(claim.evidence_type == "observed" for claim in registry.claims)
     assert all(claim.status == "verified" for claim in registry.claims)
-    assert len(load_claims(output)) == 19
+    family_rate = next(
+        claim
+        for claim in registry.claims
+        if claim.claim_id
+        == "p3.family-interventions.lead_or_stopping.oracle_aeb.missed_per_1000_scenario_replicates"
+    )
+    assert family_rate.metric_path == "/rows/0/missed_per_1000_scenario_replicates"
+    assert len(load_claims(output)) == 28
 
 
 @pytest.mark.parametrize(
@@ -327,7 +354,7 @@ def test_generation_refuses_a_missing_or_non_numeric_analysis_document(tmp_path:
     for path in evidence.glob("*.json"):
         document = json.loads(path.read_text(encoding="utf-8"))
         for key in ("cohort_size", "common_valid_tokens"):
-            document.pop(key)
+            document.pop(key, None)
         path.write_text(json.dumps(document), encoding="utf-8")
     evaluation = json.loads((evidence / "evaluation.json").read_text(encoding="utf-8"))
     evaluation.pop("simulated_seconds")
@@ -339,6 +366,11 @@ def test_generation_refuses_a_missing_or_non_numeric_analysis_document(tmp_path:
     shapley = json.loads((evidence / "shapley.json").read_text(encoding="utf-8"))
     shapley["metrics"] = {}
     (evidence / "shapley.json").write_text(json.dumps(shapley), encoding="utf-8")
+    family = json.loads((evidence / "family-interventions.json").read_text(encoding="utf-8"))
+    family.pop("common_valid_tokens", None)
+    family.pop("evaluation_per_family")
+    family["rows"] = []
+    (evidence / "family-interventions.json").write_text(json.dumps(family), encoding="utf-8")
     with pytest.raises(ValueError, match="no numeric claims"):
         generate_claims(evidence, PROTOCOL_SHA256, COHORT_SHA256)
 
@@ -388,7 +420,13 @@ def test_provenance_and_repository_root_are_required(tmp_path: Path) -> None:
 
     outside = tmp_path / "outside" / "evidence"
     outside.mkdir(parents=True)
-    for filename in ("evaluation.json", "intervals.json", "shapley.json", "exclusions.json"):
+    for filename in (
+        "evaluation.json",
+        "intervals.json",
+        "shapley.json",
+        "exclusions.json",
+        "family-interventions.json",
+    ):
         (outside / filename).write_text("{}", encoding="utf-8")
     (tmp_path / "pyproject.toml").unlink()
     with pytest.raises(ValueError, match="cannot find repository root"):
@@ -409,7 +447,7 @@ def test_claim_commands_generate_a_registry_and_audit_success_or_failure(
         app, ["generate-claims", "--evidence-dir", str(evidence), "--output", str(output)]
     )
     assert generated.exit_code == 0, generated.output
-    assert "generated 19 claims" in generated.output
+    assert "generated 28 claims" in generated.output
 
     clean = runner.invoke(app, ["audit-claims", "--claims", str(output)])
     assert clean.exit_code == 0, clean.output

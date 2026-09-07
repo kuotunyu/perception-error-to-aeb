@@ -3,81 +3,105 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Perception error to AEB</title>
+<title>Perception error to AEB — evidence report</title>
 <style>
-  :root { color-scheme: light dark; }
-  body { font: 16px/1.6 system-ui, sans-serif; margin: 0 auto; max-width: 60rem; padding: 2rem 1rem; }
-  h1, h2 { line-height: 1.25; }
-  table { border-collapse: collapse; width: 100%; }
-  th, td { border-bottom: 1px solid #8884; padding: 0.4rem 0.6rem; text-align: left; }
-  .note { border-left: 3px solid #8888; padding-left: 0.8rem; color: #666; }
-  .empty { color: #888; font-style: italic; }
+  :root {
+    color: #142033;
+    background: #eef3f6;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; line-height: 1.55; }
+  header { background: #10243a; color: #f8fbfd; padding: 4.5rem max(1.25rem, calc((100vw - 78rem) / 2)); }
+  header p { color: #bbd7e8; max-width: 54rem; font-size: 1.15rem; }
+  main { max-width: 78rem; margin: 0 auto; padding: 2.5rem 1.25rem 5rem; }
+  h1 { font: 700 clamp(2.3rem, 6vw, 5rem)/0.98 Georgia, serif; letter-spacing: -0.04em; max-width: 15ch; margin: 0; }
+  h2 { font: 700 clamp(1.65rem, 3vw, 2.4rem)/1.1 Georgia, serif; margin: 3.5rem 0 1rem; }
+  h3 { margin: 0 0 .6rem; }
+  a { color: #006a88; text-underline-offset: .18em; }
+  .eyebrow { color: #6bd5ec; font: 700 .75rem/1.2 ui-monospace, monospace; letter-spacing: .14em; text-transform: uppercase; }
+  .lede { font-size: 1.2rem; max-width: 65ch; }
+  .grid { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+  .card, .figure-card { background: #fff; border: 1px solid #d4e0e7; border-radius: .45rem; box-shadow: 0 12px 28px #29445b12; }
+  .card { padding: 1.25rem; }
+  .figure-card { padding: 1rem; overflow-x: auto; }
+  .figure-card img { display: block; width: 100%; min-width: 46rem; height: auto; }
+  .metric { font: 700 1.75rem/1 ui-monospace, monospace; color: #006a88; }
+  .note { border-left: .25rem solid #ef8d32; background: #fff7ed; padding: .9rem 1rem; }
+  table { border-collapse: collapse; width: 100%; background: #fff; font-size: .9rem; }
+  th, td { border-bottom: 1px solid #d9e3e9; padding: .65rem .75rem; text-align: left; vertical-align: top; }
+  th { background: #e7f1f5; color: #31475b; font-size: .75rem; letter-spacing: .05em; text-transform: uppercase; }
+  .scroll { overflow-x: auto; border: 1px solid #d4e0e7; border-radius: .45rem; }
+  .empty { color: #627487; font-style: italic; }
+  .replays { columns: 2 22rem; padding-left: 1.25rem; }
+  .replays li { break-inside: avoid; margin-bottom: .5rem; }
+  details { margin-top: 3rem; background: #fff; border: 1px solid #d4e0e7; border-radius: .45rem; padding: 1rem; }
+  summary { cursor: pointer; font-weight: 700; color: #10243a; }
+  code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+  @media (max-width: 45rem) { header { padding-block: 3rem; } .replays { columns: 1; } }
 </style>
 </head>
 <body>
-<h1>Perception error to AEB</h1>
+<header>
+  <p class="eyebrow">Locked nuPlan cohort · deterministic AEB</p>
+  <h1>What changes when perception errors reach emergency braking?</h1>
+  <p>The same scenarios, route, controller, rate, and termination rules are held fixed while the observed tracks change.</p>
+</header>
+<main>
+<section id="question">
+  <h2>Research question</h2>
+  <p class="lede">How do dropout, localization and shape error, latency, and track instability change collisions and braking behavior under one fixed AEB policy?</p>
+  <p class="note">The requested maximum horizon is a ceiling. Every configuration reports its measured simulated exposure. Logged actors are non-reactive.</p>
+</section>
 
-<p class="note">
-  Every number below is there because a committed claim says it should be, and
-  every claim names the artifact it rests on. The configuration groups are kept
-  apart because they answer different questions: an imported calibration
-  distribution is a measurement, and a single-channel severity is a choice.
-</p>
+<section id="observations">
+  <h2>Observed results</h2>
+  {% if common_valid_tokens is not none %}<p><span class="metric">{{ common_valid_tokens }}</span> common-valid tokens were evaluated in every configuration.</p>{% endif %}
+  {% if observed %}
+  <div class="scroll"><table>
+    <thead><tr><th>Configuration</th><th>Scenario-replicates</th><th>Counted collisions</th><th>contacts_not_at_fault</th><th>Measured exposure (s)</th></tr></thead>
+    <tbody>{% for row in observed %}<tr><td><code>{{ row.configuration_id }}</code></td><td>{{ row.scenarios }}</td><td>{{ row.collisions }}</td><td>{{ row.contacts_not_at_fault | default("—") }}</td><td>{{ row.simulated_seconds | default("—") }}</td></tr>{% endfor %}</tbody>
+  </table></div>
+  {% else %}<p class="empty">No results in this group.</p>{% endif %}
+  <p>Scenario-replicates are repeated runs, not independent tokens. <code>contacts_not_at_fault</code> records operationally excluded contacts; zero counted collisions does not mean zero contact or real-world safety.</p>
+  <p>A contact is excluded when the ego is stopped, or when a body is behind the ego and has the greater speed magnitude. This operational rule is not a closing velocity test, proof of upstream nuPlan equivalence, or an assignment of legal responsibility.</p>
+  {% if family_shortfall %}<p><code>bicycle_or_vru</code> has {{ family_shortfall.valid_tokens }} valid tokens against the protocol target of {{ family_shortfall.evaluation_per_family }}. This is a sample shortfall, so the report makes no efficacy claim for that family's event rates.</p>{% endif %}
+</section>
 
-<h2>Claims</h2>
-<table>
-  <thead>
-    <tr><th>Claim</th><th>Statement</th><th>Evidence</th><th>Status</th><th>Artifact</th></tr>
-  </thead>
-  <tbody>
-  {% for claim in claims %}
-    <tr>
-      <td>{{ claim.claim_id }}</td>
-      <td>{{ claim.text }}</td>
-      <td>{{ claim.evidence_type }}</td>
-      <td>{{ claim.status }}</td>
-      <td>{{ claim.artifact_path }}</td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table>
+<section id="figures">
+  <h2>Figures</h2>
+  {% if figures %}<div class="grid">{% for name in figures %}<figure class="figure-card"><img src="figures/{{ name }}" alt="{{ name | replace('-', ' ') | replace('.svg', '') }}"></figure>{% endfor %}</div>
+  {% else %}<p class="empty">No generated figures were supplied to this build.</p>{% endif %}
+  <p>The Shapley panels use separate scales and units. They show observed mean contributions for the full-minus-empty <code>coalition-none</code> game; the arithmetic residual is not an uncertainty interval. The empty coalition still estimates velocity from position differences and is not the oracle. There is no uncertainty interval for Shapley values or configuration differences and no evidence for a channel ranking. Family event rates use scenario-replicates as their denominator and carry no borrowed whole-cohort error bars.</p>
+</section>
+
+<section id="replays">
+  <h2>Replays</h2>
+  <p>Each derived timeline uses a predeclared family selection and three replicate-0 configurations. Geometry has a scenario-local display origin and anonymous actor IDs.</p>
+  {% if replays %}<ul class="replays">{% for name in replays %}<li><a href="replays/{{ name }}">{{ name | replace('.html', '') }}</a></li>{% endfor %}</ul>
+  {% else %}<p class="empty">No replay files were supplied to this build.</p>{% endif %}
+  <p>These timelines contain no sensor pixels, maps, nuBoard logs, native tokens, or raw trajectory exports. The study also has no per-distance collision rate and compares no AEB policy beyond the fixed controller.</p>
+</section>
+
+<details id="complete-trace">
+<summary>Complete numeric trace and claim appendix</summary>
+<h2>Claim registry</h2>
+<div class="scroll"><table>
+  <thead><tr><th>Claim</th><th>Statement</th><th>Evidence</th><th>Status</th><th>Artifact</th></tr></thead>
+  <tbody>{% for claim in claims %}<tr><td>{{ claim.claim_id }}</td><td>{{ claim.text }}</td><td>{{ claim.evidence_type }}</td><td>{{ claim.status }}</td><td>{{ claim.artifact_path }}</td></tr>{% endfor %}</tbody>
+</table></div>
 
 <h2>Cohort exclusions</h2>
-<p>
-  {{ invalid.excluded }} scenario(s) were excluded from every configuration.
-  A scenario that failed anywhere is used nowhere, so that all configurations
-  are averaged over one set of roads.
-</p>
-{% if invalid.reasons %}
-<table>
-  <thead><tr><th>Phase</th><th>Count</th></tr></thead>
-  <tbody>
-  {% for phase, count in invalid.reasons | dictsort %}
-    <tr><td>{{ phase }}</td><td>{{ count }}</td></tr>
-  {% endfor %}
-  </tbody>
-</table>
-{% endif %}
+<p>{{ invalid.excluded }} scenario(s) were excluded from every configuration. A token that fails any cell is used in none.</p>
+{% if invalid.reasons %}<div class="scroll"><table><thead><tr><th>Phase</th><th>Count</th></tr></thead><tbody>{% for phase, count in invalid.reasons | dictsort %}<tr><td>{{ phase }}</td><td>{{ count }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
 
 {% for group in groups %}
 <h2>{{ group | replace("_", " ") | title }}</h2>
-{% if grouped[group] %}
-<table>
-  <thead><tr><th>Configuration</th><th>Scenarios</th><th>Collisions</th></tr></thead>
-  <tbody>
-  {% for row in grouped[group] %}
-    <tr>
-      <td>{{ row.configuration_id }}</td>
-      <td>{{ row.scenarios }}</td>
-      <td>{{ row.collisions }}</td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table>
-{% else %}
-<p class="empty">No results in this group.</p>
-{% endif %}
+{% if grouped[group] %}<div class="scroll"><table><thead><tr><th>Configuration</th><th>Scenario-replicates</th><th>Collisions</th><th>contacts_not_at_fault</th><th>Measured exposure (s)</th></tr></thead><tbody>{% for row in grouped[group] %}<tr><td>{{ row.configuration_id }}</td><td>{{ row.scenarios }}</td><td>{{ row.collisions }}</td><td>{{ row.contacts_not_at_fault | default("—") }}</td><td>{{ row.simulated_seconds | default("—") }}</td></tr>{% endfor %}</tbody></table></div>{% else %}<p class="empty">No results in this group.</p>{% endif %}
 {% endfor %}
 
+{% if family_rows %}<h2>Family intervention event counts</h2><div class="scroll"><table><thead><tr><th>Family</th><th>Configuration</th><th>Scenario-replicates</th><th>Missed</th><th>False</th></tr></thead><tbody>{% for row in family_rows %}<tr><td>{{ row.family }}</td><td>{{ row.configuration_id }}</td><td>{{ row.scenario_replicates }}</td><td>{{ row.missed_interventions }}</td><td>{{ row.false_interventions }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
+</details>
+</main>
 </body>
 </html>

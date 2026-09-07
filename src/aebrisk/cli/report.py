@@ -47,7 +47,7 @@ def generate_claims_command(
     ],
     output: Annotated[Path, typer.Option("--output", help="Claim registry to write.")],
 ) -> None:
-    """Generate exact observed claims from the four analysis documents."""
+    """Generate exact observed claims from the registered analysis documents."""
 
     try:
         protocol_sha256, cohort_manifest_sha256 = evidence_provenance(evidence_dir)

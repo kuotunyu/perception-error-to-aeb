@@ -8776,3 +8776,719 @@ claims:
   artifact_path: docs/evidence/nuplan_aeb_v2/exclusions.json
   metric_path: /common_valid_tokens
   status: verified
+- claim_id: p3.family-interventions.common_valid_tokens
+  text: Family-Interventions common_valid_tokens is 344.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /common_valid_tokens
+  status: verified
+- claim_id: p3.family-interventions.evaluation_per_family
+  text: Family-Interventions evaluation_per_family is 100.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /evaluation_per_family
+  status: verified
+- claim_id: p3.family-interventions.lead_or_stopping.oracle_aeb.false_interventions
+  text: lead_or_stopping oracle_aeb false_interventions is 0.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/0/false_interventions
+  status: verified
+- claim_id: p3.family-interventions.lead_or_stopping.oracle_aeb.false_per_1000_scenario_replicates
+  text: lead_or_stopping oracle_aeb false_per_1000_scenario_replicates is 0.0.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/0/false_per_1000_scenario_replicates
+  status: verified
+- claim_id: p3.family-interventions.lead_or_stopping.oracle_aeb.missed_interventions
+  text: lead_or_stopping oracle_aeb missed_interventions is 0.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/0/missed_interventions
+  status: verified
+- claim_id: p3.family-interventions.lead_or_stopping.oracle_aeb.missed_per_1000_scenario_replicates
+  text: lead_or_stopping oracle_aeb missed_per_1000_scenario_replicates is 0.0.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/0/missed_per_1000_scenario_replicates
+  status: verified
+- claim_id: p3.family-interventions.lead_or_stopping.oracle_aeb.replicate_count
+  text: lead_or_stopping oracle_aeb replicate_count is 3.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/0/replicate_count
+  status: verified
+- claim_id: p3.family-interventions.lead_or_stopping.oracle_aeb.scenario_replicates
+  text: lead_or_stopping oracle_aeb scenario_replicates is 300.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/0/scenario_replicates
+  status: verified
+- claim_id: p3.family-interventions.lead_or_stopping.oracle_aeb.valid_tokens
+  text: lead_or_stopping oracle_aeb valid_tokens is 100.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/0/valid_tokens
+  status: verified
+- claim_id: p3.family-interventions.lead_or_stopping.coalition-none.false_interventions
+  text: lead_or_stopping coalition-none false_interventions is 708.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/1/false_interventions
+  status: verified
+- claim_id: p3.family-interventions.lead_or_stopping.coalition-none.false_per_1000_scenario_replicates
+  text: lead_or_stopping coalition-none false_per_1000_scenario_replicates is 2360.0.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/1/false_per_1000_scenario_replicates
+  status: verified
+- claim_id: p3.family-interventions.lead_or_stopping.coalition-none.missed_interventions
+  text: lead_or_stopping coalition-none missed_interventions is 225.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/1/missed_interventions
+  status: verified
+- claim_id: p3.family-interventions.lead_or_stopping.coalition-none.missed_per_1000_scenario_replicates
+  text: lead_or_stopping coalition-none missed_per_1000_scenario_replicates is 750.0.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/1/missed_per_1000_scenario_replicates
+  status: verified
+- claim_id: p3.family-interventions.lead_or_stopping.coalition-none.replicate_count
+  text: lead_or_stopping coalition-none replicate_count is 3.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/1/replicate_count
+  status: verified
+- claim_id: p3.family-interventions.lead_or_stopping.coalition-none.scenario_replicates
+  text: lead_or_stopping coalition-none scenario_replicates is 300.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/1/scenario_replicates
+  status: verified
+- claim_id: p3.family-interventions.lead_or_stopping.coalition-none.valid_tokens
+  text: lead_or_stopping coalition-none valid_tokens is 100.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/1/valid_tokens
+  status: verified
+- claim_id: p3.family-interventions.lead_or_stopping.coalition-dropout-localization_shape-latency-track_instability.false_interventions
+  text: lead_or_stopping coalition-dropout+localization_shape+latency+track_instability false_interventions
+    is 815.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/2/false_interventions
+  status: verified
+- claim_id: p3.family-interventions.lead_or_stopping.coalition-dropout-localization_shape-latency-track_instability.false_per_1000_scenario_replicates
+  text: lead_or_stopping coalition-dropout+localization_shape+latency+track_instability false_per_1000_scenario_replicates
+    is 2716.6666666666665.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/2/false_per_1000_scenario_replicates
+  status: verified
+- claim_id: p3.family-interventions.lead_or_stopping.coalition-dropout-localization_shape-latency-track_instability.missed_interventions
+  text: lead_or_stopping coalition-dropout+localization_shape+latency+track_instability missed_interventions
+    is 591.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/2/missed_interventions
+  status: verified
+- claim_id: p3.family-interventions.lead_or_stopping.coalition-dropout-localization_shape-latency-track_instability.missed_per_1000_scenario_replicates
+  text: lead_or_stopping coalition-dropout+localization_shape+latency+track_instability missed_per_1000_scenario_replicates
+    is 1970.0.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/2/missed_per_1000_scenario_replicates
+  status: verified
+- claim_id: p3.family-interventions.lead_or_stopping.coalition-dropout-localization_shape-latency-track_instability.replicate_count
+  text: lead_or_stopping coalition-dropout+localization_shape+latency+track_instability replicate_count
+    is 3.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/2/replicate_count
+  status: verified
+- claim_id: p3.family-interventions.lead_or_stopping.coalition-dropout-localization_shape-latency-track_instability.scenario_replicates
+  text: lead_or_stopping coalition-dropout+localization_shape+latency+track_instability scenario_replicates
+    is 300.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/2/scenario_replicates
+  status: verified
+- claim_id: p3.family-interventions.lead_or_stopping.coalition-dropout-localization_shape-latency-track_instability.valid_tokens
+  text: lead_or_stopping coalition-dropout+localization_shape+latency+track_instability valid_tokens is
+    100.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/2/valid_tokens
+  status: verified
+- claim_id: p3.family-interventions.cut_in_or_crossing.oracle_aeb.false_interventions
+  text: cut_in_or_crossing oracle_aeb false_interventions is 0.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/3/false_interventions
+  status: verified
+- claim_id: p3.family-interventions.cut_in_or_crossing.oracle_aeb.false_per_1000_scenario_replicates
+  text: cut_in_or_crossing oracle_aeb false_per_1000_scenario_replicates is 0.0.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/3/false_per_1000_scenario_replicates
+  status: verified
+- claim_id: p3.family-interventions.cut_in_or_crossing.oracle_aeb.missed_interventions
+  text: cut_in_or_crossing oracle_aeb missed_interventions is 0.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/3/missed_interventions
+  status: verified
+- claim_id: p3.family-interventions.cut_in_or_crossing.oracle_aeb.missed_per_1000_scenario_replicates
+  text: cut_in_or_crossing oracle_aeb missed_per_1000_scenario_replicates is 0.0.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/3/missed_per_1000_scenario_replicates
+  status: verified
+- claim_id: p3.family-interventions.cut_in_or_crossing.oracle_aeb.replicate_count
+  text: cut_in_or_crossing oracle_aeb replicate_count is 3.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/3/replicate_count
+  status: verified
+- claim_id: p3.family-interventions.cut_in_or_crossing.oracle_aeb.scenario_replicates
+  text: cut_in_or_crossing oracle_aeb scenario_replicates is 300.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/3/scenario_replicates
+  status: verified
+- claim_id: p3.family-interventions.cut_in_or_crossing.oracle_aeb.valid_tokens
+  text: cut_in_or_crossing oracle_aeb valid_tokens is 100.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/3/valid_tokens
+  status: verified
+- claim_id: p3.family-interventions.cut_in_or_crossing.coalition-none.false_interventions
+  text: cut_in_or_crossing coalition-none false_interventions is 903.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/4/false_interventions
+  status: verified
+- claim_id: p3.family-interventions.cut_in_or_crossing.coalition-none.false_per_1000_scenario_replicates
+  text: cut_in_or_crossing coalition-none false_per_1000_scenario_replicates is 3010.0.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/4/false_per_1000_scenario_replicates
+  status: verified
+- claim_id: p3.family-interventions.cut_in_or_crossing.coalition-none.missed_interventions
+  text: cut_in_or_crossing coalition-none missed_interventions is 474.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/4/missed_interventions
+  status: verified
+- claim_id: p3.family-interventions.cut_in_or_crossing.coalition-none.missed_per_1000_scenario_replicates
+  text: cut_in_or_crossing coalition-none missed_per_1000_scenario_replicates is 1580.0.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/4/missed_per_1000_scenario_replicates
+  status: verified
+- claim_id: p3.family-interventions.cut_in_or_crossing.coalition-none.replicate_count
+  text: cut_in_or_crossing coalition-none replicate_count is 3.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/4/replicate_count
+  status: verified
+- claim_id: p3.family-interventions.cut_in_or_crossing.coalition-none.scenario_replicates
+  text: cut_in_or_crossing coalition-none scenario_replicates is 300.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/4/scenario_replicates
+  status: verified
+- claim_id: p3.family-interventions.cut_in_or_crossing.coalition-none.valid_tokens
+  text: cut_in_or_crossing coalition-none valid_tokens is 100.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/4/valid_tokens
+  status: verified
+- claim_id: p3.family-interventions.cut_in_or_crossing.coalition-dropout-localization_shape-latency-track_instability.false_interventions
+  text: cut_in_or_crossing coalition-dropout+localization_shape+latency+track_instability false_interventions
+    is 1963.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/5/false_interventions
+  status: verified
+- claim_id: p3.family-interventions.cut_in_or_crossing.coalition-dropout-localization_shape-latency-track_instability.false_per_1000_scenario_replicates
+  text: cut_in_or_crossing coalition-dropout+localization_shape+latency+track_instability false_per_1000_scenario_replicates
+    is 6543.333333333333.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/5/false_per_1000_scenario_replicates
+  status: verified
+- claim_id: p3.family-interventions.cut_in_or_crossing.coalition-dropout-localization_shape-latency-track_instability.missed_interventions
+  text: cut_in_or_crossing coalition-dropout+localization_shape+latency+track_instability missed_interventions
+    is 1047.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/5/missed_interventions
+  status: verified
+- claim_id: p3.family-interventions.cut_in_or_crossing.coalition-dropout-localization_shape-latency-track_instability.missed_per_1000_scenario_replicates
+  text: cut_in_or_crossing coalition-dropout+localization_shape+latency+track_instability missed_per_1000_scenario_replicates
+    is 3490.0.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/5/missed_per_1000_scenario_replicates
+  status: verified
+- claim_id: p3.family-interventions.cut_in_or_crossing.coalition-dropout-localization_shape-latency-track_instability.replicate_count
+  text: cut_in_or_crossing coalition-dropout+localization_shape+latency+track_instability replicate_count
+    is 3.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/5/replicate_count
+  status: verified
+- claim_id: p3.family-interventions.cut_in_or_crossing.coalition-dropout-localization_shape-latency-track_instability.scenario_replicates
+  text: cut_in_or_crossing coalition-dropout+localization_shape+latency+track_instability scenario_replicates
+    is 300.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/5/scenario_replicates
+  status: verified
+- claim_id: p3.family-interventions.cut_in_or_crossing.coalition-dropout-localization_shape-latency-track_instability.valid_tokens
+  text: cut_in_or_crossing coalition-dropout+localization_shape+latency+track_instability valid_tokens
+    is 100.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/5/valid_tokens
+  status: verified
+- claim_id: p3.family-interventions.pedestrian_or_crosswalk.oracle_aeb.false_interventions
+  text: pedestrian_or_crosswalk oracle_aeb false_interventions is 0.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/6/false_interventions
+  status: verified
+- claim_id: p3.family-interventions.pedestrian_or_crosswalk.oracle_aeb.false_per_1000_scenario_replicates
+  text: pedestrian_or_crosswalk oracle_aeb false_per_1000_scenario_replicates is 0.0.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/6/false_per_1000_scenario_replicates
+  status: verified
+- claim_id: p3.family-interventions.pedestrian_or_crosswalk.oracle_aeb.missed_interventions
+  text: pedestrian_or_crosswalk oracle_aeb missed_interventions is 0.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/6/missed_interventions
+  status: verified
+- claim_id: p3.family-interventions.pedestrian_or_crosswalk.oracle_aeb.missed_per_1000_scenario_replicates
+  text: pedestrian_or_crosswalk oracle_aeb missed_per_1000_scenario_replicates is 0.0.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/6/missed_per_1000_scenario_replicates
+  status: verified
+- claim_id: p3.family-interventions.pedestrian_or_crosswalk.oracle_aeb.replicate_count
+  text: pedestrian_or_crosswalk oracle_aeb replicate_count is 3.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/6/replicate_count
+  status: verified
+- claim_id: p3.family-interventions.pedestrian_or_crosswalk.oracle_aeb.scenario_replicates
+  text: pedestrian_or_crosswalk oracle_aeb scenario_replicates is 300.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/6/scenario_replicates
+  status: verified
+- claim_id: p3.family-interventions.pedestrian_or_crosswalk.oracle_aeb.valid_tokens
+  text: pedestrian_or_crosswalk oracle_aeb valid_tokens is 100.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/6/valid_tokens
+  status: verified
+- claim_id: p3.family-interventions.pedestrian_or_crosswalk.coalition-none.false_interventions
+  text: pedestrian_or_crosswalk coalition-none false_interventions is 699.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/7/false_interventions
+  status: verified
+- claim_id: p3.family-interventions.pedestrian_or_crosswalk.coalition-none.false_per_1000_scenario_replicates
+  text: pedestrian_or_crosswalk coalition-none false_per_1000_scenario_replicates is 2330.0.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/7/false_per_1000_scenario_replicates
+  status: verified
+- claim_id: p3.family-interventions.pedestrian_or_crosswalk.coalition-none.missed_interventions
+  text: pedestrian_or_crosswalk coalition-none missed_interventions is 300.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/7/missed_interventions
+  status: verified
+- claim_id: p3.family-interventions.pedestrian_or_crosswalk.coalition-none.missed_per_1000_scenario_replicates
+  text: pedestrian_or_crosswalk coalition-none missed_per_1000_scenario_replicates is 1000.0.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/7/missed_per_1000_scenario_replicates
+  status: verified
+- claim_id: p3.family-interventions.pedestrian_or_crosswalk.coalition-none.replicate_count
+  text: pedestrian_or_crosswalk coalition-none replicate_count is 3.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/7/replicate_count
+  status: verified
+- claim_id: p3.family-interventions.pedestrian_or_crosswalk.coalition-none.scenario_replicates
+  text: pedestrian_or_crosswalk coalition-none scenario_replicates is 300.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/7/scenario_replicates
+  status: verified
+- claim_id: p3.family-interventions.pedestrian_or_crosswalk.coalition-none.valid_tokens
+  text: pedestrian_or_crosswalk coalition-none valid_tokens is 100.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/7/valid_tokens
+  status: verified
+- claim_id: p3.family-interventions.pedestrian_or_crosswalk.coalition-dropout-localization_shape-latency-track_instability.false_interventions
+  text: pedestrian_or_crosswalk coalition-dropout+localization_shape+latency+track_instability false_interventions
+    is 776.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/8/false_interventions
+  status: verified
+- claim_id: p3.family-interventions.pedestrian_or_crosswalk.coalition-dropout-localization_shape-latency-track_instability.false_per_1000_scenario_replicates
+  text: pedestrian_or_crosswalk coalition-dropout+localization_shape+latency+track_instability false_per_1000_scenario_replicates
+    is 2586.6666666666665.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/8/false_per_1000_scenario_replicates
+  status: verified
+- claim_id: p3.family-interventions.pedestrian_or_crosswalk.coalition-dropout-localization_shape-latency-track_instability.missed_interventions
+  text: pedestrian_or_crosswalk coalition-dropout+localization_shape+latency+track_instability missed_interventions
+    is 841.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/8/missed_interventions
+  status: verified
+- claim_id: p3.family-interventions.pedestrian_or_crosswalk.coalition-dropout-localization_shape-latency-track_instability.missed_per_1000_scenario_replicates
+  text: pedestrian_or_crosswalk coalition-dropout+localization_shape+latency+track_instability missed_per_1000_scenario_replicates
+    is 2803.3333333333335.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/8/missed_per_1000_scenario_replicates
+  status: verified
+- claim_id: p3.family-interventions.pedestrian_or_crosswalk.coalition-dropout-localization_shape-latency-track_instability.replicate_count
+  text: pedestrian_or_crosswalk coalition-dropout+localization_shape+latency+track_instability replicate_count
+    is 3.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/8/replicate_count
+  status: verified
+- claim_id: p3.family-interventions.pedestrian_or_crosswalk.coalition-dropout-localization_shape-latency-track_instability.scenario_replicates
+  text: pedestrian_or_crosswalk coalition-dropout+localization_shape+latency+track_instability scenario_replicates
+    is 300.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/8/scenario_replicates
+  status: verified
+- claim_id: p3.family-interventions.pedestrian_or_crosswalk.coalition-dropout-localization_shape-latency-track_instability.valid_tokens
+  text: pedestrian_or_crosswalk coalition-dropout+localization_shape+latency+track_instability valid_tokens
+    is 100.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/8/valid_tokens
+  status: verified
+- claim_id: p3.family-interventions.bicycle_or_vru.oracle_aeb.false_interventions
+  text: bicycle_or_vru oracle_aeb false_interventions is 0.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/9/false_interventions
+  status: verified
+- claim_id: p3.family-interventions.bicycle_or_vru.oracle_aeb.false_per_1000_scenario_replicates
+  text: bicycle_or_vru oracle_aeb false_per_1000_scenario_replicates is 0.0.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/9/false_per_1000_scenario_replicates
+  status: verified
+- claim_id: p3.family-interventions.bicycle_or_vru.oracle_aeb.missed_interventions
+  text: bicycle_or_vru oracle_aeb missed_interventions is 0.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/9/missed_interventions
+  status: verified
+- claim_id: p3.family-interventions.bicycle_or_vru.oracle_aeb.missed_per_1000_scenario_replicates
+  text: bicycle_or_vru oracle_aeb missed_per_1000_scenario_replicates is 0.0.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/9/missed_per_1000_scenario_replicates
+  status: verified
+- claim_id: p3.family-interventions.bicycle_or_vru.oracle_aeb.replicate_count
+  text: bicycle_or_vru oracle_aeb replicate_count is 3.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/9/replicate_count
+  status: verified
+- claim_id: p3.family-interventions.bicycle_or_vru.oracle_aeb.scenario_replicates
+  text: bicycle_or_vru oracle_aeb scenario_replicates is 132.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/9/scenario_replicates
+  status: verified
+- claim_id: p3.family-interventions.bicycle_or_vru.oracle_aeb.valid_tokens
+  text: bicycle_or_vru oracle_aeb valid_tokens is 44.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/9/valid_tokens
+  status: verified
+- claim_id: p3.family-interventions.bicycle_or_vru.coalition-none.false_interventions
+  text: bicycle_or_vru coalition-none false_interventions is 267.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/10/false_interventions
+  status: verified
+- claim_id: p3.family-interventions.bicycle_or_vru.coalition-none.false_per_1000_scenario_replicates
+  text: bicycle_or_vru coalition-none false_per_1000_scenario_replicates is 2022.7272727272727.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/10/false_per_1000_scenario_replicates
+  status: verified
+- claim_id: p3.family-interventions.bicycle_or_vru.coalition-none.missed_interventions
+  text: bicycle_or_vru coalition-none missed_interventions is 210.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/10/missed_interventions
+  status: verified
+- claim_id: p3.family-interventions.bicycle_or_vru.coalition-none.missed_per_1000_scenario_replicates
+  text: bicycle_or_vru coalition-none missed_per_1000_scenario_replicates is 1590.909090909091.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/10/missed_per_1000_scenario_replicates
+  status: verified
+- claim_id: p3.family-interventions.bicycle_or_vru.coalition-none.replicate_count
+  text: bicycle_or_vru coalition-none replicate_count is 3.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/10/replicate_count
+  status: verified
+- claim_id: p3.family-interventions.bicycle_or_vru.coalition-none.scenario_replicates
+  text: bicycle_or_vru coalition-none scenario_replicates is 132.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/10/scenario_replicates
+  status: verified
+- claim_id: p3.family-interventions.bicycle_or_vru.coalition-none.valid_tokens
+  text: bicycle_or_vru coalition-none valid_tokens is 44.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/10/valid_tokens
+  status: verified
+- claim_id: p3.family-interventions.bicycle_or_vru.coalition-dropout-localization_shape-latency-track_instability.false_interventions
+  text: bicycle_or_vru coalition-dropout+localization_shape+latency+track_instability false_interventions
+    is 1327.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/11/false_interventions
+  status: verified
+- claim_id: p3.family-interventions.bicycle_or_vru.coalition-dropout-localization_shape-latency-track_instability.false_per_1000_scenario_replicates
+  text: bicycle_or_vru coalition-dropout+localization_shape+latency+track_instability false_per_1000_scenario_replicates
+    is 10053.030303030304.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/11/false_per_1000_scenario_replicates
+  status: verified
+- claim_id: p3.family-interventions.bicycle_or_vru.coalition-dropout-localization_shape-latency-track_instability.missed_interventions
+  text: bicycle_or_vru coalition-dropout+localization_shape+latency+track_instability missed_interventions
+    is 206.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/11/missed_interventions
+  status: verified
+- claim_id: p3.family-interventions.bicycle_or_vru.coalition-dropout-localization_shape-latency-track_instability.missed_per_1000_scenario_replicates
+  text: bicycle_or_vru coalition-dropout+localization_shape+latency+track_instability missed_per_1000_scenario_replicates
+    is 1560.6060606060605.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/11/missed_per_1000_scenario_replicates
+  status: verified
+- claim_id: p3.family-interventions.bicycle_or_vru.coalition-dropout-localization_shape-latency-track_instability.replicate_count
+  text: bicycle_or_vru coalition-dropout+localization_shape+latency+track_instability replicate_count
+    is 3.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/11/replicate_count
+  status: verified
+- claim_id: p3.family-interventions.bicycle_or_vru.coalition-dropout-localization_shape-latency-track_instability.scenario_replicates
+  text: bicycle_or_vru coalition-dropout+localization_shape+latency+track_instability scenario_replicates
+    is 132.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/11/scenario_replicates
+  status: verified
+- claim_id: p3.family-interventions.bicycle_or_vru.coalition-dropout-localization_shape-latency-track_instability.valid_tokens
+  text: bicycle_or_vru coalition-dropout+localization_shape+latency+track_instability valid_tokens is
+    44.
+  evidence_type: observed
+  protocol_hash: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+  cohort_manifest_hash: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+  artifact_path: docs/evidence/nuplan_aeb_v2/family-interventions.json
+  metric_path: /rows/11/valid_tokens
+  status: verified

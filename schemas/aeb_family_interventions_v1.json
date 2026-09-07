@@ -1,0 +1,138 @@
+{
+  "$defs": {
+    "FamilyInterventionRowV1": {
+      "additionalProperties": false,
+      "description": "Observed intervention event counts for one family and configuration.",
+      "properties": {
+        "configuration_id": {
+          "enum": [
+            "oracle_aeb",
+            "coalition-none",
+            "coalition-dropout+localization_shape+latency+track_instability"
+          ],
+          "title": "Configuration Id",
+          "type": "string"
+        },
+        "false_interventions": {
+          "minimum": 0,
+          "title": "False Interventions",
+          "type": "integer"
+        },
+        "false_per_1000_scenario_replicates": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "False Per 1000 Scenario Replicates"
+        },
+        "family": {
+          "enum": [
+            "lead_or_stopping",
+            "cut_in_or_crossing",
+            "pedestrian_or_crosswalk",
+            "bicycle_or_vru"
+          ],
+          "title": "Family",
+          "type": "string"
+        },
+        "missed_interventions": {
+          "minimum": 0,
+          "title": "Missed Interventions",
+          "type": "integer"
+        },
+        "missed_per_1000_scenario_replicates": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Missed Per 1000 Scenario Replicates"
+        },
+        "replicate_count": {
+          "minimum": 1,
+          "title": "Replicate Count",
+          "type": "integer"
+        },
+        "scenario_replicates": {
+          "minimum": 0,
+          "title": "Scenario Replicates",
+          "type": "integer"
+        },
+        "valid_tokens": {
+          "minimum": 0,
+          "title": "Valid Tokens",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "family",
+        "configuration_id",
+        "valid_tokens",
+        "replicate_count",
+        "scenario_replicates",
+        "missed_interventions",
+        "false_interventions"
+      ],
+      "title": "FamilyInterventionRowV1",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "The complete four-family by three-configuration observed summary.",
+  "properties": {
+    "cohort_manifest_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Cohort Manifest Sha256",
+      "type": "string"
+    },
+    "common_valid_tokens": {
+      "minimum": 0,
+      "title": "Common Valid Tokens",
+      "type": "integer"
+    },
+    "evaluation_per_family": {
+      "minimum": 1,
+      "title": "Evaluation Per Family",
+      "type": "integer"
+    },
+    "protocol_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Protocol Sha256",
+      "type": "string"
+    },
+    "rows": {
+      "items": {
+        "$ref": "#/$defs/FamilyInterventionRowV1"
+      },
+      "title": "Rows",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "aeb-family-interventions/v1",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "protocol_sha256",
+    "cohort_manifest_sha256",
+    "common_valid_tokens",
+    "evaluation_per_family",
+    "rows"
+  ],
+  "title": "FamilyInterventionsV1",
+  "type": "object"
+}

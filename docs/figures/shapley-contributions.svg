@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 680" role="img" aria-labelledby="title desc">
+<title id="title">Observed mean Shapley contributions</title>
+<desc id="desc">Two panels use independent scales for collision indicator and intervention duration.</desc>
+<rect width="960" height="680" fill="#f7f9fc" />
+<text x="44" y="42" font-family="system-ui, sans-serif" font-size="24" font-weight="700" fill="#14213d">Observed mean Shapley contributions</text>
+<text x="44" y="66" font-family="system-ui, sans-serif" font-size="13" font-weight="400" fill="#14213d">full minus empty coalition-none; oracle is a different baseline</text>
+<rect x="32" y="84.0" width="896" height="268" rx="8" fill="#ffffff" stroke="#d7deea" />
+<text x="52" y="118.0" font-family="system-ui, sans-serif" font-size="18" font-weight="650" fill="#14213d">Collision indicator contribution</text>
+<text x="700" y="118.0" font-family="system-ui, sans-serif" font-size="12" font-weight="400" fill="#14213d">n = 344 tokens</text>
+<line x1="480" y1="136.0" x2="480" y2="310.0" stroke="#526078" />
+<text x="52" y="172.0" font-family="system-ui, sans-serif" font-size="13" font-weight="400" fill="#14213d">dropout</text>
+<rect x="460.088" y="160.000" width="19.912" height="14" fill="#197278" />
+<text x="754" y="172.0" font-family="system-ui, sans-serif" font-size="12" font-weight="400" fill="#14213d">-0.0021802325581395357</text>
+<text x="52" y="210.0" font-family="system-ui, sans-serif" font-size="13" font-weight="400" fill="#14213d">latency</text>
+<rect x="480.000" y="198.000" width="24.336" height="14" fill="#d97706" />
+<text x="754" y="210.0" font-family="system-ui, sans-serif" font-size="12" font-weight="400" fill="#14213d">0.002664728682170542</text>
+<text x="52" y="248.0" font-family="system-ui, sans-serif" font-size="13" font-weight="400" fill="#14213d">localization_shape</text>
+<rect x="230.000" y="236.000" width="250.000" height="14" fill="#197278" />
+<text x="754" y="248.0" font-family="system-ui, sans-serif" font-size="12" font-weight="400" fill="#14213d">-0.027374031007751935</text>
+<text x="52" y="286.0" font-family="system-ui, sans-serif" font-size="13" font-weight="400" fill="#14213d">track_instability</text>
+<rect x="480.000" y="274.000" width="6.637" height="14" fill="#d97706" />
+<text x="754" y="286.0" font-family="system-ui, sans-serif" font-size="12" font-weight="400" fill="#14213d">0.0007267441860465114</text>
+<text x="52" y="334.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">efficiency residual = 2.220446049250313e-16 (arithmetic check, not a confidence interval)</text>
+<rect x="32" y="386.0" width="896" height="268" rx="8" fill="#ffffff" stroke="#d7deea" />
+<text x="52" y="420.0" font-family="system-ui, sans-serif" font-size="18" font-weight="650" fill="#14213d">Intervention duration contribution (s)</text>
+<text x="700" y="420.0" font-family="system-ui, sans-serif" font-size="12" font-weight="400" fill="#14213d">n = 344 tokens</text>
+<line x1="480" y1="438.0" x2="480" y2="612.0" stroke="#526078" />
+<text x="52" y="474.0" font-family="system-ui, sans-serif" font-size="13" font-weight="400" fill="#14213d">dropout</text>
+<rect x="473.622" y="462.000" width="6.378" height="14" fill="#197278" />
+<text x="754" y="474.0" font-family="system-ui, sans-serif" font-size="12" font-weight="400" fill="#14213d">-0.10376291989664084</text>
+<text x="52" y="512.0" font-family="system-ui, sans-serif" font-size="13" font-weight="400" fill="#14213d">latency</text>
+<rect x="463.604" y="500.000" width="16.396" height="14" fill="#197278" />
+<text x="754" y="512.0" font-family="system-ui, sans-serif" font-size="12" font-weight="400" fill="#14213d">-0.2667312661498706</text>
+<text x="52" y="550.0" font-family="system-ui, sans-serif" font-size="13" font-weight="400" fill="#14213d">localization_shape</text>
+<rect x="480.000" y="538.000" width="250.000" height="14" fill="#d97706" />
+<text x="754" y="550.0" font-family="system-ui, sans-serif" font-size="12" font-weight="400" fill="#14213d">4.0670219638242875</text>
+<text x="52" y="588.0" font-family="system-ui, sans-serif" font-size="13" font-weight="400" fill="#14213d">track_instability</text>
+<rect x="477.896" y="576.000" width="2.104" height="14" fill="#197278" />
+<text x="754" y="588.0" font-family="system-ui, sans-serif" font-size="12" font-weight="400" fill="#14213d">-0.03422157622739022</text>
+<text x="52" y="636.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">efficiency residual = 2.6645352591003757e-15 (arithmetic check, not a confidence interval)</text>
+</svg>

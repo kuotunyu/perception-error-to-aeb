@@ -74,18 +74,56 @@ def workspace(tmp_path: Path) -> Path:
         json.dumps(
             {
                 "configurations": [
-                    {"configuration_id": "no_aeb", "scenarios": 2, "collisions": 2},
-                    {"configuration_id": "oracle_aeb", "scenarios": 2, "collisions": 0},
-                    {"configuration_id": "dropout-medium", "scenarios": 2, "collisions": 1},
+                    {
+                        "configuration_id": "no_aeb",
+                        "scenarios": 2,
+                        "collisions": 2,
+                        "contacts_not_at_fault": 0,
+                        "simulated_seconds": 4.0,
+                    },
+                    {
+                        "configuration_id": "oracle_aeb",
+                        "scenarios": 2,
+                        "collisions": 0,
+                        "contacts_not_at_fault": 1,
+                        "simulated_seconds": 5.0,
+                    },
+                    {
+                        "configuration_id": "dropout-medium",
+                        "scenarios": 2,
+                        "collisions": 1,
+                        "contacts_not_at_fault": 2,
+                        "simulated_seconds": 6.0,
+                    },
+                    {
+                        "configuration_id": "coalition-none",
+                        "scenarios": 2,
+                        "collisions": 1,
+                        "contacts_not_at_fault": 3,
+                        "simulated_seconds": 7.0,
+                    },
                     {
                         "configuration_id": "coalition-dropout+latency",
                         "scenarios": 2,
                         "collisions": 1,
+                        "contacts_not_at_fault": 4,
+                        "simulated_seconds": 8.0,
+                    },
+                    {
+                        "configuration_id": (
+                            "coalition-dropout+localization_shape+latency+track_instability"
+                        ),
+                        "scenarios": 2,
+                        "collisions": 0,
+                        "contacts_not_at_fault": 5,
+                        "simulated_seconds": 9.0,
                     },
                     {
                         "configuration_id": "calibration_imported_0123456789abcdef",
                         "scenarios": 2,
                         "collisions": 1,
+                        "contacts_not_at_fault": 6,
+                        "simulated_seconds": 10.0,
                     },
                 ]
             }
@@ -614,6 +652,148 @@ def test_the_page_keeps_the_configuration_groups_apart(workspace: Path) -> None:
 
     for heading in ("Baseline", "Single Channel", "Coalition", "Imported"):
         assert heading in page
+
+
+def test_report_leads_with_question_observations_figures_and_replays(
+    workspace: Path,
+) -> None:
+    run(
+        "report",
+        "--claims",
+        str(workspace / "claims.yaml"),
+        "--artifacts-dir",
+        str(workspace / "artifacts"),
+        "--output-dir",
+        str(workspace / "site"),
+    )
+    page = (workspace / "site" / "index.html").read_text(encoding="utf-8")
+
+    headings = [
+        page.index(label)
+        for label in ("Research question", "Observed results", "Figures", "Replays")
+    ]
+    assert headings == sorted(headings)
+    assert '<details id="complete-trace">' in page
+    assert "Scenario-replicates" in page
+    assert "contacts_not_at_fault" in page
+    assert "<script" not in page
+
+    observed = page[
+        page.index('<section id="observations">') : page.index('<section id="figures">')
+    ]
+    assert "coalition-none" in observed
+    assert "coalition-dropout+localization_shape+latency+track_instability" in observed
+    assert "stopped" in page
+    assert "closing velocity" in page
+    assert "legal responsibility" in page
+    assert "position differences" in page
+    assert "no uncertainty interval" in page
+    assert "nuBoard" in page
+    assert "per-distance" in page
+
+    appendix = page[page.index('<details id="complete-trace">') :]
+    assert appendix.count("contacts_not_at_fault") >= 4
+    assert appendix.count("Measured exposure (s)") >= 4
+
+
+def test_report_copies_derived_figures_and_replays_with_relative_links(workspace: Path) -> None:
+    figures = workspace / "figures"
+    figures.mkdir()
+    (figures / "shapley-contributions.svg").write_text("<svg>shapley</svg>\n", encoding="utf-8")
+    (figures / "intervention-rates-by-family.svg").write_text(
+        "<svg>families</svg>\n", encoding="utf-8"
+    )
+    replays = workspace / "artifacts" / "replays"
+    replays.mkdir()
+    (replays / "lead_or_stopping--oracle_aeb.html").write_text(
+        "<!doctype html><title>replay</title>\n", encoding="utf-8"
+    )
+
+    run(
+        "report",
+        "--claims",
+        str(workspace / "claims.yaml"),
+        "--artifacts-dir",
+        str(workspace / "artifacts"),
+        "--output-dir",
+        str(workspace / "site"),
+    )
+    page = (workspace / "site" / "index.html").read_text(encoding="utf-8")
+
+    assert 'src="figures/shapley-contributions.svg"' in page
+    assert 'href="replays/lead_or_stopping--oracle_aeb.html"' in page
+    assert (workspace / "site" / "figures" / "shapley-contributions.svg").read_text() == (
+        "<svg>shapley</svg>\n"
+    )
+    assert (workspace / "site" / "replays" / "lead_or_stopping--oracle_aeb.html").is_file()
+    assert "grid-template-columns: 1fr" in page
+
+
+def test_report_exposes_the_family_sample_shortfall_without_an_efficacy_claim(
+    workspace: Path,
+) -> None:
+    (workspace / "artifacts" / "family-interventions.json").write_text(
+        json.dumps(
+            {
+                "evaluation_per_family": 100,
+                "rows": [
+                    {
+                        "family": "bicycle_or_vru",
+                        "configuration_id": "oracle_aeb",
+                        "valid_tokens": 44,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    run(
+        "report",
+        "--claims",
+        str(workspace / "claims.yaml"),
+        "--artifacts-dir",
+        str(workspace / "artifacts"),
+        "--output-dir",
+        str(workspace / "site"),
+    )
+    page = (workspace / "site" / "index.html").read_text(encoding="utf-8")
+
+    assert "44 valid tokens" in page
+    assert "target of 100" in page
+    assert "sample shortfall" in page
+
+
+def test_report_finds_a_partial_figure_set_beside_a_nested_docs_evidence_dir(
+    workspace: Path,
+) -> None:
+    from aebrisk.report.builder import build_site
+
+    artifacts = workspace / "docs" / "evidence" / "run"
+    artifacts.mkdir(parents=True)
+    (artifacts / "family-interventions.json").write_text(
+        json.dumps(
+            {
+                "evaluation_per_family": 100,
+                "rows": [
+                    {
+                        "family": "lead_or_stopping",
+                        "configuration_id": "oracle_aeb",
+                        "valid_tokens": 100,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    figures = workspace / "docs" / "figures"
+    figures.mkdir()
+    (figures / "shapley-contributions.svg").write_text("<svg/>\n", encoding="utf-8")
+
+    build_site(workspace / "claims.yaml", artifacts, workspace / "nested-site")
+
+    assert (workspace / "nested-site" / "figures" / "shapley-contributions.svg").is_file()
+    assert not (workspace / "nested-site" / "figures" / "intervention-rates-by-family.svg").exists()
 
 
 def test_the_page_always_shows_the_exclusions(workspace: Path) -> None:

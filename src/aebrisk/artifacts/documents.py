@@ -1,4 +1,4 @@
-"""Strict contracts for the four analysis documents published under ``docs``."""
+"""Strict contracts for the registered analysis documents published under ``docs``."""
 
 from __future__ import annotations
 
@@ -8,6 +8,10 @@ from typing import Annotated, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from aebrisk.artifacts.family_interventions import (
+    FAMILY_INTERVENTIONS_SCHEMA_VERSION,
+    FamilyInterventionsV1,
+)
 from aebrisk.attribution.shapley import ATTRIBUTED_METRICS, CHANNELS
 
 Sha256 = Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
@@ -174,6 +178,7 @@ SCHEMA_VERSIONS: tuple[str, ...] = (
     INTERVALS_SCHEMA_VERSION,
     SHAPLEY_SCHEMA_VERSION,
     EXCLUSIONS_SCHEMA_VERSION,
+    FAMILY_INTERVENTIONS_SCHEMA_VERSION,
 )
 
 DOCUMENT_MODELS: dict[str, type[BaseModel]] = {
@@ -181,6 +186,7 @@ DOCUMENT_MODELS: dict[str, type[BaseModel]] = {
     INTERVALS_SCHEMA_VERSION: AEBIntervalsV1,
     SHAPLEY_SCHEMA_VERSION: AEBShapleyV1,
     EXCLUSIONS_SCHEMA_VERSION: AEBExclusionsV1,
+    FAMILY_INTERVENTIONS_SCHEMA_VERSION: FamilyInterventionsV1,
 }
 
 

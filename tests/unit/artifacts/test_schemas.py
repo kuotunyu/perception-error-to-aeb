@@ -41,6 +41,7 @@ def test_every_committed_schema_has_a_model() -> None:
         "aeb_intervals_v1",
         "aeb_shapley_v1",
         "aeb_exclusions_v1",
+        "aeb_family_interventions_v1",
     ]
 
 
@@ -91,6 +92,7 @@ def test_writing_schemas_produces_the_declared_files(tmp_path: Path) -> None:
     assert sorted(path.name for path in written) == [
         "aeb_evaluation_v1.json",
         "aeb_exclusions_v1.json",
+        "aeb_family_interventions_v1.json",
         "aeb_intervals_v1.json",
         "aeb_result_v1.json",
         "aeb_result_v2.json",

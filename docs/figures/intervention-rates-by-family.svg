@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 790" role="img" aria-labelledby="title desc">
+<title id="title">Observed intervention event rates by family</title>
+<desc id="desc">Missed and false intervention events per 1,000 scenario-replicates; no uncertainty intervals are inferred.</desc>
+<rect width="1200" height="790" fill="#f7f9fc" />
+<text x="44" y="42" font-family="system-ui, sans-serif" font-size="24" font-weight="700" fill="#14213d">Observed intervention event rates by family</text>
+<text x="44" y="68" font-family="system-ui, sans-serif" font-size="13" font-weight="400" fill="#14213d">events per 1,000 scenario-replicates</text>
+<text x="44" y="109.0" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#14213d">lead_or_stopping</text>
+<text x="214" y="109.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">oracle_aeb</text>
+<rect x="672.000" y="96.000" width="0.000" height="14" fill="#d97706" />
+<text x="830" y="108.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">missed 0.0</text>
+<rect x="672.000" y="116.000" width="0.000" height="14" fill="#d97706" />
+<text x="830" y="128.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">false 0.0</text>
+<text x="1040" y="118.0" font-family="system-ui, sans-serif" font-size="10" font-weight="400" fill="#14213d">300 scenario-replicates</text>
+<line x1="44" y1="141.0" x2="1156" y2="141.0" stroke="#d7deea" />
+<text x="44" y="163.0" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#14213d">lead_or_stopping</text>
+<text x="214" y="163.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">coalition-none</text>
+<rect x="672.000" y="150.000" width="11.191" height="14" fill="#d97706" />
+<text x="830" y="162.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">missed 750.0</text>
+<rect x="672.000" y="170.000" width="35.213" height="14" fill="#d97706" />
+<text x="830" y="182.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">false 2360.0</text>
+<text x="1040" y="172.0" font-family="system-ui, sans-serif" font-size="10" font-weight="400" fill="#14213d">300 scenario-replicates</text>
+<line x1="44" y1="195.0" x2="1156" y2="195.0" stroke="#d7deea" />
+<text x="44" y="217.0" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#14213d">lead_or_stopping</text>
+<text x="214" y="217.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">coalition-dropout+localization_shape+latency+track_instability</text>
+<rect x="672.000" y="204.000" width="29.394" height="14" fill="#d97706" />
+<text x="830" y="216.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">missed 1970.0</text>
+<rect x="672.000" y="224.000" width="40.535" height="14" fill="#d97706" />
+<text x="830" y="236.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">false 2716.6666666666665</text>
+<text x="1040" y="226.0" font-family="system-ui, sans-serif" font-size="10" font-weight="400" fill="#14213d">300 scenario-replicates</text>
+<line x1="44" y1="249.0" x2="1156" y2="249.0" stroke="#d7deea" />
+<text x="44" y="271.0" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#14213d">cut_in_or_crossing</text>
+<text x="214" y="271.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">oracle_aeb</text>
+<rect x="672.000" y="258.000" width="0.000" height="14" fill="#d97706" />
+<text x="830" y="270.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">missed 0.0</text>
+<rect x="672.000" y="278.000" width="0.000" height="14" fill="#d97706" />
+<text x="830" y="290.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">false 0.0</text>
+<text x="1040" y="280.0" font-family="system-ui, sans-serif" font-size="10" font-weight="400" fill="#14213d">300 scenario-replicates</text>
+<line x1="44" y1="303.0" x2="1156" y2="303.0" stroke="#d7deea" />
+<text x="44" y="325.0" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#14213d">cut_in_or_crossing</text>
+<text x="214" y="325.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">coalition-none</text>
+<rect x="672.000" y="312.000" width="23.575" height="14" fill="#d97706" />
+<text x="830" y="324.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">missed 1580.0</text>
+<rect x="672.000" y="332.000" width="44.912" height="14" fill="#d97706" />
+<text x="830" y="344.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">false 3010.0</text>
+<text x="1040" y="334.0" font-family="system-ui, sans-serif" font-size="10" font-weight="400" fill="#14213d">300 scenario-replicates</text>
+<line x1="44" y1="357.0" x2="1156" y2="357.0" stroke="#d7deea" />
+<text x="44" y="379.0" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#14213d">cut_in_or_crossing</text>
+<text x="214" y="379.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">coalition-dropout+localization_shape+latency+track_instability</text>
+<rect x="672.000" y="366.000" width="52.074" height="14" fill="#d97706" />
+<text x="830" y="378.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">missed 3490.0</text>
+<rect x="672.000" y="386.000" width="97.632" height="14" fill="#d97706" />
+<text x="830" y="398.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">false 6543.333333333333</text>
+<text x="1040" y="388.0" font-family="system-ui, sans-serif" font-size="10" font-weight="400" fill="#14213d">300 scenario-replicates</text>
+<line x1="44" y1="411.0" x2="1156" y2="411.0" stroke="#d7deea" />
+<text x="44" y="433.0" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#14213d">pedestrian_or_crosswalk</text>
+<text x="214" y="433.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">oracle_aeb</text>
+<rect x="672.000" y="420.000" width="0.000" height="14" fill="#d97706" />
+<text x="830" y="432.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">missed 0.0</text>
+<rect x="672.000" y="440.000" width="0.000" height="14" fill="#d97706" />
+<text x="830" y="452.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">false 0.0</text>
+<text x="1040" y="442.0" font-family="system-ui, sans-serif" font-size="10" font-weight="400" fill="#14213d">300 scenario-replicates</text>
+<line x1="44" y1="465.0" x2="1156" y2="465.0" stroke="#d7deea" />
+<text x="44" y="487.0" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#14213d">pedestrian_or_crosswalk</text>
+<text x="214" y="487.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">coalition-none</text>
+<rect x="672.000" y="474.000" width="14.921" height="14" fill="#d97706" />
+<text x="830" y="486.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">missed 1000.0</text>
+<rect x="672.000" y="494.000" width="34.766" height="14" fill="#d97706" />
+<text x="830" y="506.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">false 2330.0</text>
+<text x="1040" y="496.0" font-family="system-ui, sans-serif" font-size="10" font-weight="400" fill="#14213d">300 scenario-replicates</text>
+<line x1="44" y1="519.0" x2="1156" y2="519.0" stroke="#d7deea" />
+<text x="44" y="541.0" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#14213d">pedestrian_or_crosswalk</text>
+<text x="214" y="541.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">coalition-dropout+localization_shape+latency+track_instability</text>
+<rect x="672.000" y="528.000" width="41.828" height="14" fill="#d97706" />
+<text x="830" y="540.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">missed 2803.3333333333335</text>
+<rect x="672.000" y="548.000" width="38.595" height="14" fill="#d97706" />
+<text x="830" y="560.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">false 2586.6666666666665</text>
+<text x="1040" y="550.0" font-family="system-ui, sans-serif" font-size="10" font-weight="400" fill="#14213d">300 scenario-replicates</text>
+<line x1="44" y1="573.0" x2="1156" y2="573.0" stroke="#d7deea" />
+<text x="44" y="595.0" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#14213d">bicycle_or_vru</text>
+<text x="214" y="595.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">oracle_aeb</text>
+<rect x="672.000" y="582.000" width="0.000" height="14" fill="#d97706" />
+<text x="830" y="594.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">missed 0.0</text>
+<rect x="672.000" y="602.000" width="0.000" height="14" fill="#d97706" />
+<text x="830" y="614.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">false 0.0</text>
+<text x="1040" y="604.0" font-family="system-ui, sans-serif" font-size="10" font-weight="400" fill="#14213d">132 scenario-replicates</text>
+<line x1="44" y1="627.0" x2="1156" y2="627.0" stroke="#d7deea" />
+<text x="44" y="649.0" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#14213d">bicycle_or_vru</text>
+<text x="214" y="649.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">coalition-none</text>
+<rect x="672.000" y="636.000" width="23.738" height="14" fill="#d97706" />
+<text x="830" y="648.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">missed 1590.909090909091</text>
+<rect x="672.000" y="656.000" width="30.181" height="14" fill="#d97706" />
+<text x="830" y="668.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">false 2022.7272727272727</text>
+<text x="1040" y="658.0" font-family="system-ui, sans-serif" font-size="10" font-weight="400" fill="#14213d">132 scenario-replicates</text>
+<line x1="44" y1="681.0" x2="1156" y2="681.0" stroke="#d7deea" />
+<text x="44" y="703.0" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#14213d">bicycle_or_vru</text>
+<text x="214" y="703.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">coalition-dropout+localization_shape+latency+track_instability</text>
+<rect x="672.000" y="690.000" width="23.286" height="14" fill="#d97706" />
+<text x="830" y="702.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">missed 1560.6060606060605</text>
+<rect x="672.000" y="710.000" width="150.000" height="14" fill="#d97706" />
+<text x="830" y="722.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">false 10053.030303030304</text>
+<text x="1040" y="712.0" font-family="system-ui, sans-serif" font-size="10" font-weight="400" fill="#14213d">132 scenario-replicates</text>
+<line x1="44" y1="735.0" x2="1156" y2="735.0" stroke="#d7deea" />
+</svg>

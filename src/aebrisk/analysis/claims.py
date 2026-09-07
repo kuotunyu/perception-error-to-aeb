@@ -29,6 +29,7 @@ PUBLISHED_DOCUMENTS: tuple[tuple[str, str], ...] = (
     ("intervals.json", "aeb-intervals/v1"),
     ("shapley.json", "aeb-shapley/v1"),
     ("exclusions.json", "aeb-exclusions/v1"),
+    ("family-interventions.json", "aeb-family-interventions/v1"),
 )
 
 _NUMBER_PATTERN = re.compile(r"(?<![\w.])[-+]?(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][-+]?\d+)?%?")
@@ -251,6 +252,15 @@ def _claim_identity(
         metric = tokens[1]
         detail = "-".join(tokens[2:])
         return f"p3.shapley.{_slug(metric)}-{_slug(detail)}", f"Shapley {metric} {detail}"
+    if stem == "family-interventions" and len(tokens) == 3 and tokens[0] == "rows":
+        row = document["rows"][int(tokens[1])]
+        family = str(row["family"])
+        configuration = str(row["configuration_id"])
+        metric = tokens[2]
+        return (
+            f"p3.family-interventions.{_slug(family)}.{_slug(configuration)}.{_slug(metric)}",
+            f"{family} {configuration} {metric}",
+        )
     metric = "-".join(tokens)
     return f"p3.{_slug(stem)}.{_slug(metric)}", f"{stem.title()} {' '.join(tokens)}"
 

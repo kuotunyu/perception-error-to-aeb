@@ -223,6 +223,51 @@ def test_the_animation_has_one_step_per_frame() -> None:
     assert len(figure["frames"]) == 7
 
 
+def test_animation_has_plotly_generated_play_pause_and_time_slider() -> None:
+    replay = load_replay_module()
+
+    figure = replay.build_replay_figure(timeline(3), title="t")
+
+    labels = [button["label"] for button in figure["layout"]["updatemenus"][0]["buttons"]]
+    assert labels == ["Play", "Pause"]
+    assert [step["label"] for step in figure["layout"]["sliders"][0]["steps"]] == [
+        "0.0 s",
+        "0.1 s",
+        "0.2 s",
+    ]
+
+
+def test_actor_trace_indices_stay_stable_when_actors_enter_exit_or_reorder() -> None:
+    replay = load_replay_module()
+    frames = (
+        frame(0, tracks=(track("actor-b", 20.0),)),
+        frame(1, tracks=(track("actor-a", 10.0), track("actor-b", 21.0))),
+        frame(2, tracks=(track("actor-b", 22.0), track("actor-a", 11.0))),
+        frame(3, tracks=(track("actor-a", 12.0),)),
+    )
+
+    figure = replay.build_replay_figure(frames, title="t")
+
+    expected_names = ["ego", "actor-a", "actor-b"]
+    for animation_frame in figure["frames"]:
+        assert [trace["name"] for trace in animation_frame["data"]] == expected_names
+    assert figure["frames"][0]["data"][1]["x"] == ()
+    assert figure["frames"][3]["data"][2]["x"] == ()
+
+
+def test_axes_cover_the_whole_timeline_instead_of_rescaling_each_frame() -> None:
+    replay = load_replay_module()
+    frames = (
+        frame(0, tracks=(track("a", -20.0),)),
+        frame(1, tracks=(track("a", 80.0),)),
+    )
+
+    figure = replay.build_replay_figure(frames, title="t")
+
+    assert figure["layout"]["xaxis"]["range"][0] < -20.0
+    assert figure["layout"]["xaxis"]["range"][1] > 80.0
+
+
 def test_the_animation_is_titled_with_what_it_shows() -> None:
     """A replay nobody can attribute to a scenario and a cell is not evidence."""
 
@@ -244,6 +289,9 @@ def test_the_animation_is_written_as_self_contained_html(tmp_path: Any) -> None:
 
     assert written.lstrip().startswith("<")
     assert "plotly" in written.lower()
+    assert "Derived visualization" in written
+    assert "CC BY-NC-SA 4.0" in written
+    assert "Plotly.js is MIT licensed" in written
 
 
 def test_the_written_html_pins_its_line_ending(tmp_path: Any) -> None:

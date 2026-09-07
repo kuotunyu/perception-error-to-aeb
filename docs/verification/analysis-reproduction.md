@@ -45,6 +45,21 @@ tokens. A recursive relative-path, byte-length, and SHA-256 comparison found
 | `cohort/development-eligibility.json` | 473,232 | `fbd7fe980b3c28191645197f301eae96277cf3dedeb029927a756a73fe881f88` |
 | `cohort/evaluation-eligibility.json` | 1,426,273 | `b9a78c518582c6f60581b56396140a390b29e1611605262ff8bb76fe68174d84` |
 
+Task E2 read the same immutable formal directory to add the family event
+summary; it did not run the formal cohort again:
+
+```powershell
+docker compose run --rm dev uv run --frozen aeb-risk summarize-families --results-dir artifacts/formal/nuplan_aeb_v2 --manifest artifacts/manifests/nuplan_aeb_v2/evaluation.json --protocol configs/protocols/nuplan_aeb_v2.yaml --output-dir docs/evidence/nuplan_aeb_v2
+docker compose run --rm dev uv run --frozen aeb-risk summarize-families --results-dir artifacts/formal/nuplan_aeb_v2 --manifest artifacts/manifests/nuplan_aeb_v2/evaluation.json --protocol configs/protocols/nuplan_aeb_v2.yaml --output-dir artifacts/e2-reproduction/nuplan_aeb_v2
+```
+
+Both commands exited 0. The two `family-interventions.json` files were
+byte-identical with SHA-256
+`417eba86942dc086780e153a07ddf678be9933329bd229930c22437b69902074`.
+All nine earlier D3 JSON files retained their recorded hashes, and all 1,087
+earlier claim objects remained item-for-item identical; 86 observed family
+claims were appended.
+
 The common cohort contains 344 unique tokens. Each configuration row contains
 1,032 scenario-replicate records and its separately measured exposure. The
 top-level exposure is the explicit sum over the 26 rows: 389,838.9 simulated
@@ -75,6 +90,43 @@ supports significance claims for changes or rankings of channel importance.
 The result record does not carry distance travelled. This release therefore
 reports `collisions_per_100km` as `null` for every configuration rather than
 inventing a distance denominator.
+
+## Figures, report, and selected replay reconstruction
+
+The figures are generated directly from `shapley.json` and
+`family-interventions.json`. Collision-indicator and intervention-duration
+Shapley values use separate SVG panels, scales, and units. The family plot uses
+event counts per scenario-replicate and applies no whole-cohort uncertainty
+interval to a family row. Two independent figure builds and two report builds
+were compared recursively by relative path and SHA-256; the final Task E2
+verification record reports the exact result.
+
+Replay selection is fixed before rendering: within each family, choose the
+oracle token whose replicate-mean intervention duration is nearest the family
+median, breaking a tie by SHA-256 of the token. Only that token is resolved and
+rerun for `oracle_aeb`, `coalition-none`, and the full medium coalition at
+replicate zero. The resulting set is capped at twelve HTML files.
+
+Every selected fresh outcome must exactly reproduce the corresponding frozen
+replicate-zero record for token/configuration identity, simulated duration,
+three collision counts, collision energy, `contacts_not_at_fault`, minimum TTC,
+minimum clearance, stop distance, maximum deceleration, maximum absolute jerk,
+and intervention duration before any HTML is accepted. Missed and false event
+counts are cross-configuration matching metrics and are not reconstructed by a
+single replay run. The frozen result schema does not store final pose or final
+speed; reconstructed kinematics instead compare those values with the same
+fresh simulator outcome. The displayed terminal frame includes that final
+state while holding the last available observation tracks.
+
+Display geometry is translated to the selected scenario's first ego pose and
+native actor IDs become stable `actor-NNN` labels. The viewer embeds Plotly.js,
+provides generated play/pause and time-slider controls, uses a stable union of
+actor traces across frames, and fixes axes over all frames. Offline structural
+checks cover the bounded inventory, embedded resources, prohibited paths and
+identifiers, and absence of sensor/map/database payloads. Interactive browser
+acceptance is a separate human visual gate and must be recorded independently;
+file-URL navigation was unavailable to the automated browser in this desktop
+environment.
 
 ## License decision
 
