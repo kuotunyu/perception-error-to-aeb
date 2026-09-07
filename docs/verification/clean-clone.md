@@ -112,16 +112,94 @@ under `_canonical_key`. Their SHA-256 is
 
 ## Rebuilt release artifacts
 
-The following same-clone checks are still pending at this documentation
-checkpoint and must be filled with actual exit codes and SHA-256 values before
-E3 acceptance:
+The evidence-only documentation checkpoint
+`8de34ac937ab816115f6798aa50e683bdbc0b932` has tree
+`31bcee3615f88a281af5b8b5592d155376f08d56` and epoch `1788789972`.
+Its diff from the audited checkpoint contains only this record,
+[`mutation-audit.md`](mutation-audit.md),
+[`release-checklist.md`](release-checklist.md), and the survivor-invariant
+section of [`simulation-contract.md`](../simulation-contract.md). Source,
+tests, mutation configuration, lock, Docker, Compose, and workflow bytes did
+not change. This distinction preserves the actual audit provenance: the
+mutation audit ran at `04437cb`, not at the later documentation SHA.
 
-- rebuild the two SVG figures and static report from committed evidence;
-- compare every committed/rebuilt replay asset;
-- run both skill contract suites and the attribution validator;
-- regenerate schemas and prove no tracked byte changes;
-- build wheel and normalized sdist twice in fresh directories at this commit's
-  epoch, compare hashes, and install a wheel rebuilt from the normalized sdist.
+A second new volume, `e3-p3-releaseclone-8de34ac`, cloned that exact evidence
+checkpoint with `git clone --no-local`, removed its local origin, and began
+clean with LF bytes and UID/GID 1001. Its binary context SHA-256 is
+`867ca043c049e99b844818b910a8253a6de2f3250d2d7f3e82b49feef18b21b1`;
+23 of 23 key context files matched their Git blobs. Image
+`perception-error-to-aeb-dev:e3-release-8de34ac-uid1001` has manifest digest
+`sha256:be035fa9c4b945f994fec1368cc3c5464e250adb670b71d5004e2622fad4e937`.
+
+The full gate inside the final clone again printed all eight markers, two
+`1666 passed, 5 skipped` results, and 100% of 4,444 statements and 1,356
+branches. That gate was the first phase of a longer reproduction job. The
+later job phase exited 2 because it tried to compare the generated report to
+an untracked `site/` directory that correctly did not exist in the clean
+clone. The complete log, including the successful gate and the later setup
+failure, has SHA-256
+`83ef432bcc21d70d1e1a1edf5c9083637a7a3eb8f2a1ff2adda71a7e93bff9d4`.
+The already successful gate was not repeated to hide that failure.
+
+A corrected, bounded artifact/build phase then exited 0. It established:
+
+- claim audit: zero violations;
+- attribution validation: pass for both READMEs and the release note;
+- skill contracts: 71 passed;
+- two fresh figure builds: mutually and byte-identical to the two committed
+  SVG files;
+- two fresh report builds: mutually identical and all 15 paths, sizes, and
+  SHA-256 values identical to the preserved E2 reference;
+- all 12 report replay files: byte-identical to the committed replay assets;
+- nine regenerated schemas: byte-identical to `schemas/`;
+- report index SHA-256:
+  `e5c1627901bb5278347e7d0e973626364edca5f4ac280436e6f2b2aad49da86a`;
+- selected replay SHA-256:
+  `04c681d7bc3604ccb361bf88f89a9f615cebeebcccc1e6334ab59136f2dba59e`.
+
+The artifact/build log covers UTC `2026-09-07T14:22:23Z` through
+`2026-09-07T14:22:42Z` and has SHA-256
+`7e8601aee2de5ad0d690c9407ec872dd1e3638185d5892c916e777a8ed66a6ea`.
+
+## Reproducible distributions
+
+Both builds ran inside the same pinned final-clone container, used fresh
+output directories and `SOURCE_DATE_EPOCH=1788789972`, and invoked the locked
+backend with `python -m build --no-isolation`. Each directory contained one
+correctly named wheel and one sdist. After sdist normalization, both builds
+had these hashes:
+
+| Artifact | SHA-256 |
+| --- | --- |
+| `perception_error_to_aeb-1.0.0-py3-none-any.whl` | `9ae57d83d78b264c7e809af59183bf0e1b2f0becae129e81c69d4cb526725506` |
+| `perception_error_to_aeb-1.0.0.tar.gz` | `326b2b8bc4fb380bfa96d159c24c68b27972c6cec28963cbc4042dae3f49a3ea` |
+| `SHA256SUMS` | `fd2cd8aee00df72670243ce2cd11e0162b14d2ce56147107cbd864aea78a35ba` |
+
+The helper reported installed, wheel, and sdist version `1.0.0`, verified the
+distribution name and filenames, and wrote exactly two portable checksum
+lines. The direct wheel installed into one empty target and imported from that
+target as 1.0.0. The normalized sdist was unpacked and built into a wheel,
+which installed into a second empty target and also imported as 1.0.0. Its
+wheel hash matched the direct build.
+
+## Dependency licence metadata
+
+This was a metadata and installed-license-file inspection, not a dedicated
+licence scanner. It inspected 74 installed distribution records using
+`License-Expression`, legacy `License`, classifiers, and installed licence
+files; no record lacked all four forms of evidence. The pinned nuPlan package
+has contradictory legacy metadata (`apache-2.0` plus a non-commercial
+classifier), so its installed licence file was checked directly. That file is
+the Apache License 2.0 notice from Motional and has SHA-256
+`2f43f04335316ee361ed2b75e5da8e152ac7d832145a44caa111344ef4c6fa73`.
+
+The built release-candidate wheel and sdist contain the project's MIT licence
+and first-party package, and do not vendor dependency modules. On that
+distribution basis the observed dependency licences are compatible with
+publishing these MIT project archives. The full metadata inventory SHA-256 is
+`9a6bad56711e04680330f11cd05cc80400f2150326e6cf5242417c1698f0b7c2`;
+the focused nuPlan licence log SHA-256 is
+`b585e2ba2156edc4eb2e6fa55f380fde2e8a2e11f5d10f0c31bd7a676c6e4ec6`.
 
 Nothing in this document is evidence that GitHub Pages or a public release has
 run. Those are E4 operations and remain blocked on the explicit release
