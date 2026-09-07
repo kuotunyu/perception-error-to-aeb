@@ -71,5 +71,5 @@ def test_release_verifies_tag_version_and_writes_checksums_from_two_artifacts() 
         'export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"\ndocker compose run --rm -e SOURCE_DATE_EPOCH dev uv run --frozen python -m build --no-isolation --outdir dist\ndocker compose run --rm dev uv run --frozen python -m aebrisk.release normalize-sdist --epoch "$SOURCE_DATE_EPOCH" --dist-dir dist\n',
         'docker compose run --rm dev uv run --frozen python -m aebrisk.release verify-version --tag "$GITHUB_REF_NAME" --dist-dir dist',
         "docker compose run --rm dev uv run --frozen python -m aebrisk.release write-checksums --dist-dir dist",
-        'gh release create "$GITHUB_REF_NAME" dist/*.whl dist/*.tar.gz dist/SHA256SUMS --title "perception-error-to-aeb $GITHUB_REF_NAME" --notes-file "docs/release-notes/$GITHUB_REF_NAME.md"',
+        'gh release create "$GITHUB_REF_NAME" dist/*.whl dist/*.tar.gz dist/SHA256SUMS --verify-tag --title "perception-error-to-aeb $GITHUB_REF_NAME" --notes-file "docs/release-notes/$GITHUB_REF_NAME.md"',
     )

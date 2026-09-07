@@ -26,7 +26,7 @@ def load_dropout_module() -> ModuleType:
     """Import inside the test so a missing module is a purposeful RED failure."""
 
     try:
-        from aebrisk.errors import dropout
+        import aebrisk.errors.dropout as dropout
     except ImportError:
         pytest.fail("aebrisk.errors.dropout is missing", pytrace=False)
     return dropout
@@ -181,6 +181,34 @@ def test_the_result_does_not_depend_on_input_order() -> None:
     }
 
 
+def test_each_track_identity_reaches_its_own_draw(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Distinct identities select distinct deterministic fates in one frame."""
+
+    dropout = load_dropout_module()
+    tracks = make_tracks(2)
+    draws = {tracks[0].track_id: 0.2, tracks[1].track_id: 0.8}
+    monkeypatch.setattr(
+        dropout,
+        "dropout_draw",
+        lambda _key, track_id, _step: draws[track_id],
+    )
+
+    result, _ = dropout.apply_dropout(tracks, 0.5, make_key(), 0, None)
+
+    assert [track.visible for track in result] == [False, True]
+
+
+def test_a_draw_equal_to_probability_remains_visible(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Dropout is the half-open event draw < probability."""
+
+    dropout = load_dropout_module()
+    monkeypatch.setattr(dropout, "dropout_draw", lambda *_args: 0.5)
+
+    result, _ = dropout.apply_dropout(make_tracks(1), 0.5, make_key(), 0, None)
+
+    assert result[0].visible is True
+
+
 def test_repeating_one_step_gives_the_same_answer() -> None:
     """A step recomputed during a retry must not re-roll what was already observed."""
 
@@ -291,6 +319,16 @@ def test_a_negative_step_is_refused() -> None:
 
     with pytest.raises(ValueError, match=r"^(step\ |step\ must\ be\ a\ non\-negative\ integer)"):
         dropout.apply_dropout(make_tracks(), 0.5, make_key(), -1, None)
+
+
+@pytest.mark.parametrize("step", [True, 1.5])
+def test_a_boolean_or_noninteger_step_is_refused(step: object) -> None:
+    """A frame index is an integer count, never a truth value or fraction."""
+
+    dropout = load_dropout_module()
+
+    with pytest.raises(ValueError, match=r"^step must be a non-negative integer$"):
+        dropout.apply_dropout(make_tracks(), 0.5, make_key(), step, None)  # type: ignore[arg-type]
 
 
 def test_the_observed_rate_is_close_to_the_configured_probability() -> None:

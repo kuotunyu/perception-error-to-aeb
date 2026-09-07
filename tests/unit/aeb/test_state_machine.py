@@ -341,6 +341,36 @@ def test_a_threat_that_demands_nothing_but_is_close_holds_the_state() -> None:
     assert command.state is state_machine.AEBState.FULL
 
 
+def test_release_counters_reset_on_every_nonclear_path() -> None:
+    """Monitoring, warning demand and hysteresis each discard stale clear progress."""
+
+    state_machine = load_state_machine_module()
+    from aebrisk.aeb.state_machine import AEBMemory, AEBState
+
+    cases = (
+        (AEBState.MONITOR, (), 0),
+        (AEBState.FULL, (threat(2.9, 1.0),), 0),
+        (AEBState.FULL, (threat(3.5, 1.0),), 0),
+    )
+    for initial_state, threats, expected in cases:
+        memory = AEBMemory(initial_state, 0, 4, 0.0)
+        updated, _ = state_machine.update_aeb(memory, threats)
+        assert updated.release_clear_steps == expected
+
+
+def test_release_completion_returns_monitoring_with_a_zeroed_counter() -> None:
+    """The fifth clear step completes one release rather than seeding the next."""
+
+    state_machine = load_state_machine_module()
+    from aebrisk.aeb.state_machine import AEBMemory, AEBState
+
+    memory = AEBMemory(AEBState.FULL, 0, 4, 0.0)
+    updated, command = state_machine.update_aeb(memory, ())
+
+    assert command.state is AEBState.MONITOR
+    assert updated.release_clear_steps == 0
+
+
 # --------------------------------------------------------------------------
 # Selection and priority
 # --------------------------------------------------------------------------
@@ -459,6 +489,16 @@ def test_a_finer_step_needs_proportionally_more_qualifying_steps() -> None:
         states.append(command.state.value)
 
     assert states == ["monitor", "monitor", "monitor", "warning"]
+
+
+def test_one_coarse_step_can_cover_the_warning_duration() -> None:
+    """At 0.5 s, one valid step already exceeds the nominal 0.2 s warning delay."""
+
+    state_machine = load_state_machine_module()
+
+    _, command = state_machine.update_aeb(monitoring(), (threat(2.9, 1.0),), dt_s=0.5)
+
+    assert command.state is state_machine.AEBState.WARNING
 
 
 @pytest.mark.parametrize("bad_value", [0.0, -0.1, float("nan")])

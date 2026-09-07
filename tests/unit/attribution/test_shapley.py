@@ -31,7 +31,7 @@ def load_shapley_module() -> ModuleType:
     """Import inside the test so a missing module is a purposeful RED failure."""
 
     try:
-        from aebrisk.attribution import shapley
+        import aebrisk.attribution.shapley as shapley
     except ImportError:
         pytest.fail("aebrisk.attribution.shapley is missing", pytrace=False)
     return shapley
@@ -302,6 +302,31 @@ def test_each_metric_is_attributed_on_its_own() -> None:
     assert set(attributed) == set(games)
     assert attributed["collision_indicator"]["dropout"] > 0.0
     assert attributed["intervention_duration_s"]["latency"] == pytest.approx(2.0, abs=1e-12)
+
+
+def test_metric_wrapper_preserves_a_custom_channel_game() -> None:
+    """The wrapper forwards the caller's complete channel set to exact Shapley."""
+
+    shapley = load_shapley_module()
+    channels = ("camera", "radar")
+    game = {
+        frozenset(): 0.0,
+        frozenset({"camera"}): 0.1,
+        frozenset({"radar"}): 0.4,
+        frozenset(channels): 0.9,
+    }
+
+    attributed = shapley.shapley_by_metric(
+        {"collision_indicator": game},
+        channels=channels,
+    )
+
+    assert attributed == {
+        "collision_indicator": {
+            "camera": pytest.approx(0.3, abs=1e-12),
+            "radar": pytest.approx(0.6, abs=1e-12),
+        }
+    }
 
 
 def test_an_unknown_metric_is_refused() -> None:

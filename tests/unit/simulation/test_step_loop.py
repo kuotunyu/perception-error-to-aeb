@@ -48,7 +48,7 @@ def load_step_loop_module() -> ModuleType:
     """Import inside the test so a missing module is a purposeful RED failure."""
 
     try:
-        from aebrisk.simulation import step_loop
+        import aebrisk.simulation.step_loop as step_loop
     except ImportError:  # pragma: no cover - names the absence during RED
         pytest.fail("aebrisk.simulation.step_loop is missing", pytrace=False)
     return step_loop
@@ -114,6 +114,7 @@ def run(
     initial_speed_mps: float = 10.0,
     replicate: int = 0,
     dt_s: float = DT_S,
+    map_speed_limit_mps: Optional[float] = None,
     source: Optional[Any] = None,
 ) -> Any:
     return module.run_steps(
@@ -127,7 +128,7 @@ def run(
         replicate=replicate,
         protocol_hash=PROTOCOL_HASH,
         dt_s=dt_s,
-        map_speed_limit_mps=None,
+        map_speed_limit_mps=map_speed_limit_mps,
     )
 
 
@@ -154,6 +155,55 @@ def test_an_ego_with_no_threat_holds_its_speed_and_never_brakes() -> None:
     assert outcome.collisions == {"vru": 0, "vehicle": 0, "object": 0}
     assert outcome.max_deceleration_mps2 == pytest.approx(0.0, abs=1e-9)
     assert outcome.distance_travelled_m == pytest.approx(10.0 * 90 * DT_S, rel=1e-6)
+
+
+def test_one_stopped_control_step_reports_every_public_numeric_output() -> None:
+    """A one-step run is valid and its zero-valued measurements remain explicit."""
+
+    module = load_step_loop_module()
+
+    outcome = run(
+        module,
+        config=configuration("no_aeb", aeb=False),
+        steps=1,
+        initial_speed_mps=0.0,
+    )
+
+    assert outcome.states == (AEBState.MONITOR,)
+    assert outcome.nominal_accelerations_mps2 == (0.0,)
+    assert outcome.collision_energy_j == 0.0
+    assert outcome.min_clearance_m == 0.0
+    assert outcome.max_deceleration_mps2 == 0.0
+    assert outcome.max_abs_jerk_mps3 == 0.0
+    assert outcome.intervention_duration_s == 0.0
+    assert outcome.distance_travelled_m == 0.0
+    assert outcome.final_speed_mps == 0.0
+    assert outcome.stop_distance_m == 0.0
+    assert outcome.ran_out_of_route is False
+
+
+def test_nondefault_dt_and_map_limit_drive_hand_calculated_control_outputs() -> None:
+    """Three 0.2 s steps apply -1,-2,-3 m/s2 toward a 5 m/s map limit."""
+
+    module = load_step_loop_module()
+
+    outcome = run(
+        module,
+        config=configuration("no_aeb", aeb=False),
+        steps=3,
+        initial_speed_mps=10.0,
+        dt_s=0.2,
+        map_speed_limit_mps=5.0,
+    )
+
+    assert outcome.states == (AEBState.MONITOR,) * 3
+    assert outcome.nominal_accelerations_mps2 == pytest.approx((-5.0, -4.8, -4.4))
+    assert outcome.final_speed_mps == pytest.approx(8.8)
+    assert outcome.distance_travelled_m == pytest.approx(5.6)
+    assert outcome.max_deceleration_mps2 == pytest.approx(3.0)
+    assert outcome.max_abs_jerk_mps3 == pytest.approx(5.0)
+    assert outcome.intervention_duration_s == 0.0
+    assert outcome.stop_distance_m is None
 
 
 def test_the_aeb_keeps_the_ego_off_a_stationary_lead() -> None:
@@ -189,7 +239,8 @@ def test_without_the_aeb_the_same_scenario_collides() -> None:
     outcome = run(module, lead_at(60.0), config=configuration("no_aeb", aeb=False))
 
     assert outcome.collisions["vehicle"] == 1
-    assert outcome.collision_energy_j > 0.0
+    assert outcome.collision_energy_j == pytest.approx(75_000.0)
+    assert outcome.final_speed_mps == pytest.approx(10.0)
 
 
 def test_a_collision_ends_the_run_rather_than_integrating_through_the_body() -> None:
@@ -358,8 +409,10 @@ def test_the_jerk_and_deceleration_the_run_reached_are_reported() -> None:
     outcome = run(module, lead_at(60.0))
 
     assert outcome.max_deceleration_mps2 > 0.0
-    assert outcome.max_abs_jerk_mps3 > 0.0
+    assert outcome.max_abs_jerk_mps3 == pytest.approx(5.0)
     assert math.isfinite(outcome.max_abs_jerk_mps3)
+    braking_steps = sum(state in (AEBState.PARTIAL, AEBState.FULL) for state in outcome.states)
+    assert outcome.intervention_duration_s == pytest.approx(braking_steps * DT_S)
 
 
 def test_the_minimum_time_to_collision_seen_is_reported() -> None:

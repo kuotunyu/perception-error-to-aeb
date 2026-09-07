@@ -28,7 +28,7 @@ def load_latency_module() -> ModuleType:
     """Import inside the test so a missing module is a purposeful RED failure."""
 
     try:
-        from aebrisk.errors import latency
+        import aebrisk.errors.latency as latency
     except ImportError:
         pytest.fail("aebrisk.errors.latency is missing", pytrace=False)
     return latency
@@ -124,6 +124,23 @@ def test_a_history_too_short_for_the_request_is_invalid() -> None:
     assert selection.valid is False
 
 
+def test_an_invalid_selection_records_the_available_age_from_absolute_timestamps() -> None:
+    """Invalid does not erase how much history was actually available."""
+
+    latency = load_latency_module()
+    history = (
+        make_frame(0, BASE_US + 50_000),
+        make_frame(1, BASE_US + 150_000),
+        make_frame(2, BASE_US + 300_000),
+    )
+
+    selection = latency.select_latency_frame(history, 2, 0.4)
+
+    assert selection.valid is False
+    assert selection.selected_index == 0
+    assert selection.realized_latency_s == pytest.approx(0.25)
+
+
 def test_an_invalid_selection_never_points_into_the_future() -> None:
     """The one thing that must never happen, stated as its own test."""
 
@@ -166,7 +183,7 @@ def test_an_invalid_observation_shows_nothing() -> None:
     tracks, selection = latency.apply_latency(history, 1, 0.4)
 
     assert selection.valid is False
-    assert all(not track.visible for track in tracks)
+    assert all(track.visible is False for track in tracks)
 
 
 def test_a_valid_observation_returns_the_older_frame_intact() -> None:
@@ -238,6 +255,22 @@ def test_two_frames_sharing_a_timestamp_select_the_older() -> None:
     assert selection.selected_index == 1
 
 
+def test_a_tie_between_the_first_two_frames_selects_index_zero() -> None:
+    """The oldest tie rule also applies at the lower boundary of the history."""
+
+    latency = load_latency_module()
+    history = (
+        make_frame(0, BASE_US),
+        make_frame(1, BASE_US),
+        make_frame(2, BASE_US + 100_000),
+    )
+
+    selection = latency.select_latency_frame(history, 2, 0.1)
+
+    assert selection.selected_index == 0
+    assert selection.realized_latency_s == pytest.approx(0.1)
+
+
 def test_a_history_that_goes_backwards_in_time_is_refused() -> None:
     """Non-monotonic timestamps mean the history was assembled wrongly.
 
@@ -301,6 +334,25 @@ def test_an_impossible_frequency_is_refused(bad_value: float) -> None:
 
     with pytest.raises(ValueError, match=r"^frequency_hz must "):
         latency.select_latency_frame(regular_history(), 3, 0.1, frequency_hz=bad_value)
+
+
+def test_a_low_positive_frequency_is_valid() -> None:
+    """Positive frequency has no artificial one-hertz lower bound."""
+
+    latency = load_latency_module()
+
+    selection = latency.select_latency_frame(regular_history(), 3, 0.1, frequency_hz=0.5)
+
+    assert selection.valid is True
+
+
+def test_apply_latency_forwards_frequency_validation() -> None:
+    """The public wrapper cannot silently replace an invalid configured rate."""
+
+    latency = load_latency_module()
+
+    with pytest.raises(ValueError, match=r"^frequency_hz must "):
+        latency.apply_latency(regular_history(), 3, 0.1, frequency_hz=0.0)
 
 
 @pytest.mark.parametrize("bad_value", ["0.1", True, None])

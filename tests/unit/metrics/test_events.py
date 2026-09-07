@@ -330,6 +330,21 @@ def test_the_nearest_counterpart_is_chosen() -> None:
     assert summary.matched_delays_s == pytest.approx((0.05,))
 
 
+def test_nearest_matching_uses_nonzero_onset_differences() -> None:
+    """A shared candidate at 10.9 s belongs to the 11.0 s oracle event."""
+
+    events = load_events_module()
+
+    summary = events.match_interventions(
+        (event(10.0, 10.5), event(11.0, 11.5)),
+        (event(10.9, 11.4),),
+    )
+
+    assert summary.matched_delays_s == pytest.approx((-0.1,))
+    assert summary.missed == 1
+    assert summary.false == 0
+
+
 def test_a_tie_is_broken_by_position() -> None:
     """Two counterparts equally far away must resolve the same way every run.
 
@@ -371,6 +386,20 @@ def test_several_pairs_are_matched_independently() -> None:
     assert len(summary.matched_delays_s) == 2
 
 
+def test_a_conflicting_candidate_does_not_abort_a_later_independent_match() -> None:
+    """Greedy matching skips a used edge and continues through the candidate list."""
+
+    events = load_events_module()
+    oracle = (event(1.0, 1.4), event(1.1, 1.5), event(10.0, 10.4))
+    corrupted = (event(1.05, 1.45), event(10.1, 10.5))
+
+    summary = events.match_interventions(oracle, corrupted)
+
+    assert summary.matched_delays_s == pytest.approx((0.05, 0.1))
+    assert summary.missed == 1
+    assert summary.false == 0
+
+
 def test_two_empty_traces_produce_an_empty_summary() -> None:
     """No interventions on either side is not a failure of any kind."""
 
@@ -391,6 +420,33 @@ def test_the_delays_are_reported_in_onset_order() -> None:
     summary = events.match_interventions(oracle, corrupted)
 
     assert summary.matched_delays_s == pytest.approx((0.2, 0.1))
+
+
+def test_delay_order_uses_oracle_onsets_when_input_is_unsorted() -> None:
+    """Reported order is chronological even when the accepted oracle tuple is not."""
+
+    events = load_events_module()
+    oracle = (event(5.0, 5.5), event(1.0, 1.5))
+    corrupted = (event(5.1, 5.6), event(1.2, 1.7))
+
+    summary = events.match_interventions(oracle, corrupted)
+
+    assert summary.matched_delays_s == pytest.approx((0.2, 0.1))
+
+
+def test_zero_tolerance_and_zero_lateness_match_only_equal_onsets() -> None:
+    """Zero is an accepted exact-match contract for both non-negative thresholds."""
+
+    events = load_events_module()
+
+    summary = events.match_interventions(
+        (event(2.0, 2.5),),
+        (event(2.0, 2.6),),
+        tolerance_s=0.0,
+        missed_delay_s=0.0,
+    )
+
+    assert (summary.missed, summary.false, summary.matched_delays_s) == (0, 0, (0.0,))
 
 
 @pytest.mark.parametrize("bad_value", [-0.1, float("nan")])

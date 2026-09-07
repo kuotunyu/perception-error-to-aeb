@@ -362,6 +362,48 @@ def test_a_missed_object_reports_how_close_it_came() -> None:
     assert 0.0 < near.min_clearance_m < far.min_clearance_m
 
 
+def test_translated_near_miss_uses_the_closest_nonzero_sample() -> None:
+    """At t=3 s the centres align in x and the two boxes retain a 0.5 m y gap."""
+
+    threat = load_threat_module()
+    assessment = threat.assess_threat(
+        make_ego(center=(10.0, -5.0), speed=0.0, velocity=(0.0, 0.0)),
+        make_track(center=(16.0, -2.0), size=(2.0, 2.0), velocity=(-2.0, 0.0)),
+    )
+
+    assert assessment.predicted_overlap is False
+    assert assessment.ttc_s is None
+    assert assessment.min_clearance_m == pytest.approx(0.5)
+
+
+def test_moving_near_miss_includes_the_horizon_endpoint() -> None:
+    """At t=4 s the centre offset is (2,4), leaving the boxes 1.5 m apart in y."""
+
+    threat = load_threat_module()
+    assessment = threat.assess_threat(
+        make_ego(center=(10.0, -5.0), speed=0.0, velocity=(0.0, 0.0)),
+        make_track(center=(20.0, 3.0), size=(2.0, 2.0), velocity=(-2.0, -1.0)),
+    )
+
+    assert assessment.predicted_overlap is False
+    assert assessment.ttc_s is None
+    assert assessment.min_clearance_m == pytest.approx(1.5)
+
+
+def test_translated_near_miss_uses_relative_position_to_choose_the_sample() -> None:
+    """Relative centres are nearest at t=1.8 s, where the vertical box gap is 2.3 m."""
+
+    threat = load_threat_module()
+    assessment = threat.assess_threat(
+        make_ego(center=(10.0, -5.0), speed=0.0, velocity=(0.0, 0.0)),
+        make_track(center=(16.0, -2.0), size=(2.0, 2.0), velocity=(-2.0, 1.0)),
+    )
+
+    assert assessment.predicted_overlap is False
+    assert assessment.ttc_s is None
+    assert assessment.min_clearance_m == pytest.approx(2.3)
+
+
 def test_a_predicted_overlap_reports_no_clearance() -> None:
     """The two fields must agree; a threat cannot both hit and keep its distance."""
 
