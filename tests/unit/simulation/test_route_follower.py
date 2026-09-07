@@ -19,7 +19,9 @@ not accelerate into a scenario it was logged coasting through.
 
 from __future__ import annotations
 
+import hashlib
 import math
+import struct
 from types import ModuleType
 from typing import Any, Optional
 
@@ -321,6 +323,28 @@ def test_the_plan_bytes_change_when_the_plan_does() -> None:
     assert first != second
 
 
+def test_plan_bytes_pack_every_component_in_canonical_order() -> None:
+    """The public digest covers both scalars and every little-endian path coordinate."""
+
+    route_follower = load_route_follower_module()
+    path = np.array([[10.5, -2.0], [13.0, 4.25]], dtype=">f8")
+    plan = route_follower.NominalPlan(
+        target_speed_mps=7.5,
+        lateral_path_xy=path,
+        nominal_acceleration_mps2=-1.25,
+    )
+    packed = struct.pack("<dd", 7.5, -1.25) + np.asarray(path, dtype="<f8").tobytes()
+    expected = hashlib.sha256(packed).digest()
+
+    assert route_follower.plan_bytes(plan) == expected
+    for changed in (
+        route_follower.NominalPlan(7.6, path, -1.25),
+        route_follower.NominalPlan(7.5, path, -1.0),
+        route_follower.NominalPlan(7.5, path + np.array([[0.0, 0.0], [0.0, 0.5]]), -1.25),
+    ):
+        assert route_follower.plan_bytes(changed) != expected
+
+
 def test_the_plan_bytes_are_independent_of_the_platform() -> None:
     """A signature that differed between Windows and CI would be no signature at all."""
 
@@ -469,6 +493,29 @@ def test_running_past_the_end_of_the_route_stops_at_its_last_waypoint() -> None:
 
     assert (x, y) == pytest.approx((10.0, 10.0))
     assert yaw == pytest.approx(math.pi / 2)
+
+
+@pytest.mark.parametrize(
+    ("distance", "point", "heading"),
+    [
+        (2.5, (11.5, 22.0), math.atan2(4.0, 3.0)),
+        (5.0, (13.0, 24.0), math.atan2(4.0, 3.0)),
+        (8.0, (13.0, 27.0), math.pi / 2.0),
+        (1_000.0, (21.0, 30.0), 0.0),
+    ],
+)
+def test_translated_unequal_route_interpolation_and_terminal_heading(
+    distance: float, point: tuple[float, float], heading: float
+) -> None:
+    """Interior points, corner ties, and terminal clamps use their actual moving segment."""
+
+    route_follower = load_route_follower_module()
+    route = np.array([[10.0, 20.0], [13.0, 24.0], [13.0, 30.0], [21.0, 30.0]], dtype=np.float64)
+
+    observed_point, observed_heading = route_follower.pose_at_distance(route, distance)
+
+    assert observed_point == pytest.approx(point)
+    assert observed_heading == pytest.approx(heading)
 
 
 def test_a_distance_before_the_route_is_refused() -> None:

@@ -240,6 +240,48 @@ def test_the_covariance_adds_to_what_was_already_there() -> None:
     assert track.covariance_xy == pytest.approx((1.25, 0.5, 0.5, 1.25))
 
 
+def test_named_draws_produce_the_hand_calculated_observation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Every named draw reaches only its field, with the declared scale and covariance."""
+
+    localization = load_localization_module()
+    draws = {
+        "position_x": 0.5,
+        "position_y": -0.25,
+        "yaw": 0.5,
+        "size_length": 0.2,
+        "size_width": -0.5,
+    }
+    calls: list[tuple[Any, str, int, str]] = []
+
+    def fixed_draw(key: Any, track_id: str, step: int, field: str) -> float:
+        calls.append((key, track_id, step, field))
+        return draws[field]
+
+    monkeypatch.setattr(localization, "perturbation_draw", fixed_draw)
+    key = make_key()
+    [source] = make_tracks(1, covariance_xy=(1.0, 0.2, 0.3, 2.0))
+
+    result = localization._perturb_one(
+        source,
+        position_std_m=2.0,
+        yaw_std_rad=0.4,
+        size_relative_std=0.5,
+        key=key,
+        step=7,
+    )
+
+    assert result.center_xy_m == pytest.approx((11.0, 1.5))
+    assert result.yaw_rad == pytest.approx(0.45)
+    assert result.size_lw_m == pytest.approx((4.95, 1.425))
+    assert result.covariance_xy == pytest.approx((5.0, 0.2, 0.3, 6.0))
+    assert result.velocity_xy_mps == source.velocity_xy_mps
+    assert result.visible is source.visible
+    assert result.source_timestamp_us == source.source_timestamp_us
+    assert calls == [(key, "t-0000", 7, field) for field in draws]
+
+
 def test_identity_and_timestamp_and_velocity_survive_untouched() -> None:
     """This channel corrupts where and how big, not who or when or how fast."""
 

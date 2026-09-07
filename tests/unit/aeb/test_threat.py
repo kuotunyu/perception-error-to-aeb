@@ -60,6 +60,7 @@ def make_track(
     *,
     center: tuple[float, float] = (20.0, 0.0),
     yaw: float = 0.0,
+    size: tuple[float, float] = (4.0, 2.0),
     velocity: tuple[float, float] = (0.0, 0.0),
     track_id: str = "t-0001",
 ) -> Any:
@@ -70,7 +71,7 @@ def make_track(
         category="vehicle",
         center_xy_m=center,
         yaw_rad=yaw,
-        size_lw_m=(4.0, 2.0),
+        size_lw_m=size,
         velocity_xy_mps=velocity,
         visible=True,
         source_timestamp_us=1_600_000_000_000_000,
@@ -490,6 +491,49 @@ def test_a_faster_ego_requires_harder_braking() -> None:
     fast = threat.assess_threat(make_ego(speed=20.0, velocity=(20.0, 0.0)), make_track())
 
     assert fast.required_deceleration_mps2 == pytest.approx(4.0 * slow.required_deceleration_mps2)
+
+
+def test_translated_rectangle_point_to_edge_distances_are_hand_calculated() -> None:
+    """Interior edge projections must not collapse to origin-based corner distances."""
+
+    import numpy as np
+
+    threat = load_threat_module()
+    rectangle = np.array([[10.0, 20.0], [16.0, 20.0], [16.0, 24.0], [10.0, 24.0]], dtype=np.float64)
+    points = np.array([[13.0, 18.0], [18.0, 22.0]], dtype=np.float64)
+
+    distances = threat._point_segment_distances(points, rectangle)
+
+    assert distances.min(axis=1) == pytest.approx((2.0, 2.0))
+    lower_box = threat.oriented_box_polygon((13.0, 17.0), 0.0, (2.0, 2.0))
+    assert threat.polygon_clearance(rectangle, lower_box) == pytest.approx(2.0)
+
+
+def test_rotated_longitudinal_gap_uses_projected_body_extents() -> None:
+    """The target's width becomes its longitudinal reach when headings differ by ninety degrees."""
+
+    threat = load_threat_module()
+    root_two = math.sqrt(2.0)
+    ego = make_ego(center=(10.0, -5.0), yaw=math.pi / 4.0)
+    track = make_track(
+        center=(10.0 + 10.0 * root_two, -5.0 + 10.0 * root_two),
+        yaw=3.0 * math.pi / 4.0,
+        size=(6.0, 2.0),
+    )
+
+    assert threat._longitudinal_gap(ego, track) == pytest.approx(17.0)
+
+
+def test_diagonal_and_separation_bounds_use_both_axes_and_margin() -> None:
+    """The cheap clearance bound includes nonzero y separation and both boxes' reaches."""
+
+    threat = load_threat_module()
+
+    assert threat.half_diagonal_m((6.0, 8.0), margin_m=1.0) == pytest.approx(math.sqrt(41.0))
+    expected = 5.0 - math.sqrt(5.0) - 2.5
+    assert threat.separation_at_least(
+        (1.0, 2.0), (4.0, 2.0), (4.0, 6.0), (3.0, 4.0)
+    ) == pytest.approx(expected)
 
 
 # --------------------------------------------------------------------------

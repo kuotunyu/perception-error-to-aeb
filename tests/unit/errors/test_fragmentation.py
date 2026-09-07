@@ -44,6 +44,24 @@ def load_fragmentation_module() -> ModuleType:
     return fragmentation
 
 
+@pytest.mark.parametrize(
+    ("current", "expected"),
+    [
+        ("sensor#rack#1", "sensor#rack#2"),
+        ("123", "123#1"),
+        ("sensor#rack", "sensor#rack#1"),
+    ],
+)
+def test_public_identity_advances_only_a_final_numeric_generation(
+    current: str, expected: str
+) -> None:
+    """Accepted string IDs may contain separators or consist only of digits."""
+
+    fragmentation = load_fragmentation_module()
+
+    assert fragmentation.next_public_id(current) == expected
+
+
 def make_key() -> Any:
     from aebrisk.errors.pipeline import ErrorKey
 

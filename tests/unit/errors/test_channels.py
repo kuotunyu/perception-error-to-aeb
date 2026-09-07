@@ -20,6 +20,7 @@ precisely why the experiment matrix carries both `oracle_aeb` and
 
 from __future__ import annotations
 
+import copy
 from types import ModuleType
 from typing import Any
 
@@ -273,6 +274,25 @@ def test_each_scenario_run_gets_its_own_state() -> None:
 
     assert first.dropout_state is None
     assert second.track_memories == {}
+
+
+def test_an_injected_error_document_controls_the_bound_geometry() -> None:
+    """A validated caller-supplied calibration must not be discarded for the default file."""
+
+    from aebrisk.errors.pipeline import validate_error_config
+
+    channels = load_channels_module()
+    document = copy.deepcopy(channels.load_error_config())
+    document["channels"]["localization_shape"]["position_std_m"] = [0.0, 0.1, 2.0, 3.0]
+    validate_error_config(document)
+    bound = channels.ScenarioChannels(
+        configuration("zero", localization_shape="medium"), error_config=document
+    )
+    source = frame(0, tracks=1).tracks
+
+    [observed] = bound.geometry(source, key=key(), current_index=0)
+
+    assert observed.covariance_xy == pytest.approx((4.0, 0.0, 0.0, 4.0))
 
 
 # --------------------------------------------------------------------------

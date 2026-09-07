@@ -132,6 +132,8 @@ def test_the_seed_is_the_documented_value_for_a_fixed_key() -> None:
     canonical = json.dumps(key_values(), sort_keys=True, separators=(",", ":")).encode("utf-8")
     expected = int.from_bytes(hashlib.sha256(canonical).digest()[:8], "big")
 
+    pipeline.keyed_seed.cache_clear()
+    assert pipeline.keyed_seed(make_key(pipeline)) == expected
     assert pipeline.keyed_seed(make_key(pipeline)) == expected
 
 

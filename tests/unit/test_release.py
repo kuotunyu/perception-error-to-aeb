@@ -331,6 +331,45 @@ def test_sdist_normalization_preserves_payload_paths_types_modes_and_links(tmp_p
         assert members["root/package/link.txt"].linkname == "data.txt"
 
 
+def test_sdist_normalization_removes_overriding_pax_owners_and_is_idempotent(
+    tmp_path: Path,
+) -> None:
+    """PAX owner headers override TarInfo fields and must not retain builder identity."""
+
+    normalized: list[Path] = []
+    for directory_name, owner in (("first", 1001), ("second", 2002)):
+        directory = tmp_path / directory_name
+        directory.mkdir()
+        write_wheel(directory, "1.0.0")
+        sdist = directory / "perception_error_to_aeb-1.0.0.tar.gz"
+        payload = b"identical payload"
+        with tarfile.open(sdist, "w:gz", format=tarfile.PAX_FORMAT) as archive:
+            member = tarfile.TarInfo("root/data.txt")
+            member.size = len(payload)
+            member.uid = owner
+            member.gid = owner + 1
+            member.uname = f"builder-{owner}"
+            member.gname = f"group-{owner}"
+            member.pax_headers = {
+                "uid": str(owner),
+                "gid": str(owner + 1),
+                "uname": f"builder-{owner}",
+                "gname": f"group-{owner}",
+                "purpose": "fixture",
+            }
+            archive.addfile(member, io.BytesIO(payload))
+        normalized.append(release_module().normalize_sdist(directory, 123456789))
+
+    assert normalized[0].read_bytes() == normalized[1].read_bytes()
+    first_pass = normalized[0].read_bytes()
+    release_module().normalize_sdist(normalized[0].parent, 123456789)
+    assert normalized[0].read_bytes() == first_pass
+    with tarfile.open(normalized[0], "r:gz") as archive:
+        [member] = archive.getmembers()
+        assert (member.uid, member.gid, member.uname, member.gname) == (0, 0, "", "")
+        assert member.pax_headers == {"purpose": "fixture"}
+
+
 def test_release_cli_verifies_versions_and_writes_checksums(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:

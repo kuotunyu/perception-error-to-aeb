@@ -113,7 +113,7 @@ def normalize_sdist(distribution_dir: Path, epoch: int) -> Path:
             member.pax_headers = {
                 key: value
                 for key, value in member.pax_headers.items()
-                if key not in {"atime", "ctime", "mtime"}
+                if key not in {"atime", "ctime", "mtime", "uid", "gid", "uname", "gname"}
             }
             entries.append((member, data))
 

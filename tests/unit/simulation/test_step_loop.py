@@ -616,3 +616,42 @@ def test_a_body_behind_but_slower_than_the_ego_is_the_ego_s_fault() -> None:
     )
 
     assert module.ego_at_fault((0.0, 0.0), 0.0, 10.0, behind) is True
+
+
+@pytest.mark.parametrize(
+    ("pose", "yaw", "ego_speed", "centre", "velocity", "expected"),
+    [
+        ((5.0, 7.0), math.pi / 2.0, 0.01, (5.0, 8.0), (0.0, 0.0), False),
+        ((5.0, 7.0), math.pi / 2.0, 4.9, (25.0, 6.0), (3.0, 4.0), False),
+        ((5.0, 7.0), math.pi / 2.0, 4.9, (-15.0, 6.0), (4.0, 3.0), False),
+        ((5.0, 7.0), math.pi / 2.0, 5.0, (25.0, 6.0), (3.0, 4.0), True),
+        ((5.0, 7.0), 0.0, 4.9, (5.0, 20.0), (3.0, 4.0), True),
+        ((5.0, 7.0), 0.0, 4.9, (5.5, -13.0), (3.0, 4.0), True),
+        ((5.0, 7.0), math.pi / 4.0, 4.9, (7.0, 8.0), (3.0, 4.0), True),
+        ((5.0, 7.0), math.pi / 4.0, 4.9, (3.0, 6.0), (3.0, 4.0), False),
+    ],
+)
+def test_fault_rule_boundaries_in_translated_rotated_coordinates(
+    pose: tuple[float, float],
+    yaw: float,
+    ego_speed: float,
+    centre: tuple[float, float],
+    velocity: tuple[float, float],
+    expected: bool,
+) -> None:
+    """Pin the frozen stopped and behind-plus-faster rule on its accepted boundaries."""
+
+    module = load_step_loop_module()
+    track = TrackState(
+        track_id="boundary",
+        category="vehicle",
+        center_xy_m=centre,
+        yaw_rad=0.0,
+        size_lw_m=EGO_SIZE,
+        velocity_xy_mps=velocity,
+        visible=True,
+        source_timestamp_us=FIRST_TIMESTAMP_US,
+        covariance_xy=(0.0, 0.0, 0.0, 0.0),
+    )
+
+    assert module.ego_at_fault(pose, yaw, ego_speed, track) is expected
