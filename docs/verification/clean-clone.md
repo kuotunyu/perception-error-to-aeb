@@ -141,7 +141,10 @@ failure, has SHA-256
 `83ef432bcc21d70d1e1a1edf5c9083637a7a3eb8f2a1ff2adda71a7e93bff9d4`.
 The already successful gate was not repeated to hide that failure.
 
-A corrected, bounded artifact/build phase then exited 0. It established:
+A corrected, bounded artifact/build phase then exited 0. Before the earlier
+baseline-path failure, the first job had already completed the claim audit,
+attribution validation, 71 skill tests, and artifact generation. The successful
+phases of the two jobs together established:
 
 - claim audit: zero violations;
 - attribution validation: pass for both READMEs and the release note;
