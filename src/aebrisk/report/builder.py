@@ -21,8 +21,11 @@ import shutil
 from pathlib import Path
 from typing import Any
 
-import yaml
 from jinja2 import Environment, FileSystemLoader, select_autoescape
+
+from aebrisk.analysis.claims import load_registry, validate_supplied_evidence_claims
+from aebrisk.artifacts.documents import AEBEvaluationV1
+from aebrisk.artifacts.family_interventions import FamilyInterventionsV1
 
 TEMPLATE_DIR = Path(__file__).resolve().parent / "templates"
 
@@ -53,17 +56,6 @@ def classify_configuration(configuration_id: str) -> str:
     return "single_channel"
 
 
-#: Used only when the registry does not declare its own. The registry is the
-#: authority: adding a required field there must be enough to enforce it.
-DEFAULT_REQUIRED_FIELDS: tuple[str, ...] = (
-    "claim_id",
-    "text",
-    "evidence_type",
-    "artifact_path",
-    "status",
-)
-
-
 def load_claims(path: Path) -> list[dict[str, Any]]:
     """Read the claims this report is allowed to make, on the registry's own terms.
 
@@ -73,34 +65,23 @@ def load_claims(path: Path) -> list[dict[str, Any]]:
     disagreement would be a claim the registry accepted and the report rejected.
     """
 
-    document = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    claims = document.get("claims") or []
-    if not claims:
-        raise ValueError(
-            f"{str(path)!r} names no claims; a report with no claims is a page of "
-            "numbers nobody has taken responsibility for"
-        )
+    registry = load_registry(path)
+    return [claim.model_dump(mode="json") for claim in registry.claims]
 
-    required = tuple(document.get("claim_required_fields") or DEFAULT_REQUIRED_FIELDS)
-    allowed_types = document.get("allowed_evidence_types")
-    allowed_statuses = document.get("allowed_statuses")
 
-    for claim in claims:
-        name = claim.get("claim_id", "<unnamed>")
-        for field in required:
-            if not claim.get(field):
-                raise ValueError(f"claim {name!r} is missing {field!r}")
-        if allowed_types and claim["evidence_type"] not in allowed_types:
-            raise ValueError(
-                f"claim {name!r} has evidence_type {claim['evidence_type']!r}, which the "
-                f"registry does not allow; the allowed types are {list(allowed_types)}"
-            )
-        if allowed_statuses and claim["status"] not in allowed_statuses:
-            raise ValueError(
-                f"claim {name!r} has status {claim['status']!r}, which the registry does "
-                f"not allow; the allowed statuses are {list(allowed_statuses)}"
-            )
-    return list(claims)
+def _validated_report_document(
+    path: Path,
+    model: type[AEBEvaluationV1] | type[FamilyInterventionsV1],
+    claims_path: Path,
+    label: str,
+) -> dict[str, Any]:
+    payload = path.read_bytes()
+    try:
+        document = model.model_validate_json(payload)
+    except ValueError as exc:
+        raise ValueError(f"{label} evidence is invalid: {exc}") from exc
+    validate_supplied_evidence_claims(claims_path, path.name, payload)
+    return document.model_dump(mode="json")
 
 
 def invalid_summary(artifacts_dir: Path) -> dict[str, Any]:
@@ -130,7 +111,9 @@ def build_site(claims_path: Path, artifacts_dir: Path, output_dir: Path) -> Path
     summary_path = artifacts_dir / "evaluation.json"
     evaluation: dict[str, Any] = {}
     if summary_path.is_file():
-        evaluation = json.loads(summary_path.read_text(encoding="utf-8"))
+        evaluation = _validated_report_document(
+            summary_path, AEBEvaluationV1, claims_path, "evaluation"
+        )
         for row in evaluation.get("configurations", []):
             grouped[classify_configuration(row["configuration_id"])].append(row)
 
@@ -138,21 +121,19 @@ def build_site(claims_path: Path, artifacts_dir: Path, output_dir: Path) -> Path
     family_rows: list[dict[str, Any]] = []
     family_shortfall: dict[str, int] | None = None
     if family_path.is_file():
-        family_document = json.loads(family_path.read_text(encoding="utf-8"))
+        family_document = _validated_report_document(
+            family_path, FamilyInterventionsV1, claims_path, "family intervention"
+        )
         family_rows = family_document["rows"]
         bicycle_oracle = next(
-            (
-                row
-                for row in family_rows
-                if row["family"] == "bicycle_or_vru" and row["configuration_id"] == "oracle_aeb"
-            ),
-            None,
+            row
+            for row in family_rows
+            if row["family"] == "bicycle_or_vru" and row["configuration_id"] == "oracle_aeb"
         )
-        if bicycle_oracle is not None:
-            family_shortfall = {
-                "valid_tokens": bicycle_oracle["valid_tokens"],
-                "evaluation_per_family": family_document["evaluation_per_family"],
-            }
+        family_shortfall = {
+            "valid_tokens": bicycle_oracle["valid_tokens"],
+            "evaluation_per_family": family_document["evaluation_per_family"],
+        }
 
     output_dir.mkdir(parents=True, exist_ok=True)
     figure_names = (

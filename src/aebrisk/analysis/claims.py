@@ -6,7 +6,7 @@ import json
 import re
 from decimal import Decimal
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
@@ -66,7 +66,7 @@ class ClaimsRegistryV1(BaseModel):
     allowed_evidence_types: tuple[str, ...]
     claim_required_fields: tuple[str, ...]
     allowed_statuses: tuple[str, ...]
-    claims: tuple[ClaimV1, ...]
+    claims: tuple[ClaimV1, ...] = Field(min_length=1)
 
     @model_validator(mode="after")
     def validate_shared_vocabulary(self) -> ClaimsRegistryV1:
@@ -200,6 +200,19 @@ def _read_preserving_numbers(path: Path) -> dict[str, Any]:
     return raw
 
 
+def _read_bytes_preserving_numbers(payload: bytes, source: str) -> dict[str, Any]:
+    del source  # The strict report model already validated these exact bytes.
+    return cast(
+        dict[str, Any],
+        json.loads(
+            payload.decode("utf-8"),
+            parse_int=_JsonNumber,
+            parse_float=_JsonNumber,
+            parse_constant=_reject_json_constant,
+        ),
+    )
+
+
 def evidence_provenance(evidence_dir: Path) -> tuple[str, str]:
     """Read the two exact provenance keys the generation command must bind."""
 
@@ -280,6 +293,73 @@ def _numeric_leaves(
     return leaves
 
 
+def _claims_for_document(
+    filename: str,
+    document: dict[str, Any],
+    artifact_path: str,
+    protocol_sha256: str,
+    cohort_manifest_sha256: str,
+) -> tuple[ClaimV1, ...]:
+    claims: list[ClaimV1] = []
+    for tokens, number in _numeric_leaves(document):
+        claim_id, label = _claim_identity(filename, document, tokens)
+        claims.append(
+            ClaimV1(
+                claim_id=claim_id,
+                text=f"{label} is {number}.",
+                evidence_type="observed",
+                protocol_hash=protocol_sha256,
+                cohort_manifest_hash=cohort_manifest_sha256,
+                artifact_path=artifact_path,
+                metric_path=_pointer(tokens),
+                status="verified",
+            )
+        )
+    return tuple(claims)
+
+
+def validate_supplied_evidence_claims(
+    claims_path: Path,
+    filename: str,
+    payload: bytes,
+) -> None:
+    """Bind one exact supplied report document to its complete registry claims."""
+
+    document = _read_bytes_preserving_numbers(payload, filename)
+    protocol = cast(str, document["protocol_sha256"])
+    cohort = cast(str, document["cohort_manifest_sha256"])
+
+    expected = _claims_for_document(filename, document, filename, protocol, cohort)
+    registry = load_registry(claims_path)
+    actual = tuple(claim for claim in registry.claims if Path(claim.artifact_path).name == filename)
+    actual_paths = {claim.artifact_path for claim in actual}
+    if len(actual_paths) > 1:
+        raise ValueError(
+            f"{filename} disagrees with the claim registry: its basename is ambiguous across "
+            f"{sorted(actual_paths)}"
+        )
+
+    expected_by_id = {claim.claim_id: claim for claim in expected}
+    actual_by_id = {claim.claim_id: claim for claim in actual}
+    if len(actual_by_id) != len(actual):
+        raise ValueError(
+            f"{filename} disagrees with the claim registry: duplicate numeric claim id"
+        )
+    missing = sorted(set(expected_by_id) - set(actual_by_id))
+    extra = sorted(set(actual_by_id) - set(expected_by_id))
+    if missing or extra:
+        raise ValueError(
+            f"{filename} disagrees with the claim registry: missing claims {missing}, "
+            f"extra claims {extra}"
+        )
+
+    for claim_id, expected_claim in expected_by_id.items():
+        expected_fields = expected_claim.model_dump(exclude={"artifact_path"})
+        actual_fields = actual_by_id[claim_id].model_dump(exclude={"artifact_path"})
+        if actual_fields != expected_fields:
+            raise ValueError(f"{filename} disagrees with the claim registry at claim {claim_id!r}")
+
+
 def generate_claims(
     evidence_dir: Path, protocol_sha256: str, cohort_manifest_sha256: str
 ) -> ClaimsRegistryV1:
@@ -299,20 +379,15 @@ def generate_claims(
         if document.get("cohort_manifest_sha256") != cohort_manifest_sha256:
             raise ValueError(f"{filename}: cohort manifest hash mismatch")
         artifact_path = path.resolve().relative_to(root).as_posix()
-        for tokens, number in _numeric_leaves(document):
-            claim_id, label = _claim_identity(filename, document, tokens)
-            claims.append(
-                ClaimV1(
-                    claim_id=claim_id,
-                    text=f"{label} is {number}.",
-                    evidence_type="observed",
-                    protocol_hash=protocol_sha256,
-                    cohort_manifest_hash=cohort_manifest_sha256,
-                    artifact_path=artifact_path,
-                    metric_path=_pointer(tokens),
-                    status="verified",
-                )
+        claims.extend(
+            _claims_for_document(
+                filename,
+                document,
+                artifact_path,
+                protocol_sha256,
+                cohort_manifest_sha256,
             )
+        )
     if not claims:
         raise ValueError("published evidence produced no numeric claims")
     claim_ids = [claim.claim_id for claim in claims]

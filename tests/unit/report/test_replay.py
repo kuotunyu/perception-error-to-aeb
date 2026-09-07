@@ -255,6 +255,21 @@ def test_actor_trace_indices_stay_stable_when_actors_enter_exit_or_reorder() -> 
     assert figure["frames"][3]["data"][2]["x"] == ()
 
 
+def test_serialized_frame_explicitly_clears_fill_when_actor_becomes_unobserved() -> None:
+    import json
+
+    replay = load_replay_module()
+    frames = (
+        frame(0, tracks=(track("actor-a", 20.0, visible=True),)),
+        frame(1, tracks=(track("actor-a", 21.0, visible=False),)),
+    )
+
+    serialized = json.loads(replay.build_replay_figure(frames, title="t").to_json())
+
+    assert serialized["frames"][0]["data"][1]["fill"] == "toself"
+    assert serialized["frames"][1]["data"][1]["fill"] == "none"
+
+
 def test_axes_cover_the_whole_timeline_instead_of_rescaling_each_frame() -> None:
     replay = load_replay_module()
     frames = (

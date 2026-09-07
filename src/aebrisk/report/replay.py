@@ -134,7 +134,7 @@ def _traces(frame: ReplayFrame, identities: tuple[str, ...]) -> list[go.Scatter]
                 mode="lines",
                 # An unobserved track is drawn dashed and unfilled: present in
                 # the world, absent from what the controller was given.
-                fill="toself" if observed else None,
+                fill="toself" if observed else "none",
                 line={"dash": "solid" if observed else "dash"},
                 name=identity,
             )

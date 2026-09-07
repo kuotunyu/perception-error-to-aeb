@@ -157,7 +157,7 @@ def test_a_registry_cannot_widen_the_shared_vocabulary(
     from aebrisk.analysis.claims import load_registry
 
     with pytest.raises(ValidationError, match=next(iter(override))):
-        load_registry(_write_registry(tmp_path, [], **override))
+        load_registry(_write_registry(tmp_path, [_claim()], **override))
 
 
 def test_only_verified_claims_are_public(tmp_path: Path) -> None:

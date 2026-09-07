@@ -17,19 +17,25 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import shutil
 from pathlib import Path
 
 import pytest
+import yaml
 from pydantic import BaseModel
 from typer.testing import CliRunner
 
+from aebrisk.analysis.claims import generate_claims
 from aebrisk.artifacts.documents import (
     AEBEvaluationV1,
     AEBExclusionsV1,
     AEBIntervalsV1,
     AEBShapleyV1,
 )
+from aebrisk.artifacts.family_interventions import FAMILY_INTERVENTION_CONFIGURATION_IDS
+from aebrisk.artifacts.results import SCENARIO_FAMILIES
 from aebrisk.attribution.factorial import formal_configurations
+from aebrisk.attribution.shapley import ATTRIBUTED_METRICS, CHANNELS
 from aebrisk.cli.app import app
 from aebrisk.cohort.manifest import CohortManifestV1, membership_sha256
 
@@ -70,82 +76,164 @@ def workspace(tmp_path: Path) -> Path:
 
     artifacts = tmp_path / "artifacts"
     artifacts.mkdir()
+    cohort_hash = "1" * 64
+
+    def evaluation_row(
+        configuration_id: str,
+        group: str,
+        seconds: float,
+        collisions: int,
+        contacts_not_at_fault: int,
+    ) -> dict:
+        return {
+            "configuration_id": configuration_id,
+            "group": group,
+            "scenarios": 6,
+            "simulated_seconds": seconds,
+            "collisions": collisions,
+            "collisions_vru": 0,
+            "collisions_vehicle": collisions,
+            "collisions_object": 0,
+            "contacts_not_at_fault": contacts_not_at_fault,
+            "collision_energy_total": float(collisions * 10),
+            "missed_interventions": 0,
+            "false_interventions": 0,
+            "mean_intervention_duration_s": 0.0,
+            "max_deceleration_mps2": 0.0,
+            "max_abs_jerk_mps3": 0.0,
+            "min_ttc_s": 0.0,
+            "min_clearance_m": 0.0,
+            "collisions_per_1000_scenarios": collisions * 1000.0 / 6.0,
+            "collisions_per_hour": collisions * 3600.0 / seconds,
+            "collisions_per_100km": None,
+        }
+
+    evaluation_rows = [
+        evaluation_row("no_aeb", "baseline", 40.0, 2, 0),
+        evaluation_row("oracle_aeb", "baseline", 50.0, 0, 1),
+        evaluation_row("dropout-medium", "single_channel", 60.0, 1, 2),
+        evaluation_row("coalition-none", "coalition", 70.0, 1, 3),
+        evaluation_row("coalition-dropout+latency", "coalition", 80.0, 1, 4),
+        evaluation_row(
+            "coalition-dropout+localization_shape+latency+track_instability",
+            "coalition",
+            90.0,
+            0,
+            5,
+        ),
+        evaluation_row("calibration_imported_0123456789abcdef", "imported", 100.0, 1, 6),
+    ]
     (artifacts / "evaluation.json").write_text(
         json.dumps(
             {
-                "configurations": [
-                    {
-                        "configuration_id": "no_aeb",
-                        "scenarios": 2,
-                        "collisions": 2,
-                        "contacts_not_at_fault": 0,
-                        "simulated_seconds": 4.0,
-                    },
-                    {
-                        "configuration_id": "oracle_aeb",
-                        "scenarios": 2,
-                        "collisions": 0,
-                        "contacts_not_at_fault": 1,
-                        "simulated_seconds": 5.0,
-                    },
-                    {
-                        "configuration_id": "dropout-medium",
-                        "scenarios": 2,
-                        "collisions": 1,
-                        "contacts_not_at_fault": 2,
-                        "simulated_seconds": 6.0,
-                    },
-                    {
-                        "configuration_id": "coalition-none",
-                        "scenarios": 2,
-                        "collisions": 1,
-                        "contacts_not_at_fault": 3,
-                        "simulated_seconds": 7.0,
-                    },
-                    {
-                        "configuration_id": "coalition-dropout+latency",
-                        "scenarios": 2,
-                        "collisions": 1,
-                        "contacts_not_at_fault": 4,
-                        "simulated_seconds": 8.0,
-                    },
-                    {
-                        "configuration_id": (
-                            "coalition-dropout+localization_shape+latency+track_instability"
-                        ),
-                        "scenarios": 2,
-                        "collisions": 0,
-                        "contacts_not_at_fault": 5,
-                        "simulated_seconds": 9.0,
-                    },
-                    {
-                        "configuration_id": "calibration_imported_0123456789abcdef",
-                        "scenarios": 2,
-                        "collisions": 1,
-                        "contacts_not_at_fault": 6,
-                        "simulated_seconds": 10.0,
-                    },
-                ]
+                "schema_version": "aeb-evaluation/v1",
+                "protocol_sha256": PROTOCOL_SHA,
+                "cohort_manifest_sha256": cohort_hash,
+                "cohort_size": 3,
+                "common_valid_tokens": 2,
+                "simulated_seconds": sum(row["simulated_seconds"] for row in evaluation_rows),
+                "configurations": evaluation_rows,
             }
         ),
         encoding="utf-8",
     )
     (artifacts / "exclusions.json").write_text(
-        json.dumps({"excluded": [{"scenario_token": "s-0003", "phase": "step"}]}),
+        json.dumps(
+            {
+                "schema_version": "aeb-exclusions/v1",
+                "protocol_sha256": PROTOCOL_SHA,
+                "cohort_manifest_sha256": cohort_hash,
+                "cohort_size": 3,
+                "common_valid_tokens": 2,
+                "excluded": [
+                    {
+                        "scenario_token": "s-0003",
+                        "phase": "step",
+                        "reason": "synthetic exclusion",
+                        "exception_type": None,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    family_rows = []
+    for family in SCENARIO_FAMILIES:
+        valid_tokens = 2 if family == "lead_or_stopping" else 0
+        for configuration_id in FAMILY_INTERVENTION_CONFIGURATION_IDS:
+            family_rows.append(
+                {
+                    "family": family,
+                    "configuration_id": configuration_id,
+                    "valid_tokens": valid_tokens,
+                    "replicate_count": 3,
+                    "scenario_replicates": valid_tokens * 3,
+                    "missed_interventions": 0,
+                    "false_interventions": 0,
+                    "missed_per_1000_scenario_replicates": 0.0 if valid_tokens else None,
+                    "false_per_1000_scenario_replicates": 0.0 if valid_tokens else None,
+                }
+            )
+    (artifacts / "family-interventions.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "aeb-family-interventions/v1",
+                "protocol_sha256": PROTOCOL_SHA,
+                "cohort_manifest_sha256": cohort_hash,
+                "common_valid_tokens": 2,
+                "evaluation_per_family": 100,
+                "rows": family_rows,
+            }
+        ),
+        encoding="utf-8",
+    )
+    (artifacts / "intervals.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "aeb-intervals/v1",
+                "protocol_sha256": PROTOCOL_SHA,
+                "cohort_manifest_sha256": cohort_hash,
+                "cohort_size": 3,
+                "common_valid_tokens": 2,
+                "intervals": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+    (artifacts / "shapley.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "aeb-shapley/v1",
+                "protocol_sha256": PROTOCOL_SHA,
+                "cohort_manifest_sha256": cohort_hash,
+                "cohort_size": 3,
+                "common_valid_tokens": 2,
+                "metrics": {
+                    metric: {
+                        "values": dict.fromkeys(CHANNELS, 0.0),
+                        "efficiency_max_abs_residual": 0.0,
+                        "scenarios_attributed": 2,
+                    }
+                    for metric in ATTRIBUTED_METRICS
+                },
+            }
+        ),
         encoding="utf-8",
     )
 
     claims = tmp_path / "claims.yaml"
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\nname='synthetic-report'\n", encoding="utf-8"
+    )
+    registry = generate_claims(artifacts, PROTOCOL_SHA, cohort_hash)
     claims.write_text(
-        "allowed_evidence_types: [observed, derived, synthetic, illustrative]\n"
-        "allowed_statuses: [draft, verified, rejected, superseded]\n"
-        "claim_required_fields: [claim_id, text, evidence_type, artifact_path, status]\n"
-        "claims:\n"
-        "  - claim_id: synthetic-pipeline\n"
-        "    text: the pipeline runs end to end on synthetic inputs\n"
-        "    evidence_type: synthetic\n"
-        "    artifact_path: artifacts/evaluation.json\n"
-        "    status: draft\n",
+        yaml.safe_dump(
+            registry.model_dump(mode="json"),
+            allow_unicode=True,
+            sort_keys=False,
+            width=100,
+        ),
         encoding="utf-8",
     )
     return tmp_path
@@ -732,22 +820,6 @@ def test_report_copies_derived_figures_and_replays_with_relative_links(workspace
 def test_report_exposes_the_family_sample_shortfall_without_an_efficacy_claim(
     workspace: Path,
 ) -> None:
-    (workspace / "artifacts" / "family-interventions.json").write_text(
-        json.dumps(
-            {
-                "evaluation_per_family": 100,
-                "rows": [
-                    {
-                        "family": "bicycle_or_vru",
-                        "configuration_id": "oracle_aeb",
-                        "valid_tokens": 44,
-                    }
-                ],
-            }
-        ),
-        encoding="utf-8",
-    )
-
     run(
         "report",
         "--claims",
@@ -759,9 +831,155 @@ def test_report_exposes_the_family_sample_shortfall_without_an_efficacy_claim(
     )
     page = (workspace / "site" / "index.html").read_text(encoding="utf-8")
 
-    assert "44 valid tokens" in page
+    assert "0 valid tokens" in page
     assert "target of 100" in page
     assert "sample shortfall" in page
+
+
+def test_report_refuses_an_actual_family_document_that_breaks_its_strict_contract(
+    tmp_path: Path,
+) -> None:
+    repository = Path(__file__).resolve().parents[2]
+    source = repository / "docs" / "evidence" / "nuplan_aeb_v2"
+    artifacts = tmp_path / "evidence"
+    artifacts.mkdir()
+    for name in ("evaluation.json", "family-interventions.json"):
+        shutil.copyfile(source / name, artifacts / name)
+    family_path = artifacts / "family-interventions.json"
+    family = json.loads(family_path.read_text(encoding="utf-8"))
+    bicycle_oracle = next(
+        row
+        for row in family["rows"]
+        if row["family"] == "bicycle_or_vru" and row["configuration_id"] == "oracle_aeb"
+    )
+    bicycle_oracle["valid_tokens"] = 45
+    family_path.write_text(json.dumps(family), encoding="utf-8")
+
+    result = run(
+        "report",
+        "--claims",
+        str(repository / "docs" / "claims.yaml"),
+        "--artifacts-dir",
+        str(artifacts),
+        "--output-dir",
+        str(tmp_path / "site"),
+    )
+
+    assert result.exit_code != 0
+    assert "family intervention evidence is invalid" in result.output
+    assert not (tmp_path / "site" / "index.html").exists()
+
+
+def test_report_refuses_schema_valid_family_values_that_disagree_with_registry(
+    workspace: Path,
+) -> None:
+    family_path = workspace / "artifacts" / "family-interventions.json"
+    family = json.loads(family_path.read_text(encoding="utf-8"))
+    lead_oracle = family["rows"][0]
+    lead_oracle["false_interventions"] = 1
+    lead_oracle["false_per_1000_scenario_replicates"] = 1000.0 / 6.0
+    family_path.write_text(json.dumps(family), encoding="utf-8")
+
+    result = run(
+        "report",
+        "--claims",
+        str(workspace / "claims.yaml"),
+        "--artifacts-dir",
+        str(workspace / "artifacts"),
+        "--output-dir",
+        str(workspace / "site"),
+    )
+
+    assert result.exit_code != 0
+    assert "family-interventions.json disagrees with the claim registry" in result.output
+    assert not (workspace / "site" / "index.html").exists()
+
+
+def test_report_refuses_schema_valid_evaluation_values_that_disagree_with_registry(
+    workspace: Path,
+) -> None:
+    evaluation_path = workspace / "artifacts" / "evaluation.json"
+    evaluation = json.loads(evaluation_path.read_text(encoding="utf-8"))
+    evaluation["configurations"][0]["contacts_not_at_fault"] = 1
+    evaluation_path.write_text(json.dumps(evaluation), encoding="utf-8")
+
+    result = run(
+        "report",
+        "--claims",
+        str(workspace / "claims.yaml"),
+        "--artifacts-dir",
+        str(workspace / "artifacts"),
+        "--output-dir",
+        str(workspace / "site"),
+    )
+
+    assert result.exit_code != 0
+    assert "evaluation.json disagrees with the claim registry" in result.output
+    assert not (workspace / "site" / "index.html").exists()
+
+
+@pytest.mark.parametrize("field", ["protocol_sha256", "cohort_manifest_sha256"])
+def test_report_refuses_family_provenance_that_disagrees_with_registry(
+    workspace: Path,
+    field: str,
+) -> None:
+    family_path = workspace / "artifacts" / "family-interventions.json"
+    family = json.loads(family_path.read_text(encoding="utf-8"))
+    family[field] = "2" * 64
+    family_path.write_text(json.dumps(family), encoding="utf-8")
+
+    result = run(
+        "report",
+        "--claims",
+        str(workspace / "claims.yaml"),
+        "--artifacts-dir",
+        str(workspace / "artifacts"),
+        "--output-dir",
+        str(workspace / "site"),
+    )
+
+    assert result.exit_code != 0
+    assert "family-interventions.json disagrees with the claim registry" in result.output
+    assert not (workspace / "site" / "index.html").exists()
+
+
+@pytest.mark.parametrize("registry_fault", ["missing", "extra", "ambiguous", "duplicate"])
+def test_report_requires_one_complete_unambiguous_family_claim_set(
+    workspace: Path,
+    registry_fault: str,
+) -> None:
+    claims_path = workspace / "claims.yaml"
+    registry = yaml.safe_load(claims_path.read_text(encoding="utf-8"))
+    family_claims = [
+        claim
+        for claim in registry["claims"]
+        if Path(claim["artifact_path"]).name == "family-interventions.json"
+    ]
+    if registry_fault == "missing":
+        registry["claims"].remove(family_claims[0])
+    elif registry_fault == "extra":
+        extra = dict(family_claims[0])
+        extra["claim_id"] = "p3.family-interventions.unregistered-extra"
+        registry["claims"].append(extra)
+    elif registry_fault == "ambiguous":
+        family_claims[0]["artifact_path"] = "alternate/family-interventions.json"
+    else:
+        registry["claims"].append(dict(family_claims[0]))
+    claims_path.write_text(yaml.safe_dump(registry, sort_keys=False), encoding="utf-8")
+
+    result = run(
+        "report",
+        "--claims",
+        str(claims_path),
+        "--artifacts-dir",
+        str(workspace / "artifacts"),
+        "--output-dir",
+        str(workspace / "site"),
+    )
+
+    assert result.exit_code != 0
+    assert "family-interventions.json disagrees with the claim registry" in result.output
+    assert not (workspace / "site" / "index.html").exists()
 
 
 def test_report_finds_a_partial_figure_set_beside_a_nested_docs_evidence_dir(
@@ -771,21 +989,8 @@ def test_report_finds_a_partial_figure_set_beside_a_nested_docs_evidence_dir(
 
     artifacts = workspace / "docs" / "evidence" / "run"
     artifacts.mkdir(parents=True)
-    (artifacts / "family-interventions.json").write_text(
-        json.dumps(
-            {
-                "evaluation_per_family": 100,
-                "rows": [
-                    {
-                        "family": "lead_or_stopping",
-                        "configuration_id": "oracle_aeb",
-                        "valid_tokens": 100,
-                    }
-                ],
-            }
-        ),
-        encoding="utf-8",
-    )
+    for name in ("evaluation.json", "family-interventions.json"):
+        shutil.copyfile(workspace / "artifacts" / name, artifacts / name)
     figures = workspace / "docs" / "figures"
     figures.mkdir()
     (figures / "shapley-contributions.svg").write_text("<svg/>\n", encoding="utf-8")
@@ -828,8 +1033,8 @@ def test_the_page_states_every_claim(workspace: Path) -> None:
     )
     page = (workspace / "site" / "index.html").read_text(encoding="utf-8")
 
-    assert "synthetic-pipeline" in page
-    assert "the pipeline runs end to end on synthetic inputs" in page
+    assert "p3.baseline.scenarios.no_aeb" in page
+    assert "no_aeb scenarios is 6" in page
 
 
 def test_a_claim_missing_its_artifact_is_refused(workspace: Path) -> None:
@@ -1081,27 +1286,10 @@ def test_a_claim_outside_the_registry_vocabulary_is_refused(
     disagree with it.
     """
 
-    fields = {
-        "claim_id": "out-of-vocabulary",
-        "text": "something",
-        "evidence_type": "synthetic",
-        "artifact_path": "artifacts/evaluation.json",
-        "status": "draft",
-    }
-    fields[field] = value
-
     claims = workspace / f"bad-{field}.yaml"
-    claims.write_text(
-        "allowed_evidence_types: [observed, derived, synthetic, illustrative]\n"
-        "allowed_statuses: [draft, verified, rejected, superseded]\n"
-        "claim_required_fields: [claim_id, text, evidence_type, artifact_path, status]\n"
-        "claims:\n"
-        + "".join(
-            f"  {'-' if name == 'claim_id' else ' '} {name}: {item}\n"
-            for name, item in fields.items()
-        ),
-        encoding="utf-8",
-    )
+    registry = yaml.safe_load((workspace / "claims.yaml").read_text(encoding="utf-8"))
+    registry["claims"][0][field] = value
+    claims.write_text(yaml.safe_dump(registry, sort_keys=False), encoding="utf-8")
 
     result = run(
         "report",
@@ -1114,7 +1302,7 @@ def test_a_claim_outside_the_registry_vocabulary_is_refused(
     )
 
     assert result.exit_code != 0
-    assert "registry" in result.output
+    assert field in result.output
 
 
 @pytest.mark.parametrize("resume", [False, True])
