@@ -51,6 +51,12 @@ def _claim(claim_id: str, artifact_path: str, metric_path: str, text: str) -> di
 
 CLAIMS = [
     _claim(
+        "p3.shapley.common_valid_tokens",
+        SHAPLEY_PATH,
+        "/common_valid_tokens",
+        "Shapley common_valid_tokens is 344.",
+    ),
+    _claim(
         "p3.shapley.collision_indicator-values-dropout",
         SHAPLEY_PATH,
         "/metrics/collision_indicator/values/dropout",
@@ -159,11 +165,11 @@ def _clean_markdown() -> str:
     return "\n".join(
         [
             "# Results",
-            "Dropout's Shapley collision_indicator contribution is "
-            "-0.0021802325581395357. "
+            "Dropout's Shapley `collision_indicator` = -0.0021802325581395357. "
             "<!-- claim: p3.shapley.collision_indicator-values-dropout -->",
-            "Oracle AEB recorded 39 collisions and 1095 contacts_not_at_fault. "
-            "<!-- claim: p3.baseline.collisions.oracle_aeb --> "
+            "Oracle AEB recorded `collisions` = 39 "
+            "<!-- claim: p3.baseline.collisions.oracle_aeb --> and "
+            "`contacts_not_at_fault` = 1095 "
             "<!-- claim: p3.baseline.contacts_not_at_fault.oracle_aeb -->",
             "",
         ]
@@ -234,7 +240,8 @@ def test_a_clean_yaml_proposal_is_accepted(workspace: dict[str, Path]) -> None:
                             "p3.baseline.collisions.oracle_aeb",
                             "p3.baseline.contacts_not_at_fault.oracle_aeb",
                         ],
-                        "text": "Oracle AEB recorded 39 collisions and 1095 contacts_not_at_fault.",
+                        "text": "Oracle AEB recorded `collisions` = 39 and "
+                        "`contacts_not_at_fault` = 1095.",
                     }
                 ]
             }
@@ -255,10 +262,216 @@ def test_the_exact_common_cohort_and_an_unavailable_distance_rate_are_accepted(
     document = _write(
         workspace["root"],
         "README.md",
-        "For the common-valid cohort of 344 scenarios, dropout's Shapley "
-        "collision_indicator contribution is -0.0021802325581395357. "
+        "The common-valid cohort has `common_valid_tokens` = 344. "
+        "<!-- claim: p3.shapley.common_valid_tokens -->\n"
+        "Dropout's Shapley `collision_indicator` = -0.0021802325581395357. "
         "<!-- claim: p3.shapley.collision_indicator-values-dropout -->\n"
         "The collisions per 100 km rate is unavailable.\n",
+    )
+
+    violations, _ = _validate(workspace, documents=(document,))
+
+    assert violations == ()
+
+
+@pytest.mark.parametrize(
+    ("text", "message"),
+    [
+        (
+            "Dropout Shapley `collision_indicator` = -0.10376291989664084. "
+            "<!-- claim: p3.shapley.intervention_duration_s-values-dropout -->",
+            "binds collision_indicator to intervention_duration_s",
+        ),
+        (
+            "Dropout Shapley `collision_indicator` = -0.0021802325581395357%. "
+            "<!-- claim: p3.shapley.collision_indicator-values-dropout -->",
+            "percent conversion is not registered",
+        ),
+        (
+            "Dropout Shapley `collision_indicator` = 344. "
+            "<!-- claim: p3.shapley.collision_indicator-values-dropout -->",
+            "holds -0.0021802325581395357",
+        ),
+        (
+            "Oracle AEB recorded `collisions` = 1095 "
+            "<!-- claim: p3.baseline.collisions.oracle_aeb --> and "
+            "`contacts_not_at_fault` = 39 "
+            "<!-- claim: p3.baseline.contacts_not_at_fault.oracle_aeb -->.",
+            "collisions claim holds 39",
+        ),
+    ],
+)
+def test_a_value_is_bound_to_the_metric_and_unit_of_its_own_claim(
+    workspace: dict[str, Path], text: str, message: str
+) -> None:
+    """A union of cited numbers cannot authorize a swap, cohort value, or conversion."""
+
+    document = _write(workspace["root"], "README.md", text)
+
+    violations, _ = _validate(workspace, documents=(document,))
+
+    assert any(message in violation for violation in violations), violations
+
+
+def test_clean_metric_value_bindings_are_accepted(workspace: dict[str, Path]) -> None:
+    """Each exact value remains publishable when paired with its own metric and claim."""
+
+    document = _write(
+        workspace["root"],
+        "README.md",
+        "Dropout Shapley `collision_indicator` = -0.0021802325581395357. "
+        "<!-- claim: p3.shapley.collision_indicator-values-dropout -->\n"
+        "Dropout Shapley `intervention_duration_s` = -0.10376291989664084. "
+        "<!-- claim: p3.shapley.intervention_duration_s-values-dropout -->\n"
+        "The common-valid cohort has `common_valid_tokens` = 344. "
+        "<!-- claim: p3.shapley.common_valid_tokens -->\n"
+        "Oracle AEB recorded `collisions` = 39 "
+        "<!-- claim: p3.baseline.collisions.oracle_aeb --> and "
+        "`contacts_not_at_fault` = 1095 "
+        "<!-- claim: p3.baseline.contacts_not_at_fault.oracle_aeb -->.\n",
+    )
+
+    violations, _ = _validate(workspace, documents=(document,))
+
+    assert violations == ()
+
+
+def test_an_unbound_extra_number_fails_closed(workspace: dict[str, Path]) -> None:
+    """A valid binding cannot authorize another number elsewhere in the result."""
+
+    document = _write(
+        workspace["root"],
+        "README.md",
+        "Dropout Shapley `collision_indicator` = -0.0021802325581395357 over 1032 runs. "
+        "<!-- claim: p3.shapley.collision_indicator-values-dropout -->\n",
+    )
+
+    violations, _ = _validate(workspace, documents=(document,))
+
+    assert any("every numeric result needs a metric binding" in item for item in violations)
+
+
+def test_a_cohort_only_result_line_is_discovered(workspace: dict[str, Path]) -> None:
+    """Cohort prose is a numeric result even when it names no safety metric."""
+
+    document = _write(
+        workspace["root"], "README.md", "The common-valid cohort contains 1032 scenarios.\n"
+    )
+
+    violations, _ = _validate(workspace, documents=(document,))
+
+    assert any("no <!-- claim: ... --> marker" in violation for violation in violations)
+    assert any("common-valid cohort is 344" in violation for violation in violations)
+
+
+def test_a_numeric_row_under_a_result_table_header_is_discovered(
+    workspace: dict[str, Path],
+) -> None:
+    """A Markdown table does not hide a numeric result from marker enforcement."""
+
+    document = _write(
+        workspace["root"],
+        "README.md",
+        "| Channel | Shapley collision_indicator |\n| --- | ---: |\n| Dropout | 999 |\n",
+    )
+
+    violations, _ = _validate(workspace, documents=(document,))
+
+    assert any("README.md:3" in violation for violation in violations)
+    assert any("no <!-- claim: ... --> marker" in violation for violation in violations)
+
+
+def test_a_table_row_with_constrained_binding_is_accepted(workspace: dict[str, Path]) -> None:
+    """Tables remain available when the result cell carries the same auditable shape."""
+
+    document = _write(
+        workspace["root"],
+        "README.md",
+        "| Channel | Shapley result |\n"
+        "| --- | --- |\n"
+        "| Dropout | `collision_indicator` = -0.0021802325581395357 "
+        "<!-- claim: p3.shapley.collision_indicator-values-dropout --> |\n",
+    )
+
+    violations, _ = _validate(workspace, documents=(document,))
+
+    assert violations == ()
+
+
+def test_marker_identity_detects_an_unlike_estimand_comparison(
+    workspace: dict[str, Path],
+) -> None:
+    """Removing the word Shapley cannot make seconds comparable with a proportion."""
+
+    document = _write(
+        workspace["root"],
+        "README.md",
+        "Dropout contributed `collision_indicator` = -0.0021802325581395357 "
+        "<!-- claim: p3.shapley.collision_indicator-values-dropout --> and "
+        "`intervention_duration_s` = -0.10376291989664084 "
+        "<!-- claim: p3.shapley.intervention_duration_s-values-dropout -->; "
+        "the latter is larger.\n",
+    )
+
+    violations, _ = _validate(workspace, documents=(document,))
+
+    assert any("separate estimands" in violation for violation in violations)
+
+
+def test_oracle_contact_marker_without_the_contact_value_is_rejected(
+    workspace: dict[str, Path],
+) -> None:
+    """Citing the contact claim cannot replace stating its exact associated count."""
+
+    document = _write(
+        workspace["root"],
+        "README.md",
+        "Oracle AEB recorded `collisions` = 39 "
+        "<!-- claim: p3.baseline.collisions.oracle_aeb -->; "
+        "contacts_not_at_fault were excluded "
+        "<!-- claim: p3.baseline.contacts_not_at_fault.oracle_aeb -->.\n",
+    )
+
+    violations, _ = _validate(workspace, documents=(document,))
+
+    assert any("must state contacts_not_at_fault = 1095" in violation for violation in violations)
+
+
+def test_unavailable_distance_rate_is_allowed_beside_valid_counts(
+    workspace: dict[str, Path],
+) -> None:
+    """The literal denominator in an unavailable-rate clause is not a claimed rate."""
+
+    document = _write(
+        workspace["root"],
+        "README.md",
+        "Oracle AEB recorded `collisions` = 39 "
+        "<!-- claim: p3.baseline.collisions.oracle_aeb --> and "
+        "`contacts_not_at_fault` = 1095 "
+        "<!-- claim: p3.baseline.contacts_not_at_fault.oracle_aeb -->; "
+        "collisions per 100 km were unavailable.\n",
+    )
+
+    violations, _ = _validate(workspace, documents=(document,))
+
+    assert violations == ()
+
+
+def test_traditional_chinese_prose_uses_the_same_metric_value_contract(
+    workspace: dict[str, Path],
+) -> None:
+    """The contract depends on stable metric keys, not the surrounding language."""
+
+    document = _write(
+        workspace["root"],
+        "README.md",
+        "共同有效樣本為 `common_valid_tokens` = 344。"
+        "<!-- claim: p3.shapley.common_valid_tokens -->\n"
+        "Oracle AEB 的 `collisions` = 39 "
+        "<!-- claim: p3.baseline.collisions.oracle_aeb -->, "
+        "`contacts_not_at_fault` = 1095 "
+        "<!-- claim: p3.baseline.contacts_not_at_fault.oracle_aeb -->; "
+        "每 100 km 碰撞率未提供。\n",
     )
 
     violations, _ = _validate(workspace, documents=(document,))
@@ -272,7 +485,7 @@ def test_an_unknown_claim_id_is_reported(workspace: dict[str, Path]) -> None:
     document = _write(
         workspace["root"],
         "README.md",
-        "Shapley collision_indicator is 0.5. <!-- claim: p3.shapley.unknown -->\n",
+        "Shapley `collision_indicator` = 0.5. <!-- claim: p3.shapley.unknown -->\n",
     )
 
     violations, _ = _validate(workspace, documents=(document,))
@@ -286,20 +499,19 @@ def test_an_unknown_claim_id_is_reported(workspace: dict[str, Path]) -> None:
     [
         (
             "rounded.md",
-            "Dropout's Shapley collision_indicator contribution is -0.00218. "
+            "Dropout's Shapley `collision_indicator` = -0.00218. "
             "<!-- claim: p3.shapley.collision_indicator-values-dropout -->\n",
             "holds -0.0021802325581395357",
         ),
         (
             "wrong-source.md",
-            "The Shapley collision contribution is 39. "
-            "<!-- claim: p3.baseline.collisions.oracle_aeb -->\n",
+            "The Shapley `collisions` = 39. <!-- claim: p3.baseline.collisions.oracle_aeb -->\n",
             "must trace to shapley.json",
         ),
         (
             "mixed.md",
-            "Dropout's Shapley contributions are -0.0021802325581395357 for collision "
-            "indicator and -0.10376291989664084 seconds of intervention duration. "
+            "Dropout's Shapley `collision_indicator` = -0.0021802325581395357 and "
+            "`intervention_duration_s` = -0.10376291989664084. "
             "<!-- claim: p3.shapley.collision_indicator-values-dropout --> "
             "<!-- claim: p3.shapley.intervention_duration_s-values-dropout -->\n",
             "separate estimands",
@@ -312,14 +524,13 @@ def test_an_unknown_claim_id_is_reported(workspace: dict[str, Path]) -> None:
         ),
         (
             "cohort.md",
-            "For a common-valid cohort of 343 scenarios, dropout's Shapley "
-            "collision_indicator contribution is -0.0021802325581395357. "
-            "<!-- claim: p3.shapley.collision_indicator-values-dropout -->\n",
+            "For the common-valid cohort, `common_valid_tokens` = 343. "
+            "<!-- claim: p3.shapley.common_valid_tokens -->\n",
             "common-valid cohort is 344",
         ),
         (
             "oracle.md",
-            "Oracle AEB recorded 39 collisions. "
+            "Oracle AEB recorded `collisions` = 39. "
             "<!-- claim: p3.baseline.collisions.oracle_aeb -->\n",
             "must also state contacts_not_at_fault",
         ),
@@ -352,7 +563,7 @@ def test_exit_one_lists_every_violation_in_one_run(
         "README.md",
         "\n".join(
             [
-                "Dropout's Shapley collision_indicator contribution is -0.00218. "
+                "Dropout's Shapley `collision_indicator` = -0.00218. "
                 "<!-- claim: p3.shapley.collision_indicator-values-dropout -->",
                 "Oracle AEB had 12.3 collisions per 100 km. "
                 "<!-- claim: p3.baseline.collisions.oracle_aeb -->",

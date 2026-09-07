@@ -118,3 +118,29 @@ All five rounded values and omitted HTML claim markers. Four combined or
 compared unlike Shapley estimands; the fifth invented a cross-metric “strongest
 collision predictor” interpretation. This stable control distribution is the
 behavior the result-line recipe addresses.
+
+## Review repair RED
+
+Recorded `2026-09-07T00:14:09Z` (`2026-09-07T08:14:09+08:00`) after the
+independent review reproduced five semantic gaps against the actual registry.
+The repair contract ran in the pinned container before production changes and
+failed 10 tests while 25 existing tests passed (exit 1):
+
+```text
+......FFFF.FF.FFFF.................                                      [100%]
+10 failed, 25 passed in 2.91s
+```
+
+The failures cover metric/claim mismatch, percent conversion, a cohort value
+used as a Shapley value, swapped Oracle counts, cohort-only discovery,
+Markdown-table discovery, marker-derived unlike estimands, a cited but unstated
+Oracle contact count, valid counts beside an explicitly unavailable distance
+rate, and Traditional Chinese prose using the stable binding keys. Raw output
+and exit status are preserved in ignored
+`artifacts/e1-fix1-red.log` and `artifacts/e1-fix1-red.exit`.
+
+A later defensive case proved that an exact bound result could still carry an
+unbound extra number. Before its repair, the suite failed 1 test while 35
+passed (exit 1); the distinct raw files are
+`artifacts/e1-fix1-red-extra.log` and `.exit`. No original baseline or cold
+output above was changed.

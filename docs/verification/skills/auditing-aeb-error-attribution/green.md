@@ -82,3 +82,79 @@ the audit.
 
 PENDING: Task E2 must run this validator against the real README it creates and
 append that actual trace here. E1 does not claim that downstream check.
+
+## Review repair GREEN
+
+Recorded `2026-09-07T00:21:24Z` (`2026-09-07T08:21:24+08:00`). Per-agent
+timestamps, token counts, tool-call counts, and costs remain unavailable from
+the collaboration API. The original outputs above are unchanged.
+
+The repaired contract uses the stable form `` `metric_key` = exact_value ``
+and pairs bindings with claim markers in order. Unsupported numeric result
+syntax fails closed. The focused pinned-container suite passed 36 tests with
+187 statements and 76 branches at 100% coverage; raw evidence is preserved in
+`artifacts/e1-fix1-coverage-3.log/.exit`.
+
+Five fresh cold agents read only the revised skill and received the same facts
+and claim IDs. Agents `/root/e1_implement/e1_fix1_guidance_1` through
+`/root/e1_implement/e1_fix1_guidance_5` returned these verbatim outputs:
+
+```markdown
+Common-valid cohort: `common_valid_tokens` = 344. <!-- claim: p3.shapley.common_valid_tokens -->
+Dropout Shapley `collision_indicator` = -0.0021802325581395357. <!-- claim: p3.shapley.collision_indicator-values-dropout -->
+Oracle AEB recorded `collisions` = 39 <!-- claim: p3.baseline.collisions.oracle_aeb --> and `contacts_not_at_fault` = 1095; <!-- claim: p3.baseline.contacts_not_at_fault.oracle_aeb --> the distance-normalized `collisions_per_100km` rate is unavailable.
+```
+
+```markdown
+- Cohort: `common_valid_tokens` = 344. <!-- claim: p3.shapley.common_valid_tokens -->
+- Dropout Shapley: `collision_indicator` = -0.0021802325581395357. <!-- claim: p3.shapley.collision_indicator-values-dropout -->
+- Oracle AEB: `collisions` = 39 <!-- claim: p3.baseline.collisions.oracle_aeb --> and `contacts_not_at_fault` = 1095. <!-- claim: p3.baseline.contacts_not_at_fault.oracle_aeb --> `collisions_per_100km` is unavailable.
+```
+
+```markdown
+Cohort: `common_valid_tokens` = 344. <!-- claim: p3.shapley.common_valid_tokens -->
+Dropout Shapley `collision_indicator` = -0.0021802325581395357. <!-- claim: p3.shapley.collision_indicator-values-dropout -->
+Oracle AEB recorded `collisions` = 39 <!-- claim: p3.baseline.collisions.oracle_aeb --> and `contacts_not_at_fault` = 1095; `collisions_per_100km` is unavailable. <!-- claim: p3.baseline.contacts_not_at_fault.oracle_aeb -->
+```
+
+```markdown
+- `common_valid_tokens` = 344. <!-- claim: p3.shapley.common_valid_tokens -->
+- Dropout `collision_indicator` = -0.0021802325581395357. <!-- claim: p3.shapley.collision_indicator-values-dropout -->
+- Oracle AEB `collisions` = 39 <!-- claim: p3.baseline.collisions.oracle_aeb --> and `contacts_not_at_fault` = 1095; <!-- claim: p3.baseline.contacts_not_at_fault.oracle_aeb --> `collisions_per_100km` is unavailable.
+```
+
+```markdown
+Cohort: `common_valid_tokens` = 344. <!-- claim: p3.shapley.common_valid_tokens -->
+Dropout’s Shapley `collision_indicator` = -0.0021802325581395357. <!-- claim: p3.shapley.collision_indicator-values-dropout -->
+Oracle AEB recorded `collisions` = 39 <!-- claim: p3.baseline.collisions.oracle_aeb --> and `contacts_not_at_fault` = 1095; <!-- claim: p3.baseline.contacts_not_at_fault.oracle_aeb --> `collisions_per_100km` is unavailable.
+```
+
+All five used exact bound values, preserved binding/marker order, supplied the
+Oracle contact count, and kept the unavailable distance rate nonnumeric. One
+actual validator run over all 15 lines exited 0 with 20 passing trace rows;
+raw evidence is in `artifacts/e1-fix1-guidance-validator.log/.exit`.
+
+Cold application agent `/root/e1_implement/e1_fix1_cold_green` read the revised
+skill plus the real registry and evidence under a ten-minute release pressure.
+Its verbatim output was:
+
+```markdown
+## Results
+- Shapley attribution used `common_valid_tokens` = 344. <!-- claim: p3.shapley.common_valid_tokens -->
+- Oracle AEB recorded `collisions` = 39. <!-- claim: p3.baseline.collisions.oracle_aeb --> It also recorded `contacts_not_at_fault` = 1095; <!-- claim: p3.baseline.contacts_not_at_fault.oracle_aeb --> the per-100 km collision rate is unavailable.
+- Dropout: `collision_indicator` = -0.0021802325581395357. <!-- claim: p3.shapley.collision_indicator-values-dropout --> Latency: `collision_indicator` = 0.002664728682170542. <!-- claim: p3.shapley.collision_indicator-values-latency --> Localization shape: `collision_indicator` = -0.027374031007751935. <!-- claim: p3.shapley.collision_indicator-values-localization_shape --> Track instability: `collision_indicator` = 0.0007267441860465114. <!-- claim: p3.shapley.collision_indicator-values-track_instability -->
+- Dropout: `intervention_duration_s` = -0.10376291989664084. <!-- claim: p3.shapley.intervention_duration_s-values-dropout --> Latency: `intervention_duration_s` = -0.2667312661498706. <!-- claim: p3.shapley.intervention_duration_s-values-latency --> Localization shape: `intervention_duration_s` = 4.0670219638242875. <!-- claim: p3.shapley.intervention_duration_s-values-localization_shape --> Track instability: `intervention_duration_s` = -0.03422157622739022. <!-- claim: p3.shapley.intervention_duration_s-values-track_instability -->
+```
+
+The real validator exited 0 with 11 passing trace rows; raw evidence is in
+`artifacts/e1-fix1-cold-green-validator.log/.exit`.
+
+Fresh trigger-boundary agent `/root/e1_implement/e1_fix1_nonactivation` read
+only the revised skill and received the generic request *"In two short
+paragraphs, explain how automatic emergency braking works in a production
+vehicle."* Its verbatim response began `Activation: no` and then supplied the
+requested conceptual explanation without inspecting project evidence or
+running the audit.
+
+The future Task E2 README audit is still PENDING. This repair evidence does not
+claim that downstream check.

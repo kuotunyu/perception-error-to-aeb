@@ -6,6 +6,7 @@ import argparse
 import json
 import re
 import sys
+from collections import Counter
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -22,12 +23,22 @@ from aebrisk.analysis.claims import (
 
 MARKER = re.compile(r"<!--\s*claim:\s*([a-z0-9][a-z0-9._-]*)\s*-->")
 NUMBER = re.compile(r"(?<![\w.])[-+]?(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][-+]?\d+)?%?")
+BINDING = re.compile(
+    r"`(?P<metric>[a-z][a-z0-9_]*)`\s*=\s*"
+    r"(?P<value>[-+]?(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][-+]?\d+)?%?)"
+)
 RESULT_TERM = re.compile(
     r"\b(?:shapley|collision(?:s|_indicator)?|contacts_not_at_fault|"
-    r"intervention(?:s|_duration_s)?|false_interventions|missed_interventions)\b",
+    r"intervention(?:s|_duration_s)?|false_interventions|missed_interventions|"
+    r"common[-_ ]valid|cohort)\b",
     re.IGNORECASE,
 )
-PER_100_KM = re.compile(r"(?:per[-_ ]?100\s*km|/\s*100\s*km)", re.IGNORECASE)
+PER_100_KM = re.compile(r"(?:per[-_ ]?100\s*km|/\s*100\s*km|\u6bcf\s*100\s*km)", re.IGNORECASE)
+NUMERIC_PER_100_KM = re.compile(
+    rf"(?:{NUMBER.pattern}\s+(?:collisions?\s+)?(?:per[-_ ]?100\s*km|/\s*100\s*km)"
+    rf"|`collisions_per_100km`\s*=\s*{NUMBER.pattern})",
+    re.IGNORECASE,
+)
 COHORT_SIZE = re.compile(
     r"(?:common[-_ ]valid(?:\s+(?:cohort|tokens?))?|cohort(?:\s+of)?)\D{0,20}(\d+)",
     re.IGNORECASE,
@@ -48,6 +59,21 @@ def _claim_numbers(claim: ClaimV1, repository_root: Path) -> set[Decimal]:
     return _json_numbers(_resolve_json_pointer(_json_document(artifact), claim.metric_path))
 
 
+def _claim_metric(claim: ClaimV1) -> str:
+    """Return the stable metric key required in a constrained result binding."""
+
+    tokens = [token for token in claim.metric_path.split("/") if token]
+    if Path(claim.artifact_path).name == "shapley.json" and tokens[:1] == ["metrics"]:
+        return tokens[1]
+    return tokens[-1]
+
+
+def _result_numbers(text: str) -> tuple[Decimal, ...]:
+    """Ignore a literal distance denominator when no numeric rate is stated."""
+
+    return _text_numbers(PER_100_KM.sub("", text))
+
+
 def _common_valid_tokens(registry: dict[str, ClaimV1], repository_root: Path) -> int:
     relative = next(
         claim.artifact_path
@@ -66,7 +92,7 @@ def _structural_violations(
 ) -> list[str]:
     lower = text.lower()
     violations: list[str] = []
-    if _text_numbers(PER_100_KM.sub("", text)) and PER_100_KM.search(text):
+    if NUMERIC_PER_100_KM.search(text):
         violations.append(
             f"{source}: per-100 km rate is unpublished in this release; evaluation.json holds null"
         )
@@ -79,15 +105,14 @@ def _structural_violations(
                 f"{common_valid_tokens}"
             )
 
-    attribution = "shapley" in lower or "attribut" in lower
-    collision_metric = "collision" in lower
-    duration_metric = "duration" in lower or "seconds" in lower or re.search(r"\d\s*s\b", lower)
-    if attribution and collision_metric and duration_metric and len(_text_numbers(text)) >= 2:
+    claim_metrics = {_claim_metric(claim) for claim in claims}
+    if {"collision_indicator", "intervention_duration_s"} <= claim_metrics:
         violations.append(
             f"{source}: collision_indicator and intervention_duration_s are separate estimands; "
             "state them on separate result lines and never sum, compare or rank them"
         )
 
+    attribution = "shapley" in lower or "attribut" in lower
     if attribution and any(Path(claim.artifact_path).name != "shapley.json" for claim in claims):
         violations.append(f"{source}: every Shapley number must trace to shapley.json")
 
@@ -101,10 +126,21 @@ def _structural_violations(
             if claim.metric_path.endswith("/contacts_not_at_fault")
             and "oracle_aeb" in claim.claim_id
         ]
+        contact_bindings = [
+            match
+            for match in BINDING.finditer(text)
+            if match.group("metric") == "contacts_not_at_fault"
+            and not match.group("value").endswith("%")
+            and Decimal(match.group("value")) == Decimal(1095)
+        ]
         if "contacts_not_at_fault" not in lower or not contact_claims:
             violations.append(
                 f"{source}: an oracle_aeb collision result must also state "
                 "contacts_not_at_fault and cite its claim"
+            )
+        elif not contact_bindings:
+            violations.append(
+                f"{source}: an oracle_aeb collision result must state contacts_not_at_fault = 1095"
             )
     return violations
 
@@ -120,7 +156,7 @@ def _check_statement(
     violations: list[str] = []
     claims: list[ClaimV1] = []
     traces: list[dict[str, Any]] = []
-    held_numbers: set[Decimal] = set()
+    claim_numbers: dict[str, set[Decimal]] = {}
     for claim_id in claim_ids:
         claim = registry.get(claim_id)
         if claim is None:
@@ -128,7 +164,7 @@ def _check_statement(
             continue
         claims.append(claim)
         numbers = _claim_numbers(claim, repository_root)
-        held_numbers.update(numbers)
+        claim_numbers[claim_id] = numbers
         traces.append(
             {
                 "source": source,
@@ -141,11 +177,53 @@ def _check_statement(
         )
 
     violations.extend(_structural_violations(source, text, tuple(claims), common_valid_tokens))
-    provenance_numbers = {Decimal(common_valid_tokens)}
-    for number in _text_numbers(PER_100_KM.sub("", text)):
-        if number not in held_numbers and number not in provenance_numbers:
-            held = ", ".join(str(value) for value in sorted(held_numbers)) or "no number"
-            violations.append(f"{source}: statement says {number}, but cited evidence holds {held}")
+    bindings = tuple(BINDING.finditer(text))
+    if len(bindings) != len(claim_ids):
+        violations.append(
+            f"{source}: unsupported result syntax; write each value as "
+            "`metric_key` = exact_value and pair one claim marker in the same order"
+        )
+    stated_numbers = Counter(_result_numbers(text))
+    bound_numbers = Counter(
+        Decimal(binding.group("value").removesuffix("%")) for binding in bindings
+    )
+    if stated_numbers != bound_numbers:
+        violations.append(
+            f"{source}: every numeric result needs a metric binding; use `metric_key` = exact_value"
+        )
+
+    for binding, claim_id in zip(bindings, claim_ids):
+        claim = registry.get(claim_id)
+        if claim is None:
+            continue
+        numbers = claim_numbers[claim_id]
+        metric = binding.group("metric")
+        expected_metric = _claim_metric(claim)
+        if metric != expected_metric:
+            violations.append(
+                f"{source}: binding `{metric}` binds {metric} to {expected_metric} claim"
+            )
+            continue
+        raw_value = binding.group("value")
+        if raw_value.endswith("%"):
+            violations.append(
+                f"{source}: `{metric}` uses a percent conversion; "
+                "percent conversion is not registered"
+            )
+            continue
+        value = Decimal(raw_value)
+        if value not in numbers:
+            held = ", ".join(str(number) for number in sorted(numbers)) or "no number"
+            if metric == "common_valid_tokens":
+                violations.append(
+                    f"{source}: stated cohort {value}, but the common-valid cohort is "
+                    f"{common_valid_tokens}"
+                )
+            else:
+                violations.append(
+                    f"{source}: `{metric}` says {value}, but the {expected_metric} "
+                    f"claim holds {held}"
+                )
     if violations:
         for trace in traces:
             trace["verdict"] = "fail"
@@ -178,16 +256,22 @@ def _proposal_statements(path: Path) -> tuple[tuple[str, str, tuple[str, ...]], 
 def _document_statements(path: Path) -> tuple[tuple[str, str, tuple[str, ...]], ...]:
     statements: list[tuple[str, str, tuple[str, ...]]] = []
     in_fence = False
+    in_result_table = False
     for line_number, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
         if raw.strip().startswith(FENCE_PREFIXES):
             in_fence = not in_fence
             continue
         if in_fence:
             continue
+        is_table_row = raw.strip().startswith("|")
+        if is_table_row and RESULT_TERM.search(raw):
+            in_result_table = True
+        elif not is_table_row:
+            in_result_table = False
         claim_ids = tuple(MARKER.findall(raw))
         text = MARKER.sub("", raw).strip()
-        result_numbers = _text_numbers(PER_100_KM.sub("", text))
-        if claim_ids or (RESULT_TERM.search(text) and result_numbers):
+        result_numbers = _result_numbers(text)
+        if claim_ids or ((RESULT_TERM.search(text) or in_result_table) and result_numbers):
             statements.append((f"{path.name}:{line_number}", text, claim_ids))
     return tuple(statements)
 
