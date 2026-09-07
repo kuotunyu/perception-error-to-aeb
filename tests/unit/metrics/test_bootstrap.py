@@ -108,6 +108,63 @@ def test_a_constant_metric_has_a_degenerate_interval() -> None:
     assert interval.high == pytest.approx(1.5)
 
 
+def test_one_scenario_and_one_resample_are_valid() -> None:
+    """The smallest defined bootstrap is useful for smoke and boundary checks."""
+
+    bootstrap = load_bootstrap_module()
+    interval = bootstrap.paired_scenario_bootstrap(
+        {"only-token": {"only-config": 2.5}}, resamples=1, seed=7
+    )["only-config"]
+
+    assert interval.estimate == pytest.approx(2.5)
+    assert interval.low == pytest.approx(2.5)
+    assert interval.high == pytest.approx(2.5)
+    assert interval.resamples == 1
+
+
+def test_non_degenerate_percentile_endpoints_are_hand_calculated(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Both tails implement the requested central confidence interval."""
+
+    bootstrap = load_bootstrap_module()
+    draws = iter(([0, 0, 0, 0], [1, 1, 1, 1], [2, 2, 2, 2], [3, 3, 3, 3], [0, 1, 2, 3]))
+
+    class FixedGenerator:
+        def __init__(self, _bit_generator: object) -> None:
+            pass
+
+        def choice(self, _source: object, *, size: int, replace: bool = True) -> object:
+            assert size == 4
+            assert replace is True
+            return bootstrap.np.asarray(next(draws))
+
+    generator = FixedGenerator(None)
+    draws = iter(([0, 1, 2, 3], [0, 1, 2, 3]))
+    assert bootstrap.np.array_equal(
+        generator.choice(range(4), size=4),
+        generator.choice(range(4), size=4, replace=True),
+    )
+    draws = iter(([0, 0, 0, 0], [1, 1, 1, 1], [2, 2, 2, 2], [3, 3, 3, 3], [0, 1, 2, 3]))
+    monkeypatch.setattr(bootstrap.np.random, "Generator", FixedGenerator)
+    data = {
+        "a": {"only": 0.0},
+        "b": {"only": 1.0},
+        "c": {"only": 4.0},
+        "d": {"only": 9.0},
+    }
+
+    interval = bootstrap.paired_scenario_bootstrap(data, resamples=5, seed=7, confidence=0.6)[
+        "only"
+    ]
+
+    # The five controlled means sort to [0, 1, 3.5, 4, 9]. At the 20th and
+    # 80th percentiles, linear interpolation lands at 0.8 and 5.0.
+    assert interval.estimate == pytest.approx(3.5)
+    assert interval.low == pytest.approx(0.8)
+    assert interval.high == pytest.approx(5.0)
+
+
 def test_more_variance_gives_a_wider_interval() -> None:
     """The interval has to respond to the data, or it is decoration."""
 

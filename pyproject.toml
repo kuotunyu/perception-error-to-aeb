@@ -101,6 +101,7 @@ also_copy = [
     "src/aebrisk/dev.py",
     "src/aebrisk/private_guard.py",
     "src/aebrisk/release.py",
+    "src/aebrisk/mutmut_compat.py",
     "src/aebrisk/analysis",
     "src/aebrisk/artifacts",
     "src/aebrisk/cli",

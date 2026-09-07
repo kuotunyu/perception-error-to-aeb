@@ -255,7 +255,20 @@ def test_a_rate_carries_its_numerator_and_denominator() -> None:
 
     assert rate.numerator == 3
     assert rate.denominator == 40
+    assert rate.per == 1000.0
     assert rate.value == pytest.approx(75.0)
+
+
+def test_rates_are_defined_for_small_positive_exposures() -> None:
+    """One scenario and half a second are small, valid denominators."""
+
+    summary = summarize(
+        (result("s-1", collision_vehicle=1),),
+        simulated_seconds=0.5,
+    )
+
+    assert summary.collisions_per_1000_scenarios.value == pytest.approx(1000.0)
+    assert summary.collisions_per_hour.value == pytest.approx(7200.0)
 
 
 def test_the_per_hour_rate_uses_the_simulated_time() -> None:
@@ -281,6 +294,13 @@ def test_the_per_distance_rate_is_refused_below_a_hundred_kilometres() -> None:
     assert summary.collisions_per_100km is None
 
 
+@pytest.mark.parametrize("simulated_metres", [0.0, 0.5])
+def test_non_negative_short_distance_is_valid_exposure(simulated_metres: float) -> None:
+    summary = summarize((result("s-1"),), simulated_metres=simulated_metres)
+
+    assert summary.collisions_per_100km is None
+
+
 def test_the_per_distance_rate_appears_above_the_threshold() -> None:
     """The pair to the test above, so the rate is not simply never produced."""
 
@@ -288,6 +308,32 @@ def test_the_per_distance_rate_appears_above_the_threshold() -> None:
 
     assert summary.collisions_per_100km is not None
     assert summary.collisions_per_100km.value == pytest.approx(0.5)
+
+
+def test_the_per_distance_rate_appears_at_exactly_a_hundred_kilometres() -> None:
+    summary = summarize((result("s-1", collision_vehicle=1),), simulated_metres=100_000.0)
+
+    assert summary.collisions_per_100km is not None
+    assert summary.collisions_per_100km.value == pytest.approx(1.0)
+
+
+def test_summary_preserves_identity_clearance_and_mean_intervention_duration() -> None:
+    summary = summarize(
+        (
+            result("s-1", min_clearance_m=1.25, intervention_duration_s=0.5),
+            result("s-2", min_clearance_m=0.75, intervention_duration_s=1.5),
+        )
+    )
+
+    assert summary.configuration_id == "oracle_aeb"
+    assert summary.min_clearance_m == pytest.approx(0.75)
+    assert summary.mean_intervention_duration_s == pytest.approx(1.0)
+
+
+def test_empty_summary_has_the_empty_configuration_identity() -> None:
+    summary = summarize((), cohort=())
+
+    assert summary.configuration_id == ""
 
 
 def test_no_distance_at_all_produces_no_per_distance_rate() -> None:

@@ -265,6 +265,15 @@ def test_every_channel_must_be_configured() -> None:
         pipeline.validate_error_config(config)
 
 
+def test_the_channels_mapping_itself_is_required() -> None:
+    pipeline = load_pipeline_module()
+    config = pipeline.load_error_config()
+    del config["channels"]
+
+    with pytest.raises(ValueError, match=r"^missing error channels in configuration: "):
+        pipeline.validate_error_config(config)
+
+
 def test_an_unknown_channel_in_the_config_is_refused() -> None:
     """A channel the pipeline never applies would look configured and do nothing."""
 
@@ -325,6 +334,15 @@ def test_the_severity_list_is_the_declared_one() -> None:
     config["severities"] = ["zero", "medium", "low", "high"]
 
     with pytest.raises(ValueError, match=r"^severities\ must\ be\ exactly\ "):
+        pipeline.validate_error_config(config)
+
+
+def test_the_severity_list_itself_is_required() -> None:
+    pipeline = load_pipeline_module()
+    config = pipeline.load_error_config()
+    del config["severities"]
+
+    with pytest.raises(ValueError, match=r"^severities must be exactly "):
         pipeline.validate_error_config(config)
 
 

@@ -518,6 +518,18 @@ def test_a_braking_target_that_is_not_a_deceleration_is_refused() -> None:
         state_machine.validate_policy(policy)
 
 
+@pytest.mark.parametrize("target", [0.0, 0.5])
+def test_a_non_negative_braking_target_is_refused(target: float) -> None:
+    """Coasting and acceleration are both outside a braking-stage contract."""
+
+    state_machine = load_state_machine_module()
+    policy = state_machine.load_policy()
+    policy["partial"]["target_accel_mps2"] = target
+
+    with pytest.raises(ValueError, match=r"^partial target_accel_mps2 must be a deceleration"):
+        state_machine.validate_policy(policy)
+
+
 def test_a_policy_whose_stages_are_out_of_order_is_refused() -> None:
     """Full braking must be the most urgent stage, or the priority is a lie."""
 
@@ -528,6 +540,18 @@ def test_a_policy_whose_stages_are_out_of_order_is_refused() -> None:
     with pytest.raises(
         ValueError, match=r"^stage\ ttc_lt_s\ thresholds\ must\ decrease\ with\ urgency,\ got\ "
     ):
+        state_machine.validate_policy(policy)
+
+
+@pytest.mark.parametrize(("stage", "value"), [("partial", 3.0), ("full", 2.5)])
+def test_adjacent_stage_thresholds_must_be_strictly_ordered(stage: str, value: float) -> None:
+    """Equal thresholds would make the documented priority order ambiguous."""
+
+    state_machine = load_state_machine_module()
+    policy = state_machine.load_policy()
+    policy[stage]["ttc_lt_s"] = value
+
+    with pytest.raises(ValueError, match=r"^stage ttc_lt_s thresholds must decrease with urgency"):
         state_machine.validate_policy(policy)
 
 
@@ -553,6 +577,23 @@ def test_a_non_positive_counter_is_refused() -> None:
         ValueError, match=r"^\w+ consecutive_steps must be a positive integer, got "
     ):
         state_machine.validate_policy(policy)
+
+
+def test_a_fractional_consecutive_step_count_is_refused() -> None:
+    state_machine = load_state_machine_module()
+    policy = state_machine.load_policy()
+    policy["warning"]["consecutive_steps"] = 1.5
+
+    with pytest.raises(ValueError, match=r"^warning consecutive_steps must be a positive integer"):
+        state_machine.validate_policy(policy)
+
+
+def test_one_consecutive_step_is_a_valid_immediate_transition() -> None:
+    state_machine = load_state_machine_module()
+    policy = state_machine.load_policy()
+    policy["warning"]["consecutive_steps"] = 1
+
+    state_machine.validate_policy(policy)
 
 
 def test_a_policy_missing_its_release_rule_is_refused() -> None:

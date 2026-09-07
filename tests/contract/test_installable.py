@@ -8,12 +8,12 @@ from importlib import metadata
 from pathlib import Path
 
 import pytest
+from packaging.requirements import Requirement
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DISTRIBUTION = "perception-error-to-aeb"
-PINNED_NUPLAN = (
-    "nuplan-devkit @ git+https://github.com/motional/nuplan-devkit"
-    "@e9241677997dd86bfc0bcd44817ab04fe631405b"
+PINNED_NUPLAN_URL = (
+    "git+https://github.com/motional/nuplan-devkit@e9241677997dd86bfc0bcd44817ab04fe631405b"
 )
 EXCLUDED_STACKS = ("torch", "ray", "bokeh", "jupyter", "opencv", "pytorch-lightning")
 
@@ -32,9 +32,15 @@ def test_console_entrypoint_imports() -> None:
 def test_nuplan_is_pinned_by_commit_in_the_package_metadata() -> None:
     """The dependency must name the commit, so a moving branch can never be installed."""
 
-    requirements = metadata.requires(DISTRIBUTION) or []
+    requirements = [Requirement(value) for value in metadata.requires(DISTRIBUTION) or []]
+    nuplan = [requirement for requirement in requirements if requirement.name == "nuplan-devkit"]
 
-    assert PINNED_NUPLAN in requirements, requirements
+    assert len(nuplan) == 1, requirements
+    requirement = nuplan[0]
+    assert requirement.url == PINNED_NUPLAN_URL
+    assert not requirement.extras
+    assert not requirement.specifier
+    assert requirement.marker is None
 
 
 def test_requires_python_is_exactly_the_3_9_series() -> None:
