@@ -94,6 +94,9 @@ def test_fixed_stats_runner_uses_requested_tests_and_corrected_collector(
 
     runner = SimpleNamespace(execute_pytest=execute)
     monkeypatch.setattr(mutmut_main, "change_cwd", lambda _path: nullcontext())
+    monkeypatch.setattr(
+        mutmut, "tests_by_mangled_function_name", {"aebrisk.metrics.safety._rate": {"test_one"}}
+    )
 
     assert compat._fixed_run_stats(runner, tests=("test_one",)) == 0
     assert calls[0][0] == ["-x", "-q", "test_one"]
@@ -117,10 +120,36 @@ def test_fixed_stats_runner_uses_configured_test_directory_or_pytest_default(
 
     runner = SimpleNamespace(execute_pytest=execute)
     monkeypatch.setattr(mutmut, "config", SimpleNamespace(tests_dir=tests_dir))
+    monkeypatch.setattr(
+        mutmut, "tests_by_mangled_function_name", {"aebrisk.metrics.safety._rate": {"test_one"}}
+    )
     monkeypatch.setattr(mutmut_main, "change_cwd", lambda _path: nullcontext())
 
     assert compat._fixed_run_stats(runner, tests=()) == 0
     assert calls == [expected]
+
+
+def test_fixed_stats_runner_refuses_an_empty_instrumentation_map(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    runner = SimpleNamespace(execute_pytest=lambda _params, **_kwargs: 0)
+    monkeypatch.setattr(mutmut, "config", SimpleNamespace(tests_dir=["tests"]))
+    monkeypatch.setattr(mutmut, "tests_by_mangled_function_name", {})
+    monkeypatch.setattr(mutmut_main, "change_cwd", lambda _path: nullcontext())
+
+    with pytest.raises(RuntimeError, match=r"^mutation statistics recorded no instrumented"):
+        compat._fixed_run_stats(runner, tests=())
+
+
+def test_fixed_stats_runner_returns_a_pytest_failure_before_the_map_guard(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    runner = SimpleNamespace(execute_pytest=lambda _params, **_kwargs: 2)
+    monkeypatch.setattr(mutmut, "config", SimpleNamespace(tests_dir=["tests"]))
+    monkeypatch.setattr(mutmut, "tests_by_mangled_function_name", {})
+    monkeypatch.setattr(mutmut_main, "change_cwd", lambda _path: nullcontext())
+
+    assert compat._fixed_run_stats(runner, tests=()) == 2
 
 
 @pytest.mark.parametrize("missing_process", [False, True])

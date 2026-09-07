@@ -86,7 +86,13 @@ def _fixed_run_stats(self: Any, *, tests: Any) -> int:
         if tests_dir:
             pytest_args += tests_dir
     with mutmut_main.change_cwd("mutants"):
-        return int(self.execute_pytest(pytest_args, plugins=[_make_stats_collector(mutmut)]))
+        result = int(self.execute_pytest(pytest_args, plugins=[_make_stats_collector(mutmut)]))
+    if result == 0 and not any(mutmut.tests_by_mangled_function_name.values()):
+        raise RuntimeError(
+            "mutation statistics recorded no instrumented target coverage; "
+            "invoke this adapter by source-file path so aebrisk is not preloaded"
+        )
+    return result
 
 
 def _fixed_timeout_checker(mutants: Any) -> Any:
