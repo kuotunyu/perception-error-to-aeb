@@ -1,0 +1,34 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the tagged commit
+        uses: actions/checkout@v6
+      - name: Build the pinned container
+        run: docker compose build
+      - name: Refuse pyproject and lock drift
+        run: docker compose run --rm dev uv lock --check
+      - name: Verify the tagged source
+        run: docker compose run --rm dev uv run --frozen python -m aebrisk.dev verify
+      - name: Build reproducible distributions from the tag epoch
+        run: |
+          export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
+          docker compose run --rm -e SOURCE_DATE_EPOCH dev uv run --frozen python -m build --no-isolation --outdir dist
+          docker compose run --rm dev uv run --frozen python -m aebrisk.release normalize-sdist --epoch "$SOURCE_DATE_EPOCH" --dist-dir dist
+      - name: Require tag and archive metadata to agree
+        run: docker compose run --rm dev uv run --frozen python -m aebrisk.release verify-version --tag "$GITHUB_REF_NAME" --dist-dir dist
+      - name: Record portable distribution checksums
+        run: docker compose run --rm dev uv run --frozen python -m aebrisk.release write-checksums --dist-dir dist
+      - name: Create the GitHub release from the existing tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/*.whl dist/*.tar.gz dist/SHA256SUMS --title "perception-error-to-aeb $GITHUB_REF_NAME" --notes-file "docs/release-notes/$GITHUB_REF_NAME.md"

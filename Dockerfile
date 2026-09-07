@@ -5,8 +5,8 @@
 # is built; the digest and the command that resolved it are recorded in
 # docs/verification/container-base.md. uv is copied from its own pinned
 # release image rather than installed from a script. The project is synced
-# from the committed lock with --frozen, so a drifted lock fails the build
-# instead of quietly resolving something else.
+# from the committed lock with --frozen; CI separately runs `uv lock --check`
+# because `--frozen` consumes an existing lock without proving freshness.
 FROM python:3.9.19-slim-bookworm@sha256:69e712dbe4c4a166527cbf69374533125cfb6ee93a5e39031a0191c741d386d7
 
 COPY --from=ghcr.io/astral-sh/uv:0.11.18 /uv /uvx /bin/

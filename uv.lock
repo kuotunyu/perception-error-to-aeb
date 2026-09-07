@@ -231,6 +231,22 @@ wheels = [
 ]
 
 [[package]]
+name = "libcst"
+version = "1.7.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pyyaml", marker = "sys_platform == 'linux'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/b1/de/df97a73343469c0b92ad0784248bdde79e417bb9540c229216bd81d0b086/libcst-1.7.0.tar.gz", hash = "sha256:a63f44ffa81292f183656234c7f2848653ff45c17d867db83c9335119e28aafa", size = 776707, upload-time = "2025-03-13T10:14:21.472Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/59/8b/0633687b9998caed370d49f180067942b0138c7657a732ea730bd5dcd9ba/libcst-1.7.0-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:e7d9a796c2f3d5b71dd06b7578e8d1fb1c031d2eb8d59e7b40e288752ae1b210", size = 2215629, upload-time = "2025-03-13T10:14:10.577Z" },
+    { url = "https://files.pythonhosted.org/packages/ba/7a/5b5b08e3ec60adca4debdaba2d31ff9c7cf61967d831d53025d772e37557/libcst-1.7.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:932a4c4508bd4cf5248c99b7218bb86af97d87fefa2bdab7ea8a0c28c270724a", size = 2316491, upload-time = "2025-03-13T10:14:12.044Z" },
+    { url = "https://files.pythonhosted.org/packages/4c/b9/e4fced37aa49450023a820319161f40064c9e4667261c14237f74731215b/libcst-1.7.0-cp39-cp39-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:d12ffe199ff677a37abfb6b21aba1407eb02246dc7e6bcaf4f8e24a195ec4ad6", size = 2405789, upload-time = "2025-03-13T10:14:13.847Z" },
+    { url = "https://files.pythonhosted.org/packages/d5/3d/197d7141800dba368dda38698157b0757ca2f6ddd85d78d81725dd56fd96/libcst-1.7.0-cp39-cp39-musllinux_1_2_aarch64.whl", hash = "sha256:81036e820249937608db7e72d0799180122d40d76d0c0414c454f8aa2ffa9c51", size = 2277047, upload-time = "2025-03-13T10:14:15.532Z" },
+    { url = "https://files.pythonhosted.org/packages/3e/6a/ea66b6d4349b3abc8b061aed8fb54228b45ede998056488150f7c490e3b5/libcst-1.7.0-cp39-cp39-musllinux_1_2_x86_64.whl", hash = "sha256:94acd51ea1206460c20dea764c59222e62c45ae8a486f22024f063d11a7bca88", size = 2396848, upload-time = "2025-03-13T10:14:17.958Z" },
+]
+
+[[package]]
 name = "librt"
 version = "0.15.0"
 source = { registry = "https://pypi.org/simple" }
@@ -249,6 +265,18 @@ wheels = [
 ]
 
 [[package]]
+name = "linkify-it-py"
+version = "2.0.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "uc-micro-py", marker = "sys_platform == 'linux'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/2a/ae/bb56c6828e4797ba5a4821eec7c43b8bf40f69cda4d4f5f8c8a2810ec96a/linkify-it-py-2.0.3.tar.gz", hash = "sha256:68cda27e162e9215c17d786649d1da0021a451bdc436ef9e0fa0ba5234b9b048", size = 27946, upload-time = "2024-02-04T14:48:04.179Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/04/1e/b832de447dee8b582cac175871d2f6c3d5077cc56d5575cadba1fd1cccfa/linkify_it_py-2.0.3-py3-none-any.whl", hash = "sha256:6bcbc417b0ac14323382aef5c5192c0075bf8a9d6b41820a2b66371eac6b6d79", size = 19820, upload-time = "2024-02-04T14:48:02.496Z" },
+]
+
+[[package]]
 name = "markdown-it-py"
 version = "3.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -258,6 +286,11 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/38/71/3b932df36c1a044d397a1f92d1cf91ee0a503d91e470cbd670aa66b07ed0/markdown-it-py-3.0.0.tar.gz", hash = "sha256:e3f60a94fa066dc52ec76661e37c851cb232d92f9886b15cb560aaada2df8feb", size = 74596, upload-time = "2023-06-03T06:41:14.443Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/42/d7/1ec15b46af6af88f19b8e5ffea08fa375d433c998b8a7639e76935c14f1f/markdown_it_py-3.0.0-py3-none-any.whl", hash = "sha256:355216845c60bd96232cd8d8c40e8f9765cc86f46880e43a8fd22dc1a1a8cab1", size = 87528, upload-time = "2023-06-03T06:41:11.019Z" },
+]
+
+[package.optional-dependencies]
+linkify = [
+    { name = "linkify-it-py", marker = "sys_platform == 'linux'" },
 ]
 
 [[package]]
@@ -275,12 +308,41 @@ wheels = [
 ]
 
 [[package]]
+name = "mdit-py-plugins"
+version = "0.4.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "markdown-it-py", marker = "sys_platform == 'linux'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/19/03/a2ecab526543b152300717cf232bb4bb8605b6edb946c845016fa9c9c9fd/mdit_py_plugins-0.4.2.tar.gz", hash = "sha256:5f2cd1fdb606ddf152d37ec30e46101a60512bc0e5fa1a7002c36647b09e26b5", size = 43542, upload-time = "2024-09-09T20:27:49.564Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a7/f7/7782a043553ee469c1ff49cfa1cdace2d6bf99a1f333cf38676b3ddf30da/mdit_py_plugins-0.4.2-py3-none-any.whl", hash = "sha256:0c673c3f889399a33b95e88d2f0d111b4447bdfea7f237dab2d488f459835636", size = 55316, upload-time = "2024-09-09T20:27:48.397Z" },
+]
+
+[[package]]
 name = "mdurl"
 version = "0.1.2"
 source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/d6/54/cfe61301667036ec958cb99bd3efefba235e65cdeb9c84d24a8293ba1d90/mdurl-0.1.2.tar.gz", hash = "sha256:bb413d29f5eea38f31dd4754dd7377d4465116fb207585f97bf925588687c1ba", size = 8729, upload-time = "2022-08-14T12:40:10.846Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b3/38/89ba8ad64ae25be8de66a6d463314cf1eb366222074cfda9ee839c56a4b4/mdurl-0.1.2-py3-none-any.whl", hash = "sha256:84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8", size = 9979, upload-time = "2022-08-14T12:40:09.779Z" },
+]
+
+[[package]]
+name = "mutmut"
+version = "3.3.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "click", marker = "sys_platform == 'linux'" },
+    { name = "libcst", marker = "sys_platform == 'linux'" },
+    { name = "pytest", marker = "sys_platform == 'linux'" },
+    { name = "setproctitle", marker = "sys_platform == 'linux'" },
+    { name = "textual", marker = "sys_platform == 'linux'" },
+    { name = "toml", marker = "sys_platform == 'linux'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/64/b2/403fecfe80b0e43da57febf02748f3ec29d90c9942efefe2941f8bccd4ce/mutmut-3.3.1.tar.gz", hash = "sha256:6aabc3a8f2b6c8eafe7054e1f7348e68aba807dcf12bffb6bfa00e5046d8a6bd", size = 133797, upload-time = "2025-07-30T08:40:51.153Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/26/b2/be413154278da15151a0bffcbe88d8a0265781013a232b58df4c43377466/mutmut-3.3.1-py3-none-any.whl", hash = "sha256:b5dd21dff2af5bd1bdec0dccfdf0da82e1428d068a1f485c8138ae248552c9d8", size = 35557, upload-time = "2025-07-30T08:40:49.901Z" },
 ]
 
 [[package]]
@@ -364,7 +426,7 @@ wheels = [
 
 [[package]]
 name = "perception-error-to-aeb"
-version = "0.1.0"
+version = "1.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "cachetools", marker = "sys_platform == 'linux'" },
@@ -390,11 +452,14 @@ dependencies = [
 dev = [
     { name = "build", marker = "sys_platform == 'linux'" },
     { name = "hypothesis", marker = "sys_platform == 'linux'" },
+    { name = "mutmut", marker = "sys_platform == 'linux'" },
     { name = "mypy", marker = "sys_platform == 'linux'" },
     { name = "pytest", marker = "sys_platform == 'linux'" },
     { name = "pytest-cov", marker = "sys_platform == 'linux'" },
     { name = "ruff", marker = "sys_platform == 'linux'" },
+    { name = "setuptools", marker = "sys_platform == 'linux'" },
     { name = "types-pyyaml", marker = "sys_platform == 'linux'" },
+    { name = "wheel", marker = "sys_platform == 'linux'" },
 ]
 
 [package.metadata]
@@ -422,11 +487,23 @@ requires-dist = [
 dev = [
     { name = "build", specifier = ">=1.2,<2" },
     { name = "hypothesis", specifier = ">=6.100,<7" },
+    { name = "mutmut", specifier = ">=3.3,<4" },
     { name = "mypy", specifier = ">=1.10,<2" },
     { name = "pytest", specifier = ">=8.3,<10" },
     { name = "pytest-cov", specifier = ">=5,<8" },
     { name = "ruff", specifier = ">=0.11,<1" },
+    { name = "setuptools", specifier = "==80.9.0" },
     { name = "types-pyyaml", specifier = ">=6.0,<7" },
+    { name = "wheel", specifier = "==0.45.1" },
+]
+
+[[package]]
+name = "platformdirs"
+version = "4.4.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/23/e8/21db9c9987b0e728855bd57bff6984f67952bea55d6f75e055c46b5383e8/platformdirs-4.4.0.tar.gz", hash = "sha256:ca753cf4d81dc309bc67b0ea38fd15dc97bc30ce419a7f58d13eb3bf14c4febf", size = 21634, upload-time = "2025-08-26T14:32:04.268Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/40/4b/2028861e724d3bd36227adfa20d3fd24c3fc6d52032f4a93c133be5d17ce/platformdirs-4.4.0-py3-none-any.whl", hash = "sha256:abd01743f24e5287cd7a5db3752faf1a2d65353f38ec26d98e25a6db65958c85", size = 18654, upload-time = "2025-08-26T14:32:02.735Z" },
 ]
 
 [[package]]
@@ -672,6 +749,29 @@ wheels = [
 ]
 
 [[package]]
+name = "setproctitle"
+version = "1.3.7"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/8d/48/49393a96a2eef1ab418b17475fb92b8fcfad83d099e678751b05472e69de/setproctitle-1.3.7.tar.gz", hash = "sha256:bc2bc917691c1537d5b9bca1468437176809c7e11e5694ca79a9ca12345dcb9e", size = 27002, upload-time = "2025-09-05T12:51:25.278Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7b/b7/1abfcfe0de1b50c96002e7ecfd6a2c109798bc4284f0dc02635c7da22e9e/setproctitle-1.3.7-cp39-cp39-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:134e7f66703a1d92c0a9a0a417c580f2cc04b93d31d3fc0dd43c3aa194b706e1", size = 31551, upload-time = "2025-09-05T12:51:05.088Z" },
+    { url = "https://files.pythonhosted.org/packages/67/fa/2b25384c154bfb36112d7ec377281776e337e5124590bd96c4f3f076285a/setproctitle-1.3.7-cp39-cp39-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:9796732a040f617fc933f9531c9a84bb73c5c27b8074abbe52907076e804b2b7", size = 32489, upload-time = "2025-09-05T12:51:06.207Z" },
+    { url = "https://files.pythonhosted.org/packages/3c/24/e4f2a3467cd6322462134f1918a565b99e8bd43c1d47040082e874a3f512/setproctitle-1.3.7-cp39-cp39-manylinux2014_ppc64le.manylinux_2_17_ppc64le.manylinux_2_28_ppc64le.whl", hash = "sha256:ff3c1c32382fb71a200db8bab3df22f32e6ac7ec3170e92fa5b542cf42eed9a2", size = 34328, upload-time = "2025-09-05T12:51:07.504Z" },
+    { url = "https://files.pythonhosted.org/packages/33/75/7ca8f54e35c62f99562fcf1e052d4f162f310e2e14ab3e34d5965b5a7f71/setproctitle-1.3.7-cp39-cp39-musllinux_1_2_aarch64.whl", hash = "sha256:01f27b5b72505b304152cb0bd7ff410cc4f2d69ac70c21a7fdfa64400a68642d", size = 31744, upload-time = "2025-09-05T12:51:08.698Z" },
+    { url = "https://files.pythonhosted.org/packages/19/74/080caa13f1dad1ffab1ef7b7dbef97f278c23d4aa45bdbd209aac54e9b21/setproctitle-1.3.7-cp39-cp39-musllinux_1_2_ppc64le.whl", hash = "sha256:80b6a562cbc92b289c28f34ce709a16b26b1696e9b9a0542a675ce3a788bdf3f", size = 33100, upload-time = "2025-09-05T12:51:10.53Z" },
+    { url = "https://files.pythonhosted.org/packages/d7/bc/478b45ccbcf4be609d4ae5b46b4601960d7a7194cca2075cfae57b0cbb76/setproctitle-1.3.7-cp39-cp39-musllinux_1_2_x86_64.whl", hash = "sha256:c4fb90174d176473122e7eef7c6492d53761826f34ff61c81a1c1d66905025d3", size = 31233, upload-time = "2025-09-05T12:51:12.03Z" },
+]
+
+[[package]]
+name = "setuptools"
+version = "80.9.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/18/5d/3bf57dcd21979b887f014ea83c24ae194cfcd12b9e0fda66b957c69d1fca/setuptools-80.9.0.tar.gz", hash = "sha256:f36b47402ecde768dbfafc46e8e4207b4360c654f1f3bb84475f0a28628fb19c", size = 1319958, upload-time = "2025-05-27T00:56:51.443Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a3/dc/17031897dae0efacfea57dfd3a82fdd2a2aeb58e0ff71b77b87e44edc772/setuptools-80.9.0-py3-none-any.whl", hash = "sha256:062d34222ad13e0cc312a4c02d73f059e86a4acbfbdea8f8f76b28c99f306922", size = 1201486, upload-time = "2025-05-27T00:56:49.664Z" },
+]
+
+[[package]]
 name = "shapely"
 version = "2.0.7"
 source = { registry = "https://pypi.org/simple" }
@@ -732,6 +832,32 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/0a/d4/2b0cd0fe285e14b36db076e78c93766ff1d529d70408bd1d2a5a84f1d929/tenacity-9.1.2.tar.gz", hash = "sha256:1169d376c297e7de388d18b4481760d478b0e99a777cad3a9c86e556f4b697cb", size = 48036, upload-time = "2025-04-02T08:25:09.966Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e5/30/643397144bfbfec6f6ef821f36f33e57d35946c44a2352d3c9f0ae847619/tenacity-9.1.2-py3-none-any.whl", hash = "sha256:f77bf36710d8b73a50b2dd155c97b870017ad21afe6ab300326b0371b3b05138", size = 28248, upload-time = "2025-04-02T08:25:07.678Z" },
+]
+
+[[package]]
+name = "textual"
+version = "8.2.8"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "markdown-it-py", extra = ["linkify"], marker = "sys_platform == 'linux'" },
+    { name = "mdit-py-plugins", marker = "sys_platform == 'linux'" },
+    { name = "platformdirs", marker = "sys_platform == 'linux'" },
+    { name = "pygments", marker = "sys_platform == 'linux'" },
+    { name = "rich", marker = "sys_platform == 'linux'" },
+    { name = "typing-extensions", marker = "sys_platform == 'linux'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/00/21/39a76b01bd5eea82a04baaca7580e105d8c59450df03998345bb2cfb307b/textual-8.2.8.tar.gz", hash = "sha256:3f106a9fbc73e39dd266c9712432087de78a6d644084c7c241d6a25c3169115b", size = 1860502, upload-time = "2026-06-30T06:51:24.495Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fb/be/35261223d9416a0751cdff1c7b4a6f881387218a12d439fe22fefebc8c04/textual-8.2.8-py3-none-any.whl", hash = "sha256:267375fd402dc8d981457212efa71f0e3365fd17bba144ba9bb3ed7563cb374a", size = 731418, upload-time = "2026-06-30T06:51:26.364Z" },
+]
+
+[[package]]
+name = "toml"
+version = "0.10.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/be/ba/1f744cdc819428fc6b5084ec34d9b30660f6f9daaf70eead706e3203ec3c/toml-0.10.2.tar.gz", hash = "sha256:b3bda1d108d5dd99f4a20d24d9c348e91c4db7ab1b749200bded2f839ccbe68f", size = 22253, upload-time = "2020-11-01T01:40:22.204Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/44/6f/7120676b6d73228c96e17f1f794d8ab046fc910d781c8d151120c3f1569e/toml-0.10.2-py2.py3-none-any.whl", hash = "sha256:806143ae5bfb6a3c6e736a764057db0e6a0e05e338b5630894a5f779cabb4f9b", size = 16588, upload-time = "2020-11-01T01:40:20.672Z" },
 ]
 
 [[package]]
@@ -804,6 +930,24 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/92/ff/5a28bdfd8c3ebec42564ac7d0e54ca3db65044a9314a97f9564fa7a1e926/tzdata-2026.3.tar.gz", hash = "sha256:4a1518b8993086a7982523e071643f3c0e5f213e75b21318e78bcabfff9d1415", size = 198674, upload-time = "2026-07-10T08:50:37.887Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e5/6d/b53b99a9f2766d095985947a5782f1702cabb129a34f7a802d7197af832f/tzdata-2026.3-py2.py3-none-any.whl", hash = "sha256:dc096730c87af6cab1b171c9d532be840741ff5d459015e7f6947bd7d7e54931", size = 348168, upload-time = "2026-07-10T08:50:36.46Z" },
+]
+
+[[package]]
+name = "uc-micro-py"
+version = "1.0.3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/91/7a/146a99696aee0609e3712f2b44c6274566bc368dfe8375191278045186b8/uc-micro-py-1.0.3.tar.gz", hash = "sha256:d321b92cff673ec58027c04015fcaa8bb1e005478643ff4a500882eaab88c48a", size = 6043, upload-time = "2024-02-09T16:52:01.654Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/37/87/1f677586e8ac487e29672e4b17455758fce261de06a0d086167bb760361a/uc_micro_py-1.0.3-py3-none-any.whl", hash = "sha256:db1dffff340817673d7b466ec86114a9dc0e9d4d9b5ba229d9d60e5c12600cd5", size = 6229, upload-time = "2024-02-09T16:52:00.371Z" },
+]
+
+[[package]]
+name = "wheel"
+version = "0.45.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/8a/98/2d9906746cdc6a6ef809ae6338005b3f21bb568bea3165cfc6a243fdc25c/wheel-0.45.1.tar.gz", hash = "sha256:661e1abd9198507b1409a20c02106d9670b2576e916d58f520316666abca6729", size = 107545, upload-time = "2024-11-23T00:18:23.513Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0b/2c/87f3254fd8ffd29e4c02732eee68a83a1d3c346ae39bc6822dcbcb697f2b/wheel-0.45.1-py3-none-any.whl", hash = "sha256:708e7481cc80179af0e556bbf0cc00b8444c7321e2700b8d8580231d13017248", size = 72494, upload-time = "2024-11-23T00:18:21.207Z" },
 ]
 
 [[package]]

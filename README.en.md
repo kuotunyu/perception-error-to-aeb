@@ -4,7 +4,7 @@
 
 [繁體中文](README.md) · [Evidence guide](docs/README.md)
 
-This study trains no model. It holds the scenarios, initialization, route, nominal controller, simulation rate, and termination rules fixed while changing only the observations delivered to AEB. The formal simulation and derived evidence are complete; the repository has not been published yet.
+This study trains no model. It holds the scenarios, initialization, route, nominal controller, simulation rate, and termination rules fixed while changing only the observations delivered to AEB. Version 1.0.0 contains the completed formal simulation, derived evidence, and data-free reproduction tools.
 
 ## Observed results
 

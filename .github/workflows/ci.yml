@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  verify-in-container:
+  verify:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -19,8 +19,8 @@ jobs:
       - name: Build the pinned container
         run: docker compose build
 
+      - name: Refuse pyproject and lock drift
+        run: docker compose run --rm dev uv lock --check
+
       - name: Run the deterministic verification gate inside the container
         run: docker compose run --rm dev uv run --frozen python -m aebrisk.dev verify
-
-      - name: Build wheel and source distribution inside the container
-        run: docker compose run --rm dev uv build
