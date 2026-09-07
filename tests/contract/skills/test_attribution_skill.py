@@ -313,6 +313,23 @@ def test_a_value_is_bound_to_the_metric_and_unit_of_its_own_claim(
     assert any(message in violation for violation in violations), violations
 
 
+def test_a_spaced_percent_suffix_is_still_a_unit_conversion(
+    workspace: dict[str, Path],
+) -> None:
+    """Whitespace cannot detach an incompatible percent unit from its binding."""
+
+    document = _write(
+        workspace["root"],
+        "README.md",
+        "Dropout Shapley `collision_indicator` = -0.0021802325581395357 %. "
+        "<!-- claim: p3.shapley.collision_indicator-values-dropout -->\n",
+    )
+
+    violations, _ = _validate(workspace, documents=(document,))
+
+    assert any("percent conversion is not registered" in item for item in violations)
+
+
 def test_clean_metric_value_bindings_are_accepted(workspace: dict[str, Path]) -> None:
     """Each exact value remains publishable when paired with its own metric and claim."""
 
@@ -364,6 +381,26 @@ def test_a_cohort_only_result_line_is_discovered(workspace: dict[str, Path]) -> 
     assert any("common-valid cohort is 344" in violation for violation in violations)
 
 
+@pytest.mark.parametrize(
+    "text",
+    [
+        "`common_valid_tokens` = 1032.\n",
+        "\u5171\u540c\u6709\u6548\u6a23\u672c\u70ba 1032 \u500b\u60c5\u5883\u3002\n",
+    ],
+)
+def test_supported_cohort_contexts_do_not_silently_disappear(
+    workspace: dict[str, Path], text: str
+) -> None:
+    """Stable keys and the supported Chinese cohort phrase activate the audit."""
+
+    document = _write(workspace["root"], "README.md", text)
+
+    violations, _ = _validate(workspace, documents=(document,))
+
+    assert any("no <!-- claim: ... --> marker" in item for item in violations)
+    assert any("common-valid cohort is 344" in item for item in violations)
+
+
 def test_a_numeric_row_under_a_result_table_header_is_discovered(
     workspace: dict[str, Path],
 ) -> None:
@@ -391,6 +428,40 @@ def test_a_table_row_with_constrained_binding_is_accepted(workspace: dict[str, P
         "| --- | --- |\n"
         "| Dropout | `collision_indicator` = -0.0021802325581395357 "
         "<!-- claim: p3.shapley.collision_indicator-values-dropout --> |\n",
+    )
+
+    violations, _ = _validate(workspace, documents=(document,))
+
+    assert violations == ()
+
+
+def test_a_pipe_optional_result_table_is_discovered(workspace: dict[str, Path]) -> None:
+    """Ordinary Markdown tables receive the same fail-closed row discovery."""
+
+    document = _write(
+        workspace["root"],
+        "README.md",
+        "Channel | Shapley collision_indicator\n--- | ---\nDropout | 999\n",
+    )
+
+    violations, _ = _validate(workspace, documents=(document,))
+
+    assert any("README.md:3" in item for item in violations)
+    assert any("no <!-- claim: ... --> marker" in item for item in violations)
+
+
+def test_a_pipe_optional_table_with_a_constrained_binding_is_accepted(
+    workspace: dict[str, Path],
+) -> None:
+    """The supported table form stays usable with an exact binding and marker."""
+
+    document = _write(
+        workspace["root"],
+        "README.md",
+        "Channel | Shapley result\n"
+        "--- | ---\n"
+        "Dropout | `collision_indicator` = -0.0021802325581395357 "
+        "<!-- claim: p3.shapley.collision_indicator-values-dropout -->\n",
     )
 
     violations, _ = _validate(workspace, documents=(document,))
@@ -437,6 +508,73 @@ def test_oracle_contact_marker_without_the_contact_value_is_rejected(
     assert any("must state contacts_not_at_fault = 1095" in violation for violation in violations)
 
 
+def test_oracle_claim_identity_requires_contact_context_without_oracle_prose(
+    workspace: dict[str, Path],
+) -> None:
+    """The registry identity activates the obligation even when prose says baseline."""
+
+    document = _write(
+        workspace["root"],
+        "README.md",
+        "The baseline recorded `collisions` = 39. "
+        "<!-- claim: p3.baseline.collisions.oracle_aeb -->\n",
+    )
+
+    violations, _ = _validate(workspace, documents=(document,))
+
+    assert any("must also state contacts_not_at_fault" in item for item in violations)
+
+
+def test_oracle_claim_identity_accepts_both_exact_bound_counts(
+    workspace: dict[str, Path],
+) -> None:
+    """Claim-derived obligations do not require a literal Oracle phrase."""
+
+    document = _write(
+        workspace["root"],
+        "README.md",
+        "The baseline recorded `collisions` = 39 "
+        "<!-- claim: p3.baseline.collisions.oracle_aeb --> and "
+        "`contacts_not_at_fault` = 1095 "
+        "<!-- claim: p3.baseline.contacts_not_at_fault.oracle_aeb -->.\n",
+    )
+
+    violations, _ = _validate(workspace, documents=(document,))
+
+    assert violations == ()
+
+
+def test_oracle_contact_expectation_comes_from_its_claim(
+    workspace: dict[str, Path],
+) -> None:
+    """The validator resolves contact evidence instead of embedding the release value."""
+
+    evaluation_path = workspace["root"] / EVALUATION_PATH
+    evaluation = json.loads(evaluation_path.read_text(encoding="utf-8"))
+    evaluation["configurations"][0]["contacts_not_at_fault"] = 42
+    evaluation_path.write_text(json.dumps(evaluation), encoding="utf-8")
+    registry = yaml.safe_load(workspace["claims"].read_text(encoding="utf-8"))
+    contact_claim = next(
+        claim
+        for claim in registry["claims"]
+        if claim["claim_id"] == "p3.baseline.contacts_not_at_fault.oracle_aeb"
+    )
+    contact_claim["text"] = "oracle_aeb contacts_not_at_fault is 42."
+    workspace["claims"].write_text(yaml.safe_dump(registry, sort_keys=False), encoding="utf-8")
+    document = _write(
+        workspace["root"],
+        "README.md",
+        "Oracle AEB recorded `collisions` = 39 "
+        "<!-- claim: p3.baseline.collisions.oracle_aeb --> and "
+        "`contacts_not_at_fault` = 42 "
+        "<!-- claim: p3.baseline.contacts_not_at_fault.oracle_aeb -->.\n",
+    )
+
+    violations, _ = _validate(workspace, documents=(document,))
+
+    assert violations == ()
+
+
 def test_unavailable_distance_rate_is_allowed_beside_valid_counts(
     workspace: dict[str, Path],
 ) -> None:
@@ -455,6 +593,25 @@ def test_unavailable_distance_rate_is_allowed_beside_valid_counts(
     violations, _ = _validate(workspace, documents=(document,))
 
     assert violations == ()
+
+
+def test_a_chinese_numeric_per_distance_unit_is_rejected(
+    workspace: dict[str, Path],
+) -> None:
+    """The Chinese denominator form cannot turn a raw collision count into a rate."""
+
+    document = _write(
+        workspace["root"],
+        "README.md",
+        "Oracle AEB: `collisions` = 39 \u6bcf 100 km. "
+        "<!-- claim: p3.baseline.collisions.oracle_aeb --> "
+        "`contacts_not_at_fault` = 1095. "
+        "<!-- claim: p3.baseline.contacts_not_at_fault.oracle_aeb -->\n",
+    )
+
+    violations, _ = _validate(workspace, documents=(document,))
+
+    assert any("per-100 km rate is unpublished" in item for item in violations)
 
 
 def test_traditional_chinese_prose_uses_the_same_metric_value_contract(

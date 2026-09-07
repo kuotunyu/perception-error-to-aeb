@@ -25,22 +25,30 @@ MARKER = re.compile(r"<!--\s*claim:\s*([a-z0-9][a-z0-9._-]*)\s*-->")
 NUMBER = re.compile(r"(?<![\w.])[-+]?(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][-+]?\d+)?%?")
 BINDING = re.compile(
     r"`(?P<metric>[a-z][a-z0-9_]*)`\s*=\s*"
-    r"(?P<value>[-+]?(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][-+]?\d+)?%?)"
+    r"(?P<value>[-+]?(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][-+]?\d+)?)"
+    r"(?P<percent>\s*%)?"
 )
 RESULT_TERM = re.compile(
-    r"\b(?:shapley|collision(?:s|_indicator)?|contacts_not_at_fault|"
+    r"(?:\b(?:shapley|collision(?:s|_indicator)?|contacts_not_at_fault|"
     r"intervention(?:s|_duration_s)?|false_interventions|missed_interventions|"
-    r"common[-_ ]valid|cohort)\b",
+    r"common_valid_tokens|common[-_ ]valid|cohort)\b|\u5171\u540c\u6709\u6548\u6a23\u672c)",
     re.IGNORECASE,
 )
-PER_100_KM = re.compile(r"(?:per[-_ ]?100\s*km|/\s*100\s*km|\u6bcf\s*100\s*km)", re.IGNORECASE)
+UNAVAILABLE_PER_100_KM = re.compile(
+    r"(?:(?:collisions?\s+)?(?:per[-_ ]?100\s*km|/\s*100\s*km)"
+    r"(?:\s+(?:collision\s+)?rate)?\s+(?:is|was|were)\s+unavailable"
+    r"|\u6bcf\s*100\s*km\s*\u78b0\u649e\u7387(?:\u70ba)?\u672a\u63d0\u4f9b)",
+    re.IGNORECASE,
+)
 NUMERIC_PER_100_KM = re.compile(
-    rf"(?:{NUMBER.pattern}\s+(?:collisions?\s+)?(?:per[-_ ]?100\s*km|/\s*100\s*km)"
+    rf"(?:{NUMBER.pattern}\s+(?:collisions?\s+)?"
+    rf"(?:per[-_ ]?100\s*km|/\s*100\s*km|\u6bcf\s*100\s*km)"
     rf"|`collisions_per_100km`\s*=\s*{NUMBER.pattern})",
     re.IGNORECASE,
 )
 COHORT_SIZE = re.compile(
-    r"(?:common[-_ ]valid(?:\s+(?:cohort|tokens?))?|cohort(?:\s+of)?)\D{0,20}(\d+)",
+    r"(?:common[-_ ]valid(?:\s+(?:cohort|tokens?))?|cohort(?:\s+of)?|"
+    r"`?common_valid_tokens`?|\u5171\u540c\u6709\u6548\u6a23\u672c)\D{0,20}(\d+)",
     re.IGNORECASE,
 )
 FENCE_PREFIXES = ("```", "~~~")
@@ -71,7 +79,7 @@ def _claim_metric(claim: ClaimV1) -> str:
 def _result_numbers(text: str) -> tuple[Decimal, ...]:
     """Ignore a literal distance denominator when no numeric rate is stated."""
 
-    return _text_numbers(PER_100_KM.sub("", text))
+    return _text_numbers(UNAVAILABLE_PER_100_KM.sub("", text))
 
 
 def _common_valid_tokens(registry: dict[str, ClaimV1], repository_root: Path) -> int:
@@ -89,6 +97,7 @@ def _structural_violations(
     text: str,
     claims: tuple[ClaimV1, ...],
     common_valid_tokens: int,
+    repository_root: Path,
 ) -> list[str]:
     lower = text.lower()
     violations: list[str] = []
@@ -116,9 +125,14 @@ def _structural_violations(
     if attribution and any(Path(claim.artifact_path).name != "shapley.json" for claim in claims):
         violations.append(f"{source}: every Shapley number must trace to shapley.json")
 
-    oracle_collision = re.search(r"oracle(?:_|\s|-)?aeb", lower) and re.search(
-        r"\bcollisions?\b", lower
-    )
+    oracle_collision_claims = [
+        claim
+        for claim in claims
+        if _claim_metric(claim) == "collisions" and "oracle_aeb" in claim.claim_id
+    ]
+    oracle_collision = (
+        re.search(r"oracle(?:_|\s|-)?aeb", lower) and re.search(r"\bcollisions?\b", lower)
+    ) or oracle_collision_claims
     if oracle_collision:
         contact_claims = [
             claim
@@ -126,12 +140,15 @@ def _structural_violations(
             if claim.metric_path.endswith("/contacts_not_at_fault")
             and "oracle_aeb" in claim.claim_id
         ]
+        expected_contacts = {
+            number for claim in contact_claims for number in _claim_numbers(claim, repository_root)
+        }
         contact_bindings = [
             match
             for match in BINDING.finditer(text)
             if match.group("metric") == "contacts_not_at_fault"
-            and not match.group("value").endswith("%")
-            and Decimal(match.group("value")) == Decimal(1095)
+            and match.group("percent") is None
+            and Decimal(match.group("value")) in expected_contacts
         ]
         if "contacts_not_at_fault" not in lower or not contact_claims:
             violations.append(
@@ -139,8 +156,10 @@ def _structural_violations(
                 "contacts_not_at_fault and cite its claim"
             )
         elif not contact_bindings:
+            expected = ", ".join(str(number) for number in sorted(expected_contacts))
             violations.append(
-                f"{source}: an oracle_aeb collision result must state contacts_not_at_fault = 1095"
+                f"{source}: an oracle_aeb collision result must state "
+                f"contacts_not_at_fault = {expected}"
             )
     return violations
 
@@ -176,7 +195,9 @@ def _check_statement(
             }
         )
 
-    violations.extend(_structural_violations(source, text, tuple(claims), common_valid_tokens))
+    violations.extend(
+        _structural_violations(source, text, tuple(claims), common_valid_tokens, repository_root)
+    )
     bindings = tuple(BINDING.finditer(text))
     if len(bindings) != len(claim_ids):
         violations.append(
@@ -184,9 +205,7 @@ def _check_statement(
             "`metric_key` = exact_value and pair one claim marker in the same order"
         )
     stated_numbers = Counter(_result_numbers(text))
-    bound_numbers = Counter(
-        Decimal(binding.group("value").removesuffix("%")) for binding in bindings
-    )
+    bound_numbers = Counter(Decimal(binding.group("value")) for binding in bindings)
     if stated_numbers != bound_numbers:
         violations.append(
             f"{source}: every numeric result needs a metric binding; use `metric_key` = exact_value"
@@ -205,7 +224,7 @@ def _check_statement(
             )
             continue
         raw_value = binding.group("value")
-        if raw_value.endswith("%"):
+        if binding.group("percent") is not None:
             violations.append(
                 f"{source}: `{metric}` uses a percent conversion; "
                 "percent conversion is not registered"
@@ -263,7 +282,7 @@ def _document_statements(path: Path) -> tuple[tuple[str, str, tuple[str, ...]], 
             continue
         if in_fence:
             continue
-        is_table_row = raw.strip().startswith("|")
+        is_table_row = "|" in raw
         if is_table_row and RESULT_TERM.search(raw):
             in_result_table = True
         elif not is_table_row:
@@ -302,7 +321,9 @@ def validate_attribution(
             violations.append(
                 f"{source}: result needs text and claim_ids; no <!-- claim: ... --> marker"
             )
-            violations.extend(_structural_violations(source, text, (), common_valid_tokens))
+            violations.extend(
+                _structural_violations(source, text, (), common_valid_tokens, repository_root)
+            )
             continue
         found, traced = _check_statement(
             source, text, claim_ids, registry, repository_root, common_valid_tokens

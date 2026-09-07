@@ -144,3 +144,18 @@ unbound extra number. Before its repair, the suite failed 1 test while 35
 passed (exit 1); the distinct raw files are
 `artifacts/e1-fix1-red-extra.log` and `.exit`. No original baseline or cold
 output above was changed.
+
+## Review repair 2 RED
+
+Recorded `2026-09-07T00:49:43Z` (`2026-09-07T08:49:43+08:00`). Six invalid
+documents from the scoped fix-1 review still disappeared or passed: a spaced
+percent suffix, an unmarked documented cohort binding, Chinese cohort prose, a
+pipe-optional result table, an Oracle collision claim without literal Oracle
+prose, and a Chinese numeric per-100-km unit. A seventh clean-control failure
+showed the Oracle contact expectation was embedded as 1095 instead of resolved
+from its claim.
+
+The pinned-container repair suite exited 1 with 7 failed and 38 passed in 3.07
+seconds. Raw output and immediate status are preserved in
+`artifacts/e1-fix2-red.log/.exit`. Earlier cold outputs and RED evidence remain
+unchanged.

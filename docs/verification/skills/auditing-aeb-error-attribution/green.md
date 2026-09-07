@@ -158,3 +158,26 @@ running the audit.
 
 The future Task E2 README audit is still PENDING. This repair evidence does not
 claim that downstream check.
+
+## Review repair 2 GREEN
+
+Recorded `2026-09-07T00:51:31Z` (`2026-09-07T08:51:31+08:00`). The constrained
+grammar and skill wording are unchanged. The parser now recognizes the six
+reviewed structures, treats attached and spaced percent suffixes alike,
+activates Oracle context from the resolved collision claim, obtains the
+expected contact count from the cited contact claim, and strips a distance
+denominator only from recognized unavailable clauses.
+
+The focused pinned-container suite exited 0 with 45 passed. Coverage over
+`attribution_audit.py` was 190 statements and 76 branches with zero misses or
+partials, 100%. Raw evidence is in
+`artifacts/e1-fix2-coverage-1.log/.exit`.
+
+Because this repair changes parser discovery and identity rules without
+changing skill instructions, historical cold microexperiments were preserved
+instead of rerun. The previously accepted real-evidence cold output was run
+through the repaired validator unchanged; it exited 0 with the same 11 passing
+claim traces. Raw evidence is in
+`artifacts/e1-fix2-clean-output-validator.log/.exit`.
+
+The actual Task E2 README audit remains PENDING and is not claimed here.
