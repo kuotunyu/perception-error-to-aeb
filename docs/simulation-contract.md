@@ -167,3 +167,70 @@ failure reason, the phase, the exception type and a stack-trace hash. A scenario
 may never be removed from only the configuration in which it performed badly:
 that would make the cohort a function of the outcome, which is the one thing a
 common-cohort study cannot allow.
+
+## Mutation-equivalence invariants
+
+The release mutation audit counts every generated mutant in its denominator and
+does not award credit for equivalence. The surviving mutations below are listed
+because each has a concrete reason it cannot change an accepted result in the
+pinned release environment. Suffixes are the exact mutmut 3.3.1 identifiers at
+the audited commit; they are not patterns for future versions.
+
+| Source / function | Exact suffixes | Invariant |
+| --- | --- | --- |
+| `aeb/controller.py::limit_acceleration` | 48, 49 | Only explanatory refusal prose changes; condition, exception class, and numeric behavior are unchanged. |
+| `aeb/state_machine.py::load_policy` | 5, 7 | On the measured release container `encoding=None` resolves to UTF-8 and `UTF-8` is the same codec alias for the committed ASCII-compatible YAML. |
+| `aeb/state_machine.py::validate_policy` | 19, 20, 21, 32, 33 | Only explanatory refusal prose changes. |
+| `aeb/threat.py::_axes`, `_point_segment_distances` | axes 9; distances 10, 21, 33 | Reversing closed-polygon edge traversal preserves the unordered edge/normal set and the public per-point minimum; upper-case einsum subscripts only rename dummy indices. |
+| `aeb/threat.py::_required_deceleration` | 14 | At zero closing speed both branches return exactly zero. |
+| `aeb/threat.py::assess_threat` | 20, 21 | Only explanatory invalid-step prose changes. |
+| `aeb/threat.py::assess_threat` | 161, 163, 169, 171, 183, 185, 198, 200 | `steps` is integer; accepted centres and velocities enter float64 multiplication/addition, so omitting the explicit array dtype preserves values and dtype. |
+| `aeb/threat.py::first_overlap_step` | 20, 22, 31, 33 | Integer `arange` is multiplied by float `step_s`, and accepted velocity is combined with float64 axes; the projection is float64 without the redundant explicit dtype. |
+| `aeb/threat.py::oriented_box_polygon` | 48, 50, 60, 62, 66, 68 | Division and trigonometry produce floats before every affected array operation, preserving float64 geometry when the explicit dtype is omitted. |
+| `attribution/factorial.py::coalition_configurations` | 6 | `combinations(CHANNELS, len(CHANNELS)+1)` is empty, so extending the range emits no extra configuration. |
+| `attribution/factorial.py::formal_configurations` | 71 | Coalition identifiers are unique and visited once; replacing the post-append membership insertion with `None` cannot suppress a later distinct coalition. |
+| `attribution/factorial.py::load_experiment_matrix` | 5, 7 | Same measured UTF-8 runtime invariant as policy loading. |
+| `attribution/shapley.py::_validated_game` | 5 | Combinations above the channel count are empty. |
+| `attribution/shapley.py::_validated_game` | 12, 14, 16, 17, 20, 21, 24, 26, 28, 29, 32, 33, 42, 43, 44 | Only refusal labels or explanatory prose change; membership, finiteness, exception class, and valid-game output do not. |
+| `attribution/shapley.py::shapley_by_metric` | 8, 9 | Only explanatory unknown-metric prose changes. |
+| `cohort/filters.py::prefilter_refusal` | 8, 9 | Capitalization/decorators change in the same refusal category and branch; artifact identity does not use the message text. |
+| `cohort/splits.py::freeze_family_cohort` | 12, 13, 21, 22, 23, 24 | Only explanatory refusal prose changes; accepted membership and ordering do not. |
+| `errors/channels.py::ScenarioChannels.__init__` | 3, 4, 5, 6, 7, 8 | Only explanatory imported-configuration refusal prose changes. |
+| `errors/dropout.py::apply_dropout` | 27, 28 | Only explanatory backward-step refusal prose changes. |
+| `errors/latency.py::apply_latency`, `select_latency_frame` | apply 1; select 1 | `frequency_hz` is validated positive, but timestamp-based selection does not use its magnitude; both defaults select the same observation. |
+| `errors/latency.py::invalid_reason` | 1 | Only explanatory invalid-selection prose changes. |
+| `errors/latency.py::select_latency_frame` | 40, 41 | Only explanatory non-monotonic-history prose changes. |
+| `errors/latency.py::select_latency_frame` | 55 | Index `-1` repeats the already-tested current frame after the descending scan; zero latency returns earlier, and positive latency cannot select that duplicate. |
+| `errors/pipeline.py::_canonical_key`, `track_field_generator` | canonical 23; generator 22 | `utf-8` and `UTF-8` encode identical seed bytes. |
+| `errors/pipeline.py::load_error_config` | 5, 7 | Same measured UTF-8 runtime invariant as the other YAML loaders. |
+| `metrics/bootstrap.py::_strata`, `_validated` | strata 8, 9; validated 17, 18, 19, 20, 27, 28, 29 | Only explanatory validation prose changes. |
+| `metrics/bootstrap.py::paired_scenario_bootstrap` | 30, 32, 38, 40 | Inputs are finite Python numbers; means are stored in float64 output and all percentile/estimate arithmetic is floating, so omitted explicit dtypes preserve output. |
+| `metrics/bootstrap.py::paired_scenario_bootstrap` | 49 | NumPy `Generator.choice` defaults to `replace=True`, identical to the omitted explicit argument. |
+| `metrics/events.py::extract_interventions` | 11 | `severest` is overwritten on the first braking state before an event can be emitted. |
+| `metrics/events.py::match_interventions` | 19, 20 | Only explanatory invalid-threshold prose changes. |
+| `metrics/safety.py::measured_simulated_seconds` | 12 | Only explanatory invalid-result prose changes. |
+| `simulation/route_follower.py::_validated_route` | 3, 5 | The accepted public route type is `Float64Array`; omitting the redundant cast dtype preserves it. |
+| `simulation/route_follower.py::_validated_route` | 17 | Only a dimension quoted in a refusal changes; exception class and rejected input do not. |
+| `simulation/route_follower.py::build_nominal_plan` | 24 | The frozen tracking time constant is exactly `1.0`, so multiplication and division are identical. |
+| `simulation/route_follower.py::pose_at_distance` | 25, 26 | Only explanatory zero-length-route refusal prose changes. |
+| `simulation/step_loop.py::_category_column` | 2, 3, 4 | Only explanatory unknown-category refusal prose changes. |
+| `simulation/step_loop.py::run_steps` | 4, 5 | `ScenarioChannels` unconditionally rejects zero/nonfinite `dt_s` before simulation with the same exception category; no valid zero-duration run exists. |
+| `simulation/step_loop.py::run_steps` | 64, 71 | Every first transition resets release memory to zero: demanded branches set it directly, and initial MONITOR/no-demand does too. |
+| `simulation/step_loop.py::run_steps` | 65, 72 | `previous_acceleration_mps2` is carried but never read here; applied acceleration and jerk limiting use the separate `applied` variable. |
+| `simulation/step_loop.py::run_steps` | 97, 98, 99, 100 | Only explanatory backward-clock refusal prose changes. |
+| `simulation/step_loop.py::run_steps` | 186 | `commands` has one entry per step exactly when AEB is enabled, making `commands and enabled` equal to `commands or enabled` at this point. |
+| `simulation/step_loop.py::run_steps` | 261, 262 | These request extra exact geometry only when the sound lower bound cannot improve the known minimum; outputs are unchanged. Mutant 260 is excluded and has an exact-corner test. |
+| `simulation/step_loop.py::run_steps` | 298 | Collision counters start at zero and the first counted collision immediately terminates the run, so assignment to one equals increment by one. |
+
+The measured release runtime reports preferred encoding `UTF-8`, filesystem and
+default encodings `utf-8`, and `sys.flags.utf8_mode == 0`; the YAML claims above
+therefore depend on the actual locale, not an assumed UTF-8 mode.
+
+One floating boundary is deliberately recorded as a limitation rather than an
+equivalence: the production `wrap_to_pi(nextafter(-pi, -inf))` can round to
+`+pi`, the same circular angle but outside a literal half-open representation.
+The audit test proves only that `nextafter(+pi, -inf)` remains inside the
+documented interval in production while the previously considered candidate
+mutation did not. That mutation was killed in the final audit. No statement
+here claims exact half-open representation for every finite floating-point
+angle.
