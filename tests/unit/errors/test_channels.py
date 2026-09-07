@@ -341,3 +341,86 @@ def test_a_step_duration_that_is_not_a_number_is_refused(bad_value: object) -> N
 
     with pytest.raises(ValueError, match=r"^dt_s\ must\ be\ a\ number"):
         channels.ScenarioChannels(configuration("zero"), dt_s=bad_value)  # type: ignore[arg-type]
+
+
+def test_default_and_nondefault_step_lengths_reach_real_fragmentation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A draw between the 0.1 s and 0.2 s hazards exposes both bound durations."""
+
+    from aebrisk.errors import fragmentation
+
+    channels = load_channels_module()
+    document = copy.deepcopy(channels.load_error_config())
+    document["channels"]["track_instability"]["fragmentation_rate_per_s"][2] = 1.0
+    monkeypatch.setattr(fragmentation, "fragmentation_draw", lambda *args: 0.15)
+    config = configuration("zero", track_instability="medium")
+    default = channels.ScenarioChannels(config, error_config=document)
+    slower = channels.ScenarioChannels(config, error_config=document, dt_s=0.2)
+    source = frame(0, tracks=1).tracks
+
+    default_track = default.tracking(source, key=key(), current_index=0)[0]
+    slower_track = slower.tracking(source, key=key(), current_index=0)[0]
+
+    assert default_track.visible is True
+    assert slower_track.visible is False
+
+
+def test_latency_and_dropout_stages_each_change_the_composed_pipeline_alone() -> None:
+    """The bound stage table must expose each actual channel, not an identity placeholder."""
+
+    from aebrisk.errors.pipeline import apply_error_pipeline
+
+    channels = load_channels_module()
+    document = copy.deepcopy(channels.load_error_config())
+    document["channels"]["latency"]["latency_s"][2] = 0.1
+    document["channels"]["dropout"]["dropout_probability"][2] = 1.0
+    frames = history(3)
+    latency_config = configuration("zero", latency="medium")
+    dropout_config = configuration("zero", dropout="medium")
+    latency_bound = channels.ScenarioChannels(latency_config, error_config=document)
+    dropout_bound = channels.ScenarioChannels(dropout_config, error_config=document)
+
+    delayed = apply_error_pipeline(
+        frames,
+        2,
+        latency_config,
+        key(),
+        stages=latency_bound.stages(),
+    )
+    hidden = apply_error_pipeline(
+        frames,
+        2,
+        dropout_config,
+        key(),
+        stages=dropout_bound.stages(),
+    )
+
+    assert delayed[0].source_timestamp_us == frames[1].timestamp_us
+    assert all(track.visible is False for track in hidden)
+
+
+def test_visibility_carries_state_and_refuses_a_backward_step() -> None:
+    """Dropping state would silently restart the causal dropout stream."""
+
+    channels = load_channels_module()
+    bound = channels.ScenarioChannels(configuration("zero"))
+    tracks = frame(2, tracks=1).tracks
+
+    bound.visibility(tracks, key=key(), current_index=2)
+
+    with pytest.raises(ValueError, match=r"^step 1 precedes the recorded step 2;"):
+        bound.visibility(tracks, key=key(), current_index=1)
+
+
+def test_latency_selection_is_optional_until_the_first_observation() -> None:
+    """There is no selected frame before latency runs; afterwards the actual choice is kept."""
+
+    channels = load_channels_module()
+    bound = channels.ScenarioChannels(configuration("zero"))
+    frames = history(2)
+
+    assert bound.latency_selection is None
+    bound.latency(frames[1].tracks, history=frames, current_index=1)
+    assert bound.latency_selection is not None
+    assert bound.latency_selection.selected_index == 1

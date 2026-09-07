@@ -148,6 +148,19 @@ def test_inverted_bounds_are_refused() -> None:
         controller.limit_acceleration(0.0, -1.0, min_mps2=2.0, max_mps2=-6.0)
 
 
+def test_equal_finite_bounds_define_one_valid_actuator_command() -> None:
+    """Only an inverted interval is impossible; a fixed actuator is a valid clamp."""
+
+    controller = load_controller_module()
+
+    assert controller.limit_acceleration(
+        1.0,
+        -1.0,
+        min_mps2=0.0,
+        max_mps2=0.0,
+    ) == pytest.approx(0.0)
+
+
 @pytest.mark.parametrize("field", ["previous_mps2", "target_mps2"])
 def test_a_non_finite_acceleration_is_refused(field: str) -> None:
     """A NaN command propagates into every position the simulation integrates."""

@@ -163,6 +163,16 @@ def test_a_yaw_just_past_pi_wraps_to_the_negative_side() -> None:
     assert localization.wrap_to_pi(0.0) == 0.0
 
 
+def test_the_largest_float_below_pi_stays_in_the_half_open_interval() -> None:
+    """Rounding at the branch cut must never return the excluded +pi endpoint."""
+
+    localization = load_localization_module()
+
+    wrapped = localization.wrap_to_pi(math.nextafter(math.pi, -math.inf))
+
+    assert -math.pi <= wrapped < math.pi
+
+
 def test_the_size_error_is_relative_to_the_object() -> None:
     """A 25 cm error on a pedestrian and on a truck are not the same mistake."""
 
@@ -378,6 +388,16 @@ def test_a_negative_step_is_refused() -> None:
 
     with pytest.raises(ValueError, match=r"^step\ must\ be\ a\ non\-negative\ integer$"):
         perturb(localization, make_tracks(1), step=-1)
+
+
+@pytest.mark.parametrize("bad_step", [True, 1.5])
+def test_a_boolean_or_noninteger_step_is_refused(bad_step: object) -> None:
+    """A draw index is an exact non-negative integer, never numeric shorthand."""
+
+    localization = load_localization_module()
+
+    with pytest.raises(ValueError, match=r"^step\ must\ be\ a\ non\-negative\ integer$"):
+        perturb(localization, make_tracks(1), step=bad_step)
 
 
 def test_an_empty_scene_is_handled() -> None:

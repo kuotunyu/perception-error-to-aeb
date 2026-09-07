@@ -147,6 +147,20 @@ def test_the_margin_grows_the_box_on_every_side() -> None:
     assert corners(polygon) == [(-2.5, -1.5), (2.5, -1.5), (2.5, 1.5), (-2.5, 1.5)]
 
 
+def test_positive_sub_metre_dimensions_form_a_real_box() -> None:
+    """TrackState accepts small bodies, so positivity is not a one-metre threshold."""
+
+    threat = load_threat_module()
+    polygon = threat.oriented_box_polygon((3.0, -2.0), 0.0, (0.5, 0.25))
+
+    assert corners(polygon) == [
+        (2.75, -2.125),
+        (3.25, -2.125),
+        (3.25, -1.875),
+        (2.75, -1.875),
+    ]
+
+
 @pytest.mark.parametrize("bad_value", [-0.1, float("nan")])
 def test_an_impossible_margin_is_refused(bad_value: float) -> None:
     """A negative margin would shrink the corridor and hide real overlaps."""
@@ -237,6 +251,21 @@ def test_overlap_is_symmetric() -> None:
     second = threat.oriented_box_polygon((3.5, 1.0), -0.9, (4.0, 2.0))
 
     assert threat.polygons_overlap(first, second) == threat.polygons_overlap(second, first)
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+def test_separated_convex_triangles_do_not_overlap_in_either_order(reverse: bool) -> None:
+    """A sole separating x axis must not be erased by global projection bounds."""
+
+    import numpy as np
+
+    threat = load_threat_module()
+    first = np.array(((0.0, 10.0), (2.0, 10.0), (0.0, 12.0)), dtype=np.float64)
+    second = np.array(((3.0, 9.0), (5.0, 9.0), (3.0, 11.0)), dtype=np.float64)
+    if reverse:
+        first, second = second, first
+
+    assert threat.polygons_overlap(first, second) is False
 
 
 # --------------------------------------------------------------------------
@@ -424,6 +453,61 @@ def test_the_assessment_carries_the_track_it_describes() -> None:
     assert assessment.track_id == "t-0042"
 
 
+def test_every_nonoverlap_branch_carries_its_actual_track_identity() -> None:
+    """Cheap, exact-bound, and sampled near misses remain attributable to a body."""
+
+    threat = load_threat_module()
+    cheap = threat.assess_threat(
+        make_ego(speed=1.0, velocity=(1.0, 0.0)),
+        make_track(center=(100.0, 0.0), size=(2.0, 2.0), track_id="cheap"),
+    )
+    tight = threat.assess_threat(
+        make_ego(speed=1.0, velocity=(1.0, 0.0)),
+        make_track(center=(8.0, 0.0), size=(2.0, 2.0), track_id="tight"),
+    )
+    sampled = threat.assess_threat(
+        make_ego(center=(10.0, -5.0), speed=0.0, velocity=(0.0, 0.0)),
+        make_track(
+            center=(16.0, -2.0),
+            size=(2.0, 2.0),
+            velocity=(-4.0, 0.0),
+            track_id="sampled",
+        ),
+    )
+
+    assert (cheap.track_id, tight.track_id, sampled.track_id) == (
+        "cheap",
+        "tight",
+        "sampled",
+    )
+    assert tight.min_clearance_m == pytest.approx(0.5)
+    assert sampled.min_clearance_m == pytest.approx(0.5)
+
+
+def test_cheap_reach_uses_both_nonzero_relative_velocity_components() -> None:
+    """With ego y=4 and track y=1, reach uses their 3 m/s difference, not their sum."""
+
+    threat = load_threat_module()
+    ego = make_ego(speed=5.0, velocity=(3.0, 4.0))
+    track = make_track(
+        center=(25.0, 0.0),
+        velocity=(0.0, 1.0),
+        track_id="two-component-reach",
+    )
+
+    assessment = threat.assess_threat(ego, track)
+    expected = (
+        25.0
+        - threat.half_diagonal_m(ego.size_lw_m, 0.5)
+        - threat.half_diagonal_m(track.size_lw_m)
+        - math.hypot(3.0, 3.0) * 4.0
+    )
+
+    assert assessment.track_id == "two-component-reach"
+    assert assessment.predicted_overlap is False
+    assert assessment.min_clearance_m == pytest.approx(expected)
+
+
 def test_the_corridor_margin_widens_what_counts_as_a_threat() -> None:
     """It is the study's stated conservatism, so it must actually do something."""
 
@@ -475,6 +559,16 @@ def test_the_required_deceleration_is_the_hand_computed_value() -> None:
     assessment = threat.assess_threat(make_ego(), make_track())
 
     assert assessment.required_deceleration_mps2 == pytest.approx(3.125)
+
+
+def test_a_positive_sub_one_closing_speed_still_requires_braking() -> None:
+    """At 0.5 m/s with a 5 m gap, v squared over twice the gap is 0.025."""
+
+    threat = load_threat_module()
+    ego = make_ego(speed=0.5, velocity=(0.5, 0.0))
+    track = make_track(center=(9.0, 0.0))
+
+    assert threat._required_deceleration(ego, track) == pytest.approx(0.025)
 
 
 def test_a_receding_object_requires_no_deceleration() -> None:
@@ -796,6 +890,48 @@ def test_a_step_longer_than_the_horizon_is_refused() -> None:
         threat.assess_threat(make_ego(), make_track(), horizon_s=1.0, step_s=2.0)
 
 
+def test_a_rollout_step_equal_to_the_horizon_is_valid() -> None:
+    """The inclusive rollout contains the present and one future sample."""
+
+    threat = load_threat_module()
+    assessment = threat.assess_threat(
+        make_ego(),
+        make_track(center=(12.0, 0.0), track_id="one-step"),
+        horizon_s=1.0,
+        step_s=1.0,
+    )
+
+    assert assessment.track_id == "one-step"
+    assert assessment.ttc_s == pytest.approx(1.0)
+
+
+def test_first_overlap_does_not_sample_past_the_declared_horizon() -> None:
+    """Contact one step after the requested rollout remains outside that rollout."""
+
+    threat = load_threat_module()
+    first = threat.oriented_box_polygon((0.0, 0.0), 0.0, (2.0, 2.0))
+    second = threat.oriented_box_polygon((4.0, 0.0), 0.0, (2.0, 2.0))
+
+    assert threat.first_overlap_step(first, second, (-1.0, 0.0), 1.0, 1) is None
+    assert threat.first_overlap_step(first, second, (-1.0, 0.0), 1.0, 2) == 2
+
+
+@pytest.mark.parametrize(
+    ("start", "velocity"),
+    [((4.0, 0.0), (-2.0, 0.0)), ((-4.0, 0.0), (2.0, 0.0))],
+)
+def test_first_overlap_counts_exact_edge_contact_from_either_side(
+    start: tuple[float, float], velocity: tuple[float, float]
+) -> None:
+    """Strict separation makes a shared edge at a sampled instant an overlap."""
+
+    threat = load_threat_module()
+    first = threat.oriented_box_polygon((0.0, 0.0), 0.0, (2.0, 2.0))
+    second = threat.oriented_box_polygon(start, 0.0, (2.0, 2.0))
+
+    assert threat.first_overlap_step(first, second, velocity, 1.0, 1) == 1
+
+
 def test_a_point_that_is_not_a_pair_is_refused() -> None:
     """A three component centre would silently take only the first two.
 
@@ -910,6 +1046,40 @@ def test_a_body_that_is_already_touching_is_never_skipped() -> None:
 
     assert assessment.predicted_overlap is True
     assert assessment.ttc_s == 0.0
+
+
+def test_a_cheap_bound_equal_to_reach_still_checks_the_horizon_contact() -> None:
+    """At equality the body can touch at the endpoint, so the bound cannot skip it."""
+
+    threat = load_threat_module()
+    yaw = -math.atan2(4.0, 3.0)
+    ego = threat.EgoKinematicState(
+        center_xy_m=(0.0, 0.0),
+        yaw_rad=yaw,
+        size_lw_m=(6.0, 8.0),
+        speed_mps=4.0,
+        velocity_xy_mps=(4.0, 0.0),
+        acceleration_mps2=0.0,
+    )
+    track = make_track(
+        center=(14.0, 0.0),
+        yaw=yaw,
+        size=(6.0, 8.0),
+        velocity=(0.0, 0.0),
+        track_id="endpoint-contact",
+    )
+
+    assessment = threat.assess_threat(
+        ego,
+        track,
+        horizon_s=1.0,
+        step_s=1.0,
+        corridor_margin_m=0.0,
+    )
+
+    assert assessment.track_id == "endpoint-contact"
+    assert assessment.predicted_overlap is True
+    assert assessment.ttc_s == pytest.approx(1.0)
 
 
 def test_two_bodies_that_never_approach_are_skipped_on_the_first_step() -> None:

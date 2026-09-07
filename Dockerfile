@@ -21,8 +21,10 @@ RUN apt-get update \
 # (bind-mounted by compose), /work/artifacts its only writable output root,
 # /data holds read-only dataset mounts, /opt/venv the locked environment so it
 # never lives on a bind mount.
-RUN groupadd --gid 1000 aeb \
-    && useradd --uid 1000 --gid aeb --create-home --shell /bin/bash aeb \
+ARG AEB_UID=1000
+ARG AEB_GID=1000
+RUN groupadd --gid "$AEB_GID" aeb \
+    && useradd --uid "$AEB_UID" --gid aeb --create-home --shell /bin/bash aeb \
     && mkdir -p /work/artifacts /data/nuplan /opt/venv \
     && chown -R aeb:aeb /work /opt/venv
 

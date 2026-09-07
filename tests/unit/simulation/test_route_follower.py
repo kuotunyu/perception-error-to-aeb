@@ -59,6 +59,7 @@ def straight_route(points: int = 40, spacing: float = 2.0) -> Any:
         (30.0, 40.0, 13.9),  # the study's own cap binds
         (8.0, None, 8.0),  # no map limit available
         (30.0, None, 13.9),  # no map limit, cap still binds
+        (8.0, 0.5, 0.5),  # a small positive map limit is still a real constraint
     ],
 )
 def test_the_target_speed_is_the_smallest_of_the_three_constraints(
@@ -493,6 +494,18 @@ def test_running_past_the_end_of_the_route_stops_at_its_last_waypoint() -> None:
 
     assert (x, y) == pytest.approx((10.0, 10.0))
     assert yaw == pytest.approx(math.pi / 2)
+
+
+def test_terminal_heading_uses_both_components_of_the_last_segment() -> None:
+    """A translated diagonal endpoint faces atan2(dy, dx), not endpoint coordinates."""
+
+    route_follower = load_route_follower_module()
+    route = np.array([[1.0, 2.0], [5.0, 13.0], [11.0, 17.0]], dtype=np.float64)
+
+    point, yaw = route_follower.pose_at_distance(route, 1_000.0)
+
+    assert point == pytest.approx((11.0, 17.0))
+    assert yaw == pytest.approx(math.atan2(4.0, 6.0))
 
 
 @pytest.mark.parametrize(

@@ -292,6 +292,19 @@ def test_a_history_that_goes_backwards_in_time_is_refused() -> None:
         latency.select_latency_frame(history, 2, 0.1)
 
 
+def test_future_history_outside_the_current_prefix_is_ignored() -> None:
+    """A later malformed entry cannot invalidate a causal observation made now."""
+
+    latency = load_latency_module()
+    frames = regular_history(3)
+    future = make_frame(99, frames[1].timestamp_us - 1)
+
+    selected = latency.select_latency_frame((*frames, future), 2, 0.1)
+
+    assert selected.valid is True
+    assert selected.selected_index == 1
+
+
 def test_an_empty_history_is_refused() -> None:
     """There is nothing to observe, so any selection would be invented."""
 

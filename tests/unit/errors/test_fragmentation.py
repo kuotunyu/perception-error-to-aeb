@@ -727,3 +727,215 @@ def test_an_impossible_step_index_is_refused(bad_value: object) -> None:
             key=make_key(),
             step=bad_value,  # type: ignore[arg-type]
         )
+
+
+def test_the_draw_is_the_documented_named_track_and_step_stream() -> None:
+    """The fixed study draw includes the key, real identity, step, and field name."""
+
+    from aebrisk.errors.pipeline import track_field_generator
+
+    fragmentation = load_fragmentation_module()
+    key = make_key()
+    expected = float(track_field_generator(key, "sensor#rack", 7, "fragmentation").random())
+
+    assert fragmentation.fragmentation_draw(key, "sensor#rack", 7) == expected
+
+
+def test_default_step_probability_and_strict_draw_boundary_are_public_outcomes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Default 0.1 s and draw < probability jointly decide whether identity is lost."""
+
+    import math
+
+    fragmentation = load_fragmentation_module()
+    rate = -math.log(0.5) / 0.1
+    monkeypatch.setattr(fragmentation, "fragmentation_draw", lambda *args: 0.75)
+    (kept,), _ = fragmentation.update_fragmentation(
+        (make_track(),),
+        {},
+        rate_per_s=rate,
+        reacquisition_delay_s=0.1,
+        key=make_key(),
+        step=0,
+    )
+    probability = fragmentation.fragmentation_probability(rate, 0.1)
+    monkeypatch.setattr(fragmentation, "fragmentation_draw", lambda *args: probability)
+    (at_boundary,), _ = fragmentation.update_fragmentation(
+        (make_track(),),
+        {},
+        rate_per_s=rate,
+        reacquisition_delay_s=0.1,
+        key=make_key(),
+        step=0,
+    )
+
+    assert kept.visible is True
+    assert at_boundary.visible is True
+
+
+def test_update_passes_each_real_identity_and_current_step_to_the_draw(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Two bodies and one step use two distinct named deterministic streams."""
+
+    fragmentation = load_fragmentation_module()
+    seen: list[tuple[str, int]] = []
+
+    def capture(key: Any, track_id: str, step: int) -> float:
+        seen.append((track_id, step))
+        return 1.0
+
+    monkeypatch.setattr(fragmentation, "fragmentation_draw", capture)
+    fragmentation.update_fragmentation(
+        (make_track("first"), make_track("second")),
+        {},
+        rate_per_s=0.5,
+        reacquisition_delay_s=0.1,
+        key=make_key(),
+        step=7,
+    )
+
+    assert seen == [("first", 7), ("second", 7)]
+
+
+def test_reacquisition_preserves_covariance_slots_and_memory_provenance() -> None:
+    """Only both diagonals gain variance; identity and timestamp remain attributable."""
+
+    fragmentation = load_fragmentation_module()
+    source = make_track("source", covariance=(2.0, 3.0, 5.0, 7.0))
+    memory = fragmentation.TrackMemory(
+        public_track_id="source#2",
+        source_track_id="source",
+        last_seen_timestamp_us=BASE_US - 100_000,
+        reacquire_after_us=BASE_US,
+        previous_center_xy_m=None,
+    )
+
+    (observed,), memories = fragmentation.update_fragmentation(
+        (source,),
+        {"source": memory},
+        rate_per_s=0.0,
+        reacquisition_delay_s=0.1,
+        key=make_key(),
+        step=4,
+    )
+
+    assert observed.covariance_xy == pytest.approx((3.0, 3.0, 5.0, 8.0))
+    assert memories["source"].source_track_id == "source"
+    assert memories["source"].last_seen_timestamp_us == BASE_US
+
+
+def test_a_new_fragmentation_memory_records_source_and_actual_timestamp() -> None:
+    """The outage record remains attributable before the body is reacquired."""
+
+    fragmentation = load_fragmentation_module()
+
+    _, memories = fragmentation.update_fragmentation(
+        (make_track("breaking", timestamp_us=BASE_US + 17),),
+        {},
+        rate_per_s=CERTAIN_RATE,
+        reacquisition_delay_s=0.1,
+        key=make_key(),
+        step=3,
+    )
+
+    assert memories["breaking"].source_track_id == "breaking"
+    assert memories["breaking"].last_seen_timestamp_us == BASE_US + 17
+
+
+def test_one_microsecond_of_positive_elapsed_time_is_differenced() -> None:
+    """The accepted timestamp unit is a microsecond, so one is already positive."""
+
+    fragmentation = load_fragmentation_module()
+    memory = fragmentation.TrackMemory(
+        public_track_id="tiny",
+        source_track_id="tiny",
+        last_seen_timestamp_us=BASE_US,
+        reacquire_after_us=0,
+        previous_center_xy_m=(0.0, 0.0),
+    )
+    track = make_track(
+        "tiny",
+        center=(0.000001, 0.0),
+        timestamp_us=BASE_US + 1,
+        velocity=(99.0, 0.0),
+    )
+
+    (observed,), _ = fragmentation.update_fragmentation(
+        (track,),
+        {"tiny": memory},
+        rate_per_s=0.0,
+        reacquisition_delay_s=0.0,
+        key=make_key(),
+        step=1,
+    )
+
+    assert observed.velocity_xy_mps == pytest.approx((1.0, 0.0))
+
+
+def test_a_positive_microsecond_reacquisition_marker_is_not_treated_as_absent() -> None:
+    """Any positive marker denotes a completed outage when its timestamp has arrived."""
+
+    fragmentation = load_fragmentation_module()
+    memory = fragmentation.TrackMemory(
+        public_track_id="tiny",
+        source_track_id="tiny",
+        last_seen_timestamp_us=0,
+        reacquire_after_us=1,
+        previous_center_xy_m=None,
+    )
+
+    (observed,), _ = fragmentation.update_fragmentation(
+        (make_track("tiny", timestamp_us=1),),
+        {"tiny": memory},
+        rate_per_s=0.0,
+        reacquisition_delay_s=0.0,
+        key=make_key(),
+        step=1,
+    )
+
+    assert observed.track_id == "tiny#1"
+
+
+def test_hidden_and_reacquired_first_tracks_do_not_discard_later_tracks() -> None:
+    """Each body is processed independently when an earlier body changes state."""
+
+    fragmentation = load_fragmentation_module()
+    hidden = fragmentation.TrackMemory(
+        public_track_id="hidden",
+        source_track_id="hidden",
+        last_seen_timestamp_us=BASE_US,
+        reacquire_after_us=BASE_US + 1,
+        previous_center_xy_m=None,
+    )
+    released = fragmentation.TrackMemory(
+        public_track_id="released",
+        source_track_id="released",
+        last_seen_timestamp_us=BASE_US - 1,
+        reacquire_after_us=BASE_US,
+        previous_center_xy_m=None,
+    )
+
+    hidden_result, _ = fragmentation.update_fragmentation(
+        (make_track("hidden"), make_track("visible")),
+        {"hidden": hidden},
+        rate_per_s=0.0,
+        reacquisition_delay_s=0.1,
+        key=make_key(),
+        step=1,
+    )
+    released_result, _ = fragmentation.update_fragmentation(
+        (make_track("released"), make_track("visible")),
+        {"released": released},
+        rate_per_s=0.0,
+        reacquisition_delay_s=0.1,
+        key=make_key(),
+        step=1,
+    )
+
+    assert [(track.track_id, track.visible) for track in hidden_result] == [
+        ("hidden", False),
+        ("visible", True),
+    ]
+    assert [track.track_id for track in released_result] == ["released#1", "visible"]

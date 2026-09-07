@@ -417,6 +417,34 @@ def test_the_channels_are_applied_in_the_declared_order() -> None:
     assert calls == ["latency", "visibility", "geometry", "tracking"]
 
 
+def test_each_stage_receives_the_supplied_configuration_in_its_context() -> None:
+    """A config-aware stage must see the exact configuration the public call received."""
+
+    pipeline = load_pipeline_module()
+    config = zero_configuration(pipeline)
+    seen: list[Any] = []
+
+    def config_aware(tracks: Any, **context: Any) -> Any:
+        seen.append(context["config"])
+        return tracks
+
+    stages = pipeline.ChannelStages(
+        latency=config_aware,
+        visibility=config_aware,
+        geometry=config_aware,
+        tracking=config_aware,
+    )
+    pipeline.apply_error_pipeline(
+        (make_frame(),),
+        0,
+        config,
+        make_key(pipeline),
+        stages=stages,
+    )
+
+    assert seen == [config, config, config, config]
+
+
 def test_the_pipeline_refuses_an_index_outside_the_history() -> None:
     """Reading past the end would silently reuse the last frame as if it were current."""
 

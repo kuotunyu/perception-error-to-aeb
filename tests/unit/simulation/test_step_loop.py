@@ -378,6 +378,66 @@ def test_the_ego_follows_the_route_rather_than_a_straight_line() -> None:
     assert outcome.final_pose_xy_m == pytest.approx((10.0, 20.0), abs=1e-6)
 
 
+def test_rotated_route_velocity_drives_the_physical_threat_assessment() -> None:
+    """At 45 degrees both velocity components are speed times the route heading."""
+
+    module = load_step_loop_module()
+    coordinate = 30.0 / math.sqrt(2.0)
+
+    def diagonal_lead(step: int) -> tuple[int, tuple[TrackState, ...]]:
+        timestamp_us = FIRST_TIMESTAMP_US + step * round(DT_S * 1_000_000)
+        return timestamp_us, (
+            TrackState(
+                track_id="diagonal-lead",
+                category="vehicle",
+                center_xy_m=(coordinate, coordinate),
+                yaw_rad=math.pi / 4.0,
+                size_lw_m=EGO_SIZE,
+                velocity_xy_mps=(0.0, 0.0),
+                visible=True,
+                source_timestamp_us=timestamp_us,
+                covariance_xy=(0.0, 0.0, 0.0, 0.0),
+            ),
+        )
+
+    outcome = module.run_steps(
+        token=TOKEN,
+        route_xy=np.array([[0.0, 0.0], [100.0, 100.0]], dtype=np.float64),
+        frame_at_step=diagonal_lead,
+        steps=3,
+        initial_speed_mps=10.0,
+        ego_size_lw_m=EGO_SIZE,
+        configuration=configuration(),
+        replicate=0,
+        protocol_hash=PROTOCOL_HASH,
+        dt_s=DT_S,
+        map_speed_limit_mps=None,
+    )
+
+    assert outcome.states == (AEBState.MONITOR, AEBState.WARNING, AEBState.PARTIAL)
+    assert outcome.min_ttc_s == pytest.approx(2.4)
+
+
+def test_nondefault_dt_reaches_real_fragmentation_in_the_public_loop() -> None:
+    """At two seconds the fixed draw fragments; at the wrong 0.1 default it remains."""
+
+    module = load_step_loop_module()
+    severities = dict.fromkeys(CHANNELS, "zero")
+    severities["track_instability"] = "high"
+    config = ExperimentConfiguration(
+        configuration_id="track-instability-high",
+        aeb_enabled=True,
+        observation_mode="corrupted",
+        severity_by_channel=severities,
+        replicate_count=1,
+    )
+
+    outcome = run(module, lead_at(20.0), config=config, steps=1, dt_s=2.0)
+
+    assert outcome.states == (AEBState.MONITOR,)
+    assert outcome.min_ttc_s is None
+
+
 def test_running_out_of_route_ends_the_run_rather_than_inventing_road() -> None:
     """Extrapolating past the recording would place agents beside an ego that is nowhere."""
 
@@ -488,6 +548,130 @@ def test_a_world_source_that_goes_backwards_is_refused() -> None:
 
     with pytest.raises(ValueError, match=r"^the world source went backwards in time at step 2"):
         run(module, steps=3, source=lambda step: (stamps[step], ()))
+
+
+def test_repeated_world_timestamps_are_accepted() -> None:
+    """The recording clock is nondecreasing; two observations may share a timestamp."""
+
+    module = load_step_loop_module()
+    outcome = run(
+        module,
+        config=configuration("no_aeb", aeb=False),
+        steps=2,
+        source=lambda step: (FIRST_TIMESTAMP_US, ()),
+    )
+
+    assert outcome.states == (AEBState.MONITOR, AEBState.MONITOR)
+
+
+def test_a_backward_second_frame_reports_the_previous_timestamp() -> None:
+    """The first possible reversal raises the declared ValueError rather than an index error."""
+
+    module = load_step_loop_module()
+    stamps = (FIRST_TIMESTAMP_US, FIRST_TIMESTAMP_US - 1)
+
+    with pytest.raises(
+        ValueError,
+        match=rf"^the world source went backwards in time at step 1: {stamps[1]} is before {stamps[0]};",
+    ):
+        run(module, steps=2, source=lambda step: (stamps[step], ()))
+
+
+def test_first_frame_warning_count_starts_at_zero_and_scales_with_dt() -> None:
+    """A warning-only threat needs two 0.1 s frames but one 0.2 s frame."""
+
+    module = load_step_loop_module()
+    normal = run(module, lead_at(31.5), steps=2)
+    slower = run(module, lead_at(31.5), steps=1, dt_s=0.2)
+
+    assert normal.states == (AEBState.MONITOR, AEBState.WARNING)
+    assert slower.states == (AEBState.WARNING,)
+
+
+def test_exact_stopped_speed_records_the_first_stop_distance() -> None:
+    """The reporting threshold is inclusive even when the integrator lands on it exactly."""
+
+    module = load_step_loop_module()
+    outcome = run(
+        module,
+        config=configuration("no_aeb", aeb=False),
+        steps=1,
+        initial_speed_mps=module.STOPPED_SPEED_MPS,
+    )
+
+    assert outcome.final_speed_mps == module.STOPPED_SPEED_MPS
+    assert outcome.stop_distance_m == pytest.approx(module.STOPPED_SPEED_MPS * DT_S)
+
+
+def test_exact_route_endpoint_ends_the_run_immediately() -> None:
+    """Driving exactly the recorded length exhausts the route without an extra step."""
+
+    module = load_step_loop_module()
+    outcome = module.run_steps(
+        token=TOKEN,
+        route_xy=np.array([[0.0, 0.0], [1.0, 0.0]], dtype=np.float64),
+        frame_at_step=stamped(empty_road),
+        steps=1,
+        initial_speed_mps=10.0,
+        ego_size_lw_m=EGO_SIZE,
+        configuration=configuration("no_aeb", aeb=False),
+        replicate=0,
+        protocol_hash=PROTOCOL_HASH,
+        dt_s=DT_S,
+        map_speed_limit_mps=None,
+    )
+
+    assert outcome.distance_travelled_m == pytest.approx(1.0)
+    assert outcome.ran_out_of_route is True
+
+
+def test_distinct_excluded_contacts_include_an_exact_corner_touch() -> None:
+    """Each body counts once, including a second body whose sound bound is exactly zero."""
+
+    module = load_step_loop_module()
+
+    def contacts(step: int, timestamp_us: int) -> tuple[TrackState, ...]:
+        return (
+            TrackState(
+                track_id="a-overlap",
+                category="vehicle",
+                center_xy_m=(0.0, 0.0),
+                yaw_rad=0.0,
+                size_lw_m=(6.0, 8.0),
+                velocity_xy_mps=(0.0, 0.0),
+                visible=True,
+                source_timestamp_us=timestamp_us,
+                covariance_xy=(0.0, 0.0, 0.0, 0.0),
+            ),
+            TrackState(
+                track_id="z-corner",
+                category="vehicle",
+                center_xy_m=(6.0, 8.0),
+                yaw_rad=0.0,
+                size_lw_m=(6.0, 8.0),
+                velocity_xy_mps=(0.0, 0.0),
+                visible=True,
+                source_timestamp_us=timestamp_us,
+                covariance_xy=(0.0, 0.0, 0.0, 0.0),
+            ),
+        )
+
+    outcome = module.run_steps(
+        token=TOKEN,
+        route_xy=np.array([[0.0, 0.0], [400.0, 0.0]], dtype=np.float64),
+        frame_at_step=stamped(contacts),
+        steps=1,
+        initial_speed_mps=0.0,
+        ego_size_lw_m=(6.0, 8.0),
+        configuration=configuration("no_aeb", aeb=False),
+        replicate=0,
+        protocol_hash=PROTOCOL_HASH,
+        dt_s=DT_S,
+        map_speed_limit_mps=None,
+    )
+
+    assert outcome.min_clearance_m == 0.0
+    assert outcome.contacts_not_at_fault == 2
 
 
 def bodies(*centres: tuple[float, float]) -> Any:

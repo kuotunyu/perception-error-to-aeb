@@ -320,6 +320,16 @@ def test_matching_is_one_to_one() -> None:
     assert len(summary.matched_delays_s) == 1
 
 
+def test_the_default_tolerance_refuses_a_candidate_one_and_a_half_seconds_away() -> None:
+    """The public one-second default is part of the comparison, not a loose hint."""
+
+    events = load_events_module()
+    summary = events.match_interventions((event(10.0, 10.5),), (event(11.5, 12.0),))
+
+    assert summary.matched_delays_s == ()
+    assert (summary.missed, summary.false) == (1, 1)
+
+
 def test_the_nearest_counterpart_is_chosen() -> None:
     """Greedy on the smallest absolute delay, so the pairing is not order-dependent."""
 
@@ -447,6 +457,32 @@ def test_zero_tolerance_and_zero_lateness_match_only_equal_onsets() -> None:
     )
 
     assert (summary.missed, summary.false, summary.matched_delays_s) == (0, 0, (0.0,))
+
+
+def test_exact_grid_epsilon_boundaries_are_inclusive_for_match_and_strict_for_late() -> None:
+    """The documented floating buffer belongs to both threshold comparisons."""
+
+    events = load_events_module()
+    epsilon = events.GRID_EPSILON_S
+    match_edge = 1.0 + epsilon
+    late_edge = 0.3 + epsilon
+    at_match_edge = events.match_interventions(
+        (event(0.0, 0.5),),
+        (event(match_edge, match_edge + 0.5),),
+        tolerance_s=1.0,
+        missed_delay_s=1.0,
+    )
+    at_late_edge = events.match_interventions(
+        (event(0.0, 0.5),),
+        (event(late_edge, late_edge + 0.5),),
+        tolerance_s=1.0,
+        missed_delay_s=late_edge - epsilon,
+    )
+
+    assert at_match_edge.matched_delays_s == pytest.approx((match_edge,))
+    assert (at_match_edge.missed, at_match_edge.false) == (0, 0)
+    assert at_late_edge.matched_delays_s == pytest.approx((late_edge,))
+    assert (at_late_edge.missed, at_late_edge.false) == (0, 0)
 
 
 @pytest.mark.parametrize("bad_value", [-0.1, float("nan")])
