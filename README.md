@@ -7,11 +7,10 @@ braking (AEB) controller on a common nuPlan scenario cohort.
 
 ## Status
 
-The pinned container, the locked environment, the private-file guard and the
-deterministic verification gate exist. **No simulation, no cohort and no result
-exists yet.** Every number that will eventually appear here must trace to a
-frozen cohort manifest, a run record and an artifact hash; until then there are
-none.
+The formal simulation, frozen cohort, analysis documents and generated claims
+registry are available locally. Publication preparation is still in progress;
+this repository has not been released. Start with the [documentation guide](docs/README.md)
+for the evidence, reproduction commands and interpretation limits.
 
 ## The question
 

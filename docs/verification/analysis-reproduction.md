@@ -53,6 +53,11 @@ so there are no exclusion reasons to enumerate.
 
 ## Statistical boundary
 
+The Shapley reference is `coalition-none`, the zero-severity tracking pipeline,
+not `oracle_aeb`. Even at zero severity, tracking derives velocities from
+observed position differences; oracle bypasses that pipeline. Contributions
+therefore decompose the full coalition minus the empty coalition.
+
 Each interval first averages the three replicates within a token, then performs
 5,000 paired, family-stratified resamples with seed 20260831. One token draw is
 shared across all configurations. Shapley likewise builds both metric games
@@ -60,6 +65,12 @@ from each token's replicate means, checks efficiency to at most `1e-9`, and
 only then averages channel contributions. The observed maximum residuals are
 `2.220446049250313e-16` for collision indicator and
 `2.6645352591003757e-15` for intervention duration.
+
+Those residuals verify arithmetic efficiency, not statistical confidence.
+`shapley.json` contains observed mean contributions without uncertainty bounds.
+`intervals.json` contains configuration-specific intervals from shared paired
+draws, not intervals for differences between configurations. Neither artifact
+supports significance claims for changes or rankings of channel importance.
 
 The result record does not carry distance travelled. This release therefore
 reports `collisions_per_100km` as `null` for every configuration rather than

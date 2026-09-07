@@ -1,11 +1,11 @@
 # Simulation contract
 
-Every configuration in this study must differ from every other in exactly one
-way: the perception error applied to it. Anything else that differs — the
-scenario, the initial state, the route, the controller, the step rate, the
-duration, how long the recording is watched for — makes two numbers
-incomparable while both still look like results. This document states the
-settings that hold constant, and where each is enforced.
+The study holds the scenario, initial state, route, controller, step rate,
+requested maximum horizon and termination rules fixed across configurations.
+The declared observation pipeline and error configuration may differ. Actual
+executed duration can differ when a collision or route end terminates a run;
+rates use each configuration's measured exposure. This document states these
+settings and where each is enforced.
 
 ## The wiring
 
@@ -15,7 +15,7 @@ settings that hold constant, and where each is enforced.
 | Ego | closed loop, driven by this project's controller | A replayed ego would give every configuration the same trajectory, and the AEB would command brakes that never happened. |
 | Expert longitudinal braking | not available to the controller | The logged driver already avoided most of these collisions. A controller with access to that braking would inherit an avoidance the perception pipeline never earned, and every configuration would look competent. |
 | Step rate | 10 Hz | Fixed by the protocol. |
-| Scenario duration | 15 s, every scenario | Two scenarios simulated for different lengths cannot be compared on any rate, and no configuration may change how long it is measured over. |
+| Requested maximum horizon | 15 s for the formal nuPlan study | The horizon and termination rules are fixed; collision or route end can shorten actual exposure, which is recorded separately for each configuration. |
 
 `build_simulation_wiring` refuses any other value rather than accepting it, and
 the wiring identifier it returns is cited in every run record beside the planner
@@ -104,20 +104,27 @@ This is not a hypothesis. The first smoke over real nuPlan scenarios, on
 2026-09-06, put `oracle_aeb` at twelve collisions against `no_aeb`'s three. Every
 one of the twelve happened at an ego speed of 0.00 m/s, and the striking body in
 the case examined was 4.97 m BEHIND the ego's centre, 0.01 m off its axis, moving
-at 6.22 m/s. **Counting those would have reported the AEB as harmful, and the
-study's headline would have been backwards.**
+at 6.22 m/s. Counting all contacts changes the reported comparison. The study
+therefore reports counted and excluded contacts under the explicit rule below;
+these categories alone do not establish a causal safety benefit or harm.
 
-So a contact is attributed the way nuPlan's own `ego_at_fault_collisions`
-attributes it, and `ego_at_fault` in `simulation/step_loop.py` is the whole rule:
+This study applies its declared simulation contact classification in
+`ego_at_fault`, in `simulation/step_loop.py`:
 
-- **A stopped ego is not at fault.** There is nothing left for perception or
-  braking to have done differently.
-- **An ego struck from behind by something faster is not at fault.** The body is
-  behind the ego's centre and closing on it.
-- **Everything else is.** The ego drove into a body, and whether it should have
-  braked sooner is exactly what this study measures.
+- Contacts while the ego is at or below the stopped-speed threshold are excluded.
+- Contacts with a body behind the ego whose speed magnitude exceeds the ego's
+  speed are excluded. This compares speed magnitudes, not relative longitudinal
+  closing velocity.
+- All remaining contacts are counted in the collision metrics.
 
-Two consequences are deliberate. A contact that is not the ego's fault is
+This is the study's operational definition of "at fault", not a determination
+of legal responsibility or a demonstrated equivalence to every upstream nuPlan
+collision condition. Both counted collisions and `contacts_not_at_fault` must
+be reported: zero counted collisions does not mean contact-free operation,
+better perception or demonstrated real-world safety. The frozen results retain
+this rule; changing it requires a new protocol version.
+
+Two consequences are deliberate. A contact excluded by this rule is
 **counted, in `contacts_not_at_fault`, rather than dropped** — a run that the
 recording rear-ended is a fact about the simulation and a reader has to see how
 often it happens. And it **does not end the run**: ending it would give the

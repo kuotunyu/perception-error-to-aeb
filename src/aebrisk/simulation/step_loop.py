@@ -3,7 +3,7 @@
 This is the study's experiment, and its whole design is that exactly one thing
 differs between cells of the matrix: what the AEB was told. The nominal
 controller is perception-blind by construction, the route is the logged one, the
-step rate and duration are the protocol's, and the ego's motion is integrated the
+step rate and maximum horizon are the protocol's, and the ego's motion is integrated the
 same way whatever the observation showed. Only the braking command changes.
 
 Until 2026-09-06 this loop existed solely inside
@@ -11,21 +11,17 @@ Until 2026-09-06 this loop existed solely inside
 the study rests on that lives in a test file has no production twin, and the
 synthetic scenario was therefore evidence about itself. It now drives this.
 
-A CONTACT IS NOT THE SAME THING AS A COLLISION THE EGO CAUSED, and getting that
-wrong inverts the study. The agents replay the log and never react, so an ego
-that brakes — correctly, for a pedestrian — is then driven into by the vehicle
-that was following it in the recording. The first smoke over real nuPlan
-scenarios, on 2026-09-06, showed `oracle_aeb` with twelve collisions against
-`no_aeb`'s three, and every one of them happened at an ego speed of 0.00 m/s
-with the striking body five metres BEHIND the ego at 6.2 m/s. Counting those
-would report the AEB as harmful, which is the opposite of what happened.
+The study distinguishes counted collisions from contacts excluded by its
+declared simulation rule. Logged actors do not react to the simulated ego.
+The initial real-data smoke revealed contacts while ego was stopped, motivating
+separate reporting of this classification. Counting all contacts changes the
+reported comparison; neither category alone establishes a causal safety effect.
 
-So a contact is attributed the way nuPlan's own `ego_at_fault_collisions`
-attributes it: a stopped ego is not at fault, and neither is one struck from
-behind by something faster. A contact that is not the ego's fault is COUNTED
-SEPARATELY AND DOES NOT END THE RUN, because ending it would give the braking
-configurations less exposure than the others and bias the comparison the same way
-again, one level down.
+The rule excludes a stopped ego or a body behind ego with greater speed
+magnitude. It does not test relative longitudinal closing velocity or establish
+full equivalence to an upstream collision classifier. Excluded contacts are
+counted separately and do not terminate the run; counted collisions terminate
+it. Actual exposure is recorded for either outcome.
 
 Five more decisions here would be wrong silently, so each is stated where it is
 made:
@@ -108,10 +104,9 @@ class StepLoopOutcome:
     max_deceleration_mps2: float
     max_abs_jerk_mps3: float
     intervention_duration_s: float
-    #: Contacts the ego could not have avoided: it was stopped, or it was struck
-    #: from behind by something faster. Reported rather than dropped, because a
-    #: run that was rear-ended by the recording is a fact about the simulation
-    #: and a reader has to be able to see how often it happened.
+    #: Contacts excluded by the declared stopped-ego or behind-and-faster-speed
+    #: rule. Report these beside counted collisions; exclusion does not establish
+    #: that a contact was physically unavoidable or assign legal responsibility.
     contacts_not_at_fault: int
     distance_travelled_m: float
     final_speed_mps: float
@@ -138,22 +133,15 @@ def ego_at_fault(
     ego_speed_mps: float,
     track: TrackState,
 ) -> bool:
-    """Whether a contact is one the ego's braking could have changed.
+    """Classify a contact under this study's frozen simulation rule.
 
-    Two exclusions, both nuPlan's own and both about the same artefact: the
-    agents replay the recording and cannot react to an ego that is no longer
-    where the recording put it.
+    Exclude a stopped ego, or a body behind ego whose speed magnitude is
+    greater than ego's speed. The latter comparison is not a relative
+    longitudinal closing-velocity test. All other contacts are counted.
 
-    A STOPPED EGO IS NOT AT FAULT. There is nothing left for perception or
-    braking to do; the vehicle is already at rest.
-
-    AN EGO STRUCK FROM BEHIND BY SOMETHING FASTER IS NOT AT FAULT. The body is
-    behind the ego's centre and closing on it, which is the follower's
-    responsibility in every jurisdiction and, here, an artefact of the follower
-    replaying a recording in which the ego kept moving.
-
-    Everything else is the ego's: it drove into a body, and whether it should
-    have braked sooner is exactly what this study measures.
+    This operational classification addresses non-reactive logged actors;
+    it does not establish legal responsibility or full equivalence to an
+    upstream collision classifier. Excluded contacts remain separately counted.
     """
 
     if ego_speed_mps <= STOPPED_SPEED_MPS:
