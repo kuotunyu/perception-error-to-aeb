@@ -136,8 +136,8 @@ uv run --frozen python -m aebrisk.release normalize-sdist \
 ```
 
 Run both builds inside the pinned container mounted on that same Linux clone.
-The two output directories, interpreter, backend, source commit, and epoch must
-be identical.
+Use two separate fresh output directories (`build-one` and `build-two`). Keep
+the interpreter, backend, source commit, and epoch identical.
 
 - [ ] The clone records its volume, mount, workdir, HEAD, LF checkout, clean
       state, zero remotes, UID/GID, import path, image tag/digest, and binary

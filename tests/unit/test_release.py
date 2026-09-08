@@ -23,13 +23,18 @@ def release_module() -> types.ModuleType:
 
 
 def write_wheel(
-    directory: Path, version: str, *, package_name: str = "perception-error-to-aeb"
+    directory: Path,
+    version: str,
+    *,
+    package_name: str = "perception-error-to-aeb",
+    metadata_version: str | None = None,
 ) -> Path:
     path = directory / f"perception_error_to_aeb-{version}-py3-none-any.whl"
     with zipfile.ZipFile(path, "w") as archive:
         archive.writestr(
             f"perception_error_to_aeb-{version}.dist-info/METADATA",
-            f"Metadata-Version: 2.4\nName: {package_name}\nVersion: {version}\n",
+            f"Metadata-Version: 2.4\nName: {package_name}\n"
+            f"Version: {metadata_version or version}\n",
         )
     return path
 
@@ -41,9 +46,12 @@ def write_sdist(
     package_name: str = "perception-error-to-aeb",
     nested_metadata: bool = False,
     member_mtime: int = 0,
+    metadata_version: str | None = None,
 ) -> Path:
     path = directory / f"perception_error_to_aeb-{version}.tar.gz"
-    payload = f"Metadata-Version: 2.4\nName: {package_name}\nVersion: {version}\n".encode()
+    payload = (
+        f"Metadata-Version: 2.4\nName: {package_name}\nVersion: {metadata_version or version}\n"
+    ).encode()
     with tarfile.open(path, "w:gz") as archive:
         info = tarfile.TarInfo(f"perception_error_to_aeb-{version}/PKG-INFO")
         info.size = len(payload)
@@ -92,7 +100,7 @@ def test_release_versions_refuse_any_component_that_disagrees_with_the_tag(
     sdist: str,
     match: str,
 ) -> None:
-    """Checking only distribution filenames would miss stale internal metadata."""
+    """A stale installed package or archive version must disagree with the tag."""
 
     write_wheel(tmp_path, wheel)
     write_sdist(tmp_path, sdist)
@@ -100,6 +108,31 @@ def test_release_versions_refuse_any_component_that_disagrees_with_the_tag(
     monkeypatch.setattr(release.metadata, "version", lambda _name: installed)
 
     with pytest.raises(ValueError, match=match):
+        release.verify_release_versions("v1.0.0", tmp_path)
+
+
+@pytest.mark.parametrize("artifact", ["wheel", "sdist"])
+def test_release_versions_refuse_stale_metadata_under_canonical_archive_paths(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, artifact: str
+) -> None:
+    """Canonical filenames and member paths cannot conceal stale embedded versions."""
+
+    wheel = write_wheel(
+        tmp_path, "1.0.0", metadata_version="0.1.0" if artifact == "wheel" else "1.0.0"
+    )
+    sdist = write_sdist(
+        tmp_path, "1.0.0", metadata_version="0.1.0" if artifact == "sdist" else "1.0.0"
+    )
+    assert wheel.name == "perception_error_to_aeb-1.0.0-py3-none-any.whl"
+    assert sdist.name == "perception_error_to_aeb-1.0.0.tar.gz"
+    with zipfile.ZipFile(wheel) as archive:
+        assert archive.namelist() == ["perception_error_to_aeb-1.0.0.dist-info/METADATA"]
+    with tarfile.open(sdist, "r:gz") as source:
+        assert source.getnames() == ["perception_error_to_aeb-1.0.0/PKG-INFO"]
+    release = release_module()
+    monkeypatch.setattr(release.metadata, "version", lambda _name: "1.0.0")
+
+    with pytest.raises(ValueError, match=f"release version 1.0.0 disagrees with {artifact}=0.1.0"):
         release.verify_release_versions("v1.0.0", tmp_path)
 
 
