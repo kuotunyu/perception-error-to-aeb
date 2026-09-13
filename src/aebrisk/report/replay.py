@@ -105,10 +105,10 @@ def frame_styles(frame: ReplayFrame) -> dict[str, str]:
 
 
 def _frame_title(frame: ReplayFrame) -> str:
-    time_to_collision = "unavailable" if frame.ttc_s is None else f"{frame.ttc_s:.2f} s"
+    time_to_collision = "無可用數值" if frame.ttc_s is None else f"{frame.ttc_s:.2f} s"
     return (
-        f"{frame.time_s:.1f} s · {frame.aeb_state.value}<br>"
-        f"{frame.ego_speed_mps:.1f} m/s · TTC {time_to_collision}"
+        f"時間 {frame.time_s:.1f} s · AEB {frame.aeb_state.value}<br>"
+        f"速度 {frame.ego_speed_mps:.1f} m/s<br>TTC {time_to_collision}"
     )
 
 
@@ -190,24 +190,28 @@ def build_replay_figure(frames: tuple[ReplayFrame, ...], title: str) -> go.Figur
     figure = go.Figure(
         data=_traces(frames[0], identities),
         layout=go.Layout(
-            font={"size": 18, "family": "Segoe UI, Arial, sans-serif", "color": "#142033"},
-            height=760,
+            font={
+                "size": 18,
+                "family": "Microsoft JhengHei, Segoe UI, sans-serif",
+                "color": "#142033",
+            },
+            height=840,
             meta={"scenario": title},
             paper_bgcolor="white",
             plot_bgcolor="white",
             title={
                 "text": _frame_title(frames[0]),
                 "font": {"size": 22},
-                "y": 0.98,
+                "y": 0.96,
                 "yref": "container",
                 "yanchor": "top",
                 "x": 0.02,
                 "xref": "container",
                 "xanchor": "left",
-                "automargin": True,
+                "automargin": False,
             },
             xaxis={
-                "title": {"text": "scenario-local x (m)", "standoff": 16},
+                "title": {"text": "情境座標 x (m)", "standoff": 16},
                 "scaleanchor": "y",
                 "range": _axis_range(frames, 0),
                 "tickfont": {"size": 16},
@@ -223,7 +227,7 @@ def build_replay_figure(frames: tuple[ReplayFrame, ...], title: str) -> go.Figur
             },
             annotations=[
                 {
-                    "text": "scenario-local y (m)",
+                    "text": "情境座標 y (m)",
                     "textangle": 0,
                     "xref": "paper",
                     "yref": "paper",
@@ -235,13 +239,14 @@ def build_replay_figure(frames: tuple[ReplayFrame, ...], title: str) -> go.Figur
                     "font": {"size": 16},
                 }
             ],
-            margin={"t": 110, "b": 200, "l": 62, "r": 24},
+            margin={"t": 150, "b": 250, "l": 62, "r": 24},
             showlegend=False,
             legend={"font": {"size": 16}},
             hoverlabel={"font": {"size": 18}},
             updatemenus=[
                 {
                     "type": "buttons",
+                    "active": -1,
                     "font": {"size": 18},
                     "direction": "right",
                     "bgcolor": "#eef3f6",
@@ -249,17 +254,17 @@ def build_replay_figure(frames: tuple[ReplayFrame, ...], title: str) -> go.Figur
                     "borderwidth": 1,
                     "pad": {"t": 8, "b": 8},
                     "x": 0,
-                    "y": -0.3,
+                    "y": -0.43,
                     "xanchor": "left",
                     "yanchor": "top",
                     "buttons": [
                         {
-                            "label": "Play",
+                            "label": "播放",
                             "method": "animate",
                             "args": [None, {"frame": {"duration": 100, "redraw": True}}],
                         },
                         {
-                            "label": "Pause",
+                            "label": "暫停",
                             "method": "animate",
                             "args": [[None], {"mode": "immediate", "frame": {"duration": 0}}],
                         },
@@ -269,19 +274,20 @@ def build_replay_figure(frames: tuple[ReplayFrame, ...], title: str) -> go.Figur
                     "type": "buttons",
                     "active": -1,
                     "x": 1,
-                    "y": -0.3,
+                    "y": -0.43,
                     "xanchor": "right",
                     "yanchor": "top",
-                    "font": {"size": 16},
+                    "font": {"size": 18},
                     "bgcolor": "#eef3f6",
                     "bordercolor": "#c6d6df",
+                    "pad": {"t": 8, "b": 8},
                     "buttons": [
                         {
-                            "label": "Tracks",
+                            "label": "軌跡",
                             "method": "relayout",
                             "args": [{"showlegend": True}],
                             "args2": [{"showlegend": False}],
-                        }
+                        },
                     ],
                 },
             ],
@@ -290,14 +296,14 @@ def build_replay_figure(frames: tuple[ReplayFrame, ...], title: str) -> go.Figur
                     "active": 0,
                     "ticklen": 0,
                     "x": 0,
-                    "y": -0.12,
+                    "y": -0.16,
                     "len": 1,
                     "activebgcolor": "#087f8c",
                     "bgcolor": "#dfe8ed",
                     "bordercolor": "#9db5c4",
                     "minorticklen": 0,
                     "font": {"size": 16},
-                    "currentvalue": {"prefix": "time ", "xanchor": "left", "font": {"size": 20}},
+                    "currentvalue": {"prefix": "時間 ", "xanchor": "left", "font": {"size": 20}},
                     "pad": {"t": 12, "b": 12},
                     "steps": slider_steps,
                 }

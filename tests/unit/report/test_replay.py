@@ -229,7 +229,7 @@ def test_animation_has_plotly_generated_play_pause_and_time_slider() -> None:
     figure = replay.build_replay_figure(timeline(3), title="t")
 
     labels = [button["label"] for button in figure["layout"]["updatemenus"][0]["buttons"]]
-    assert labels == ["Play", "Pause"]
+    assert labels == ["播放", "暫停"]
     assert [step["label"] for step in figure["layout"]["sliders"][0]["steps"]] == [
         "0.0 s",
         "0.1 s",
@@ -261,15 +261,16 @@ def test_labels_and_controls_have_separate_readable_regions() -> None:
 
     assert layout["yaxis"]["title"]["text"] in (None, "")
     y_explanation = next(
-        annotation
-        for annotation in layout["annotations"]
-        if annotation["text"] == "scenario-local y (m)"
+        annotation for annotation in layout["annotations"] if annotation["text"] == "情境座標 y (m)"
     )
     assert y_explanation["textangle"] == 0
     assert y_explanation["xref"] == "paper"
     assert y_explanation["yref"] == "paper"
     assert layout["updatemenus"][0]["y"] != layout["sliders"][0]["y"]
-    assert layout["sliders"][0]["currentvalue"]["prefix"] == "time "
+    assert layout["sliders"][0]["currentvalue"]["prefix"] == "時間 "
+    plot_height = layout.height - layout.margin.t - layout.margin.b
+    assert (layout.sliders[0].y - layout.updatemenus[0].y) * plot_height >= 115
+    assert (1 - layout.title.y) * layout.height >= 24
     assert layout["margin"]["b"] >= 120
 
 
@@ -282,7 +283,7 @@ def test_long_scenario_identity_does_not_expand_the_live_status_header(tmp_path:
 
     assert figure.layout.meta["scenario"] == title
     assert rendered == replay.build_replay_figure(timeline(), title="short").layout.title.text
-    assert rendered.count("<br>") == 1
+    assert rendered.count("<br>") == 2
     path = tmp_path / "replay.html"
     replay.write_replay_html(timeline(), title=title, path=path)
     assert title in path.read_text()
@@ -374,6 +375,7 @@ def test_replay_workspace_separates_context_and_preserves_track_access(tmp_path:
     figure = replay.build_replay_figure(frames, "lead_or_stopping / coalition-dropout+latency")
     assert figure.layout.showlegend is False
     toggle = figure.layout.updatemenus[1].buttons[0]
+    assert toggle.label == "軌跡"
     assert toggle.method == "relayout"
     assert toggle.args[0]["showlegend"] is True
     assert toggle.args2[0]["showlegend"] is False
@@ -385,9 +387,12 @@ def test_replay_workspace_separates_context_and_preserves_track_access(tmp_path:
     replay.write_replay_html(frames, "lead_or_stopping / coalition-dropout+latency", path)
     html = path.read_text()
     assert '"displayModeBar": "hover"' in html
-    assert "<h1>Lead or stopping</h1>" in html
+    assert '<html lang="zh-TW">' in html
+    assert "<h1>情境回放</h1>" in html
+    assert "lead_or_stopping" in html
     assert 'class="replay-workspace"' in html
-    assert "Observed track" in html and "Unobserved track" in html
+    assert "已觀測軌跡" in html and "未觀測軌跡" in html
+    assert "故障設定" in html and "操作說明" in html
     assert "<li>dropout</li>" in html and "<li>latency</li>" in html
     assert 'class="replay-context"' in html
     replay.write_replay_html(frames, "<script>alert(1)</script>", path)
