@@ -6,8 +6,10 @@ import html
 from pathlib import Path
 from typing import Any, Optional
 
-from aebrisk.artifacts.documents import AEBShapleyV1
+from aebrisk.artifacts.documents import AEBEvaluationV1, AEBShapleyV1
 from aebrisk.artifacts.family_interventions import FamilyInterventionsV1
+from aebrisk.attribution.factorial import SWEPT_SEVERITIES
+from aebrisk.attribution.shapley import CHANNELS
 
 INK = "#14213d"
 MUTED = "#526078"
@@ -130,21 +132,136 @@ def intervention_rates_svg(family_interventions: dict[str, Any]) -> str:
     return "\n".join(parts)
 
 
+def severity_svg(evaluation: dict[str, Any]) -> str:
+    """Plot the complete fixed severity sweep with separate units and denominators."""
+
+    document = AEBEvaluationV1.model_validate(evaluation)
+    configurations = {row.configuration_id: row for row in document.configurations}
+    expected = [f"{channel}-{level}" for channel in CHANNELS for level in SWEPT_SEVERITIES]
+    if len(configurations) != len(document.configurations) or any(
+        name not in configurations or configurations[name].group != "single_channel"
+        for name in expected
+    ):
+        raise ValueError("severity sweep must contain each fixed channel/level exactly once")
+    values: dict[str, dict[str, Optional[float]]] = {}
+    for name in expected:
+        row = configurations[name]
+        values[name] = {
+            "collisions_per_hour": (
+                row.collisions / row.simulated_seconds * 3600.0
+                if row.simulated_seconds > 0.0
+                else None
+            ),
+            "false_per_1000_replicates": (
+                row.false_interventions / row.scenarios * 1000.0 if row.scenarios else None
+            ),
+            "missed_per_1000_replicates": (
+                row.missed_interventions / row.scenarios * 1000.0 if row.scenarios else None
+            ),
+            "mean_intervention_duration_s": row.mean_intervention_duration_s,
+        }
+    panels = (
+        ("collisions_per_hour", "Counted collisions / measured hour"),
+        ("false_per_1000_replicates", "False events / 1,000 scenario-replicates"),
+        ("missed_per_1000_replicates", "Missed events / 1,000 scenario-replicates"),
+        ("mean_intervention_duration_s", "Mean intervention duration (s)"),
+    )
+    parts = [
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 1160" '
+        'role="img" aria-labelledby="title desc">',
+        '<title id="title">Observed single-channel severity sensitivity</title>',
+        '<desc id="desc">Four channels, fixed low/medium/high severity; each metric row '
+        "shares a scale across channels. Missing values are unavailable, not zero.</desc>",
+        f'<rect width="1440" height="1160" fill="{PAPER}" />',
+        _text(32, 36, "Observed single-channel severity sensitivity", size=25, weight=700),
+        _text(
+            32,
+            61,
+            "Lines connect fixed levels; not a confidence interval. No causal channel ranking.",
+            size=13,
+        ),
+        _text(
+            32,
+            83,
+            "Exposure is measured per configuration; events are not unique scenarios.",
+            size=13,
+        ),
+    ]
+    for index, (metric, label) in enumerate(panels):
+        top = 106.0 + index * 255.0
+        maximum = max([value[metric] or 0.0 for value in values.values()] + [1e-12])
+        parts.append(_text(32, top + 14, label, size=18, weight=650))
+        parts.append(_text(930, top + 14, f"Shared scale: 0 to {maximum}", size=12))
+        for column, channel in enumerate(CHANNELS):
+            left = 32.0 + column * 350.0
+            parts.extend(
+                [
+                    f'<rect x="{left}" y="{top + 24}" width="332" height="219" '
+                    f'rx="8" fill="#ffffff" stroke="{GRID}" />',
+                    _text(left + 12, top + 46, channel, size=14, weight=600),
+                    f'<line x1="{left + 30}" y1="{top + 144}" '
+                    f'x2="{left + 302}" y2="{top + 144}" stroke="{GRID}" />',
+                ]
+            )
+            previous: Optional[tuple[float, float]] = None
+            for position, level in enumerate(SWEPT_SEVERITIES):
+                name = f"{channel}-{level}"
+                value = values[name][metric]
+                x = left + 50 + position * 110
+                raw = "unavailable" if value is None else str(value)
+                parts.append(
+                    f'<g data-metric="{metric}" data-configuration="{name}" data-value="{raw}">'
+                )
+                if value is None:
+                    previous = None
+                else:
+                    y = top + 144 - value / maximum * 80
+                    if previous is not None:
+                        parts.append(
+                            f'<line x1="{previous[0]}" y1="{previous[1]}" x2="{x}" '
+                            f'y2="{y}" stroke="{NEGATIVE}" stroke-width="2" />'
+                        )
+                    parts.append(f'<circle cx="{x}" cy="{y}" r="4" fill="{NEGATIVE}" />')
+                    previous = (x, y)
+                parts.extend(
+                    [
+                        _text(x - 20, top + 160, level, size=11),
+                        _text(left + 12, top + 184 + position * 17, f"{level}: {raw}", size=11),
+                        "</g>",
+                    ]
+                )
+    parts.append("</svg>\n")
+    return "\n".join(parts)
+
+
 def write_figures(evidence_dir: Path, output_dir: Path) -> tuple[Path, ...]:
-    """Validate source documents and write both figures in a fixed order."""
+    """Validate common source identity and write the three figures in fixed order."""
 
     shapley = AEBShapleyV1.model_validate_json((evidence_dir / "shapley.json").read_bytes())
     families = FamilyInterventionsV1.model_validate_json(
         (evidence_dir / "family-interventions.json").read_bytes()
     )
-    output_dir.mkdir(parents=True, exist_ok=True)
+    evaluation = AEBEvaluationV1.model_validate_json(
+        (evidence_dir / "evaluation.json").read_bytes()
+    )
+    identities = {
+        (document.protocol_sha256, document.cohort_manifest_sha256, document.common_valid_tokens)
+        for document in (shapley, families, evaluation)
+    }
+    if len(identities) != 1:
+        raise ValueError("figure evidence identity differs across documents")
     documents = (
         (output_dir / "shapley-contributions.svg", shapley_svg(shapley.model_dump(mode="json"))),
         (
             output_dir / "intervention-rates-by-family.svg",
             intervention_rates_svg(families.model_dump(mode="json")),
         ),
+        (
+            output_dir / "error-severity-sensitivity.svg",
+            severity_svg(evaluation.model_dump(mode="json")),
+        ),
     )
+    output_dir.mkdir(parents=True, exist_ok=True)
     for path, contents in documents:
         with path.open("w", encoding="utf-8", newline="\n") as handle:
             handle.write(contents)

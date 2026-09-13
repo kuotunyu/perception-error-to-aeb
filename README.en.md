@@ -16,6 +16,18 @@ The common-valid cohort has `common_valid_tokens` = 344. <!-- claim: p3.evaluati
 | oracle AEB | `scenarios` = 1032 <!-- claim: p3.baseline.scenarios.oracle_aeb --> | `collisions` = 39 <!-- claim: p3.baseline.collisions.oracle_aeb --> | `contacts_not_at_fault` = 1095 <!-- claim: p3.baseline.contacts_not_at_fault.oracle_aeb --> | `simulated_seconds` = 14901.900000000001 <!-- claim: p3.baseline.simulated_seconds.oracle_aeb --> |
 | full medium coalition | `scenarios` = 1032 <!-- claim: p3.coalition.scenarios.coalition-dropout-localization_shape-latency-track_instability --> | `collisions` = 0 <!-- claim: p3.coalition.collisions.coalition-dropout-localization_shape-latency-track_instability --> | `contacts_not_at_fault` = 1150 <!-- claim: p3.coalition.contacts_not_at_fault.coalition-dropout-localization_shape-latency-track_instability --> | `simulated_seconds` = 15395.8 <!-- claim: p3.coalition.simulated_seconds.coalition-dropout-localization_shape-latency-track_instability --> |
 
+Read braking costs alongside collisions. False/missed counts below are events,
+not independent scenarios, and can exceed the scenario-replicate count. The
+contract defines both fields as zero for no AEB; this does not mean the disabled
+brake missed no threats. The [experiment card](docs/experiment-card.md) explains
+the comparisons.
+
+| Configuration | Mean intervention duration (s) | False events | Missed events |
+| --- | ---: | ---: | ---: |
+| no AEB | `mean_intervention_duration_s` = 0.0 <!-- claim: p3.baseline.mean_intervention_duration_s.no_aeb --> | `false_interventions` = 0 <!-- claim: p3.baseline.false_interventions.no_aeb --> | `missed_interventions` = 0 <!-- claim: p3.baseline.missed_interventions.no_aeb --> |
+| oracle AEB | `mean_intervention_duration_s` = 9.150872093023263 <!-- claim: p3.baseline.mean_intervention_duration_s.oracle_aeb --> | `false_interventions` = 0 <!-- claim: p3.baseline.false_interventions.oracle_aeb --> | `missed_interventions` = 0 <!-- claim: p3.baseline.missed_interventions.oracle_aeb --> |
+| full medium coalition | `mean_intervention_duration_s` = 13.265503875969005 <!-- claim: p3.coalition.mean_intervention_duration_s.coalition-dropout-localization_shape-latency-track_instability --> | `false_interventions` = 4881 <!-- claim: p3.coalition.false_interventions.coalition-dropout-localization_shape-latency-track_instability --> | `missed_interventions` = 2685 <!-- claim: p3.coalition.missed_interventions.coalition-dropout-localization_shape-latency-track_instability --> |
+
 In the Shapley collision game, localization and shape has an observed mean contribution of `collision_indicator` = -0.027374031007751935. <!-- claim: p3.shapley.collision_indicator-values-localization_shape -->
 
 In the Shapley intervention-duration game, the same channel has an observed mean contribution of `intervention_duration_s` = 4.0670219638242875. <!-- claim: p3.shapley.intervention_duration_s-values-localization_shape -->
@@ -26,6 +38,7 @@ For `bicycle_or_vru`, `valid_tokens` = 44 <!-- claim: p3.family-interventions.bi
 
 ## Figures and replays
 
+- [Single-channel severity sensitivity](docs/figures/error-severity-sensitivity.svg) compares the fixed levels using separate scales for collision rate, false/missed event rates and intervention duration, with each configuration's measured exposure and replicate denominator.
 - [Observed mean Shapley contributions](docs/figures/shapley-contributions.svg) separate collision indicator and intervention duration into panels with their own units.
 - [Intervention event rates by family](docs/figures/intervention-rates-by-family.svg) use scenario-replicates as the denominator and do not borrow whole-cohort bootstrap error bars.
 - The predeclared median-nearest examples each have oracle, empty-coalition, and full-coalition replicate-zero views:

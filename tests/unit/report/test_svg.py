@@ -112,15 +112,36 @@ def test_svg_generation_is_byte_stable_and_escapes_labels() -> None:
 def test_write_figures_reads_strict_evidence_and_writes_fixed_names(tmp_path: Path) -> None:
     from aebrisk.report.svg import write_figures
 
+    from .test_severity_svg import evaluation
+
     evidence = tmp_path / "evidence"
     evidence.mkdir()
     (evidence / "shapley.json").write_text(json.dumps(_shapley()), encoding="utf-8")
     (evidence / "family-interventions.json").write_text(json.dumps(_families()), encoding="utf-8")
+    measured = evaluation()
+    measured.update(cohort_size=4, common_valid_tokens=4)
+    (evidence / "evaluation.json").write_text(json.dumps(measured), encoding="utf-8")
 
     written = write_figures(evidence, tmp_path / "figures")
 
     assert [path.name for path in written] == [
         "shapley-contributions.svg",
         "intervention-rates-by-family.svg",
+        "error-severity-sensitivity.svg",
     ]
     assert all(path.read_bytes().endswith(b"</svg>\n") for path in written)
+
+
+def test_figures_refuse_mixed_cohort_before_writing(tmp_path: Path) -> None:
+    import pytest
+
+    from aebrisk.report.svg import write_figures
+
+    from .test_severity_svg import evaluation
+
+    (tmp_path / "shapley.json").write_text(json.dumps(_shapley()), encoding="utf-8")
+    (tmp_path / "family-interventions.json").write_text(json.dumps(_families()), encoding="utf-8")
+    (tmp_path / "evaluation.json").write_text(json.dumps(evaluation()), encoding="utf-8")
+    with pytest.raises(ValueError, match="figure evidence identity"):
+        write_figures(tmp_path, tmp_path / "out")
+    assert not (tmp_path / "out").exists()

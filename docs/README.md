@@ -5,6 +5,7 @@
 | 目的 | 文件 |
 | --- | --- |
 | 看目前的分析證據 | [證據索引](evidence/README.md) |
+| 快速了解研究設計、比較方式與限制 | [研究卡](experiment-card.md) |
 | 看研究首頁與雙語結果 | [繁體中文首頁](../README.md)、[English](../README.en.md) |
 | 看圖表與預先固定選樣的回放 | [圖表](figures/)、[衍生回放](evidence/nuplan_aeb_v2/replays/) |
 | 重現聚合結果、查原始雜湊 | [分析重現](verification/analysis-reproduction.md) |

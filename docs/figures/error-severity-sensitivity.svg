@@ -1,0 +1,336 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 1160" role="img" aria-labelledby="title desc">
+<title id="title">Observed single-channel severity sensitivity</title>
+<desc id="desc">Four channels, fixed low/medium/high severity; each metric row shares a scale across channels. Missing values are unavailable, not zero.</desc>
+<rect width="1440" height="1160" fill="#f7f9fc" />
+<text x="32" y="36" font-family="system-ui, sans-serif" font-size="25" font-weight="700" fill="#14213d">Observed single-channel severity sensitivity</text>
+<text x="32" y="61" font-family="system-ui, sans-serif" font-size="13" font-weight="400" fill="#14213d">Lines connect fixed levels; not a confidence interval. No causal channel ranking.</text>
+<text x="32" y="83" font-family="system-ui, sans-serif" font-size="13" font-weight="400" fill="#14213d">Exposure is measured per configuration; events are not unique scenarios.</text>
+<text x="32" y="120.0" font-family="system-ui, sans-serif" font-size="18" font-weight="650" fill="#14213d">Counted collisions / measured hour</text>
+<text x="930" y="120.0" font-family="system-ui, sans-serif" font-size="12" font-weight="400" fill="#14213d">Shared scale: 0 to 7.350839220811051</text>
+<rect x="32.0" y="130.0" width="332" height="219" rx="8" fill="#ffffff" stroke="#d7deea" />
+<text x="44.0" y="152.0" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="#14213d">dropout</text>
+<line x1="62.0" y1="250.0" x2="334.0" y2="250.0" stroke="#d7deea" />
+<g data-metric="collisions_per_hour" data-configuration="dropout-low" data-value="6.208461018028416">
+<circle cx="82.0" cy="182.43262891179484" r="4" fill="#197278" />
+<text x="62.0" y="266.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">low</text>
+<text x="44.0" y="290.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">low: 6.208461018028416</text>
+</g>
+<g data-metric="collisions_per_hour" data-configuration="dropout-medium" data-value="4.53635049276439">
+<line x1="82.0" y1="182.43262891179484" x2="192.0" y2="200.63039354830156" stroke="#197278" stroke-width="2" />
+<circle cx="192.0" cy="200.63039354830156" r="4" fill="#197278" />
+<text x="172.0" y="266.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">medium</text>
+<text x="44.0" y="307.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">medium: 4.53635049276439</text>
+</g>
+<g data-metric="collisions_per_hour" data-configuration="dropout-high" data-value="4.546149398166917">
+<line x1="192.0" y1="200.63039354830156" x2="302.0" y2="200.52375097203858" stroke="#197278" stroke-width="2" />
+<circle cx="302.0" cy="200.52375097203858" r="4" fill="#197278" />
+<text x="282.0" y="266.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">high</text>
+<text x="44.0" y="324.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">high: 4.546149398166917</text>
+</g>
+<rect x="382.0" y="130.0" width="332" height="219" rx="8" fill="#ffffff" stroke="#d7deea" />
+<text x="394.0" y="152.0" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="#14213d">localization_shape</text>
+<line x1="412.0" y1="250.0" x2="684.0" y2="250.0" stroke="#d7deea" />
+<g data-metric="collisions_per_hour" data-configuration="localization_shape-low" data-value="0.9336402243329983">
+<circle cx="432.0" cy="239.8390897007813" r="4" fill="#197278" />
+<text x="412.0" y="266.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">low</text>
+<text x="394.0" y="290.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">low: 0.9336402243329983</text>
+</g>
+<g data-metric="collisions_per_hour" data-configuration="localization_shape-medium" data-value="0.0">
+<line x1="432.0" y1="239.8390897007813" x2="542.0" y2="250.0" stroke="#197278" stroke-width="2" />
+<circle cx="542.0" cy="250.0" r="4" fill="#197278" />
+<text x="522.0" y="266.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">medium</text>
+<text x="394.0" y="307.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">medium: 0.0</text>
+</g>
+<g data-metric="collisions_per_hour" data-configuration="localization_shape-high" data-value="0.0">
+<line x1="542.0" y1="250.0" x2="652.0" y2="250.0" stroke="#197278" stroke-width="2" />
+<circle cx="652.0" cy="250.0" r="4" fill="#197278" />
+<text x="632.0" y="266.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">high</text>
+<text x="394.0" y="324.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">high: 0.0</text>
+</g>
+<rect x="732.0" y="130.0" width="332" height="219" rx="8" fill="#ffffff" stroke="#d7deea" />
+<text x="744.0" y="152.0" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="#14213d">latency</text>
+<line x1="762.0" y1="250.0" x2="1034.0" y2="250.0" stroke="#d7deea" />
+<g data-metric="collisions_per_hour" data-configuration="latency-low" data-value="7.227609468168403">
+<circle cx="782.0" cy="171.3411230902047" r="4" fill="#197278" />
+<text x="762.0" y="266.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">low</text>
+<text x="744.0" y="290.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">low: 7.227609468168403</text>
+</g>
+<g data-metric="collisions_per_hour" data-configuration="latency-medium" data-value="7.2523620540300975">
+<line x1="782.0" y1="171.3411230902047" x2="892.0" y2="171.07173794798453" stroke="#197278" stroke-width="2" />
+<circle cx="892.0" cy="171.07173794798453" r="4" fill="#197278" />
+<text x="872.0" y="266.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">medium</text>
+<text x="744.0" y="307.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">medium: 7.2523620540300975</text>
+</g>
+<g data-metric="collisions_per_hour" data-configuration="latency-high" data-value="7.350839220811051">
+<line x1="892.0" y1="171.07173794798453" x2="1002.0" y2="170.0" stroke="#197278" stroke-width="2" />
+<circle cx="1002.0" cy="170.0" r="4" fill="#197278" />
+<text x="982.0" y="266.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">high</text>
+<text x="744.0" y="324.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">high: 7.350839220811051</text>
+</g>
+<rect x="1082.0" y="130.0" width="332" height="219" rx="8" fill="#ffffff" stroke="#d7deea" />
+<text x="1094.0" y="152.0" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="#14213d">track_instability</text>
+<line x1="1112.0" y1="250.0" x2="1384.0" y2="250.0" stroke="#d7deea" />
+<g data-metric="collisions_per_hour" data-configuration="track_instability-low" data-value="5.498080983811206">
+<circle cx="1132.0" cy="190.1637737552956" r="4" fill="#197278" />
+<text x="1112.0" y="266.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">low</text>
+<text x="1094.0" y="290.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">low: 5.498080983811206</text>
+</g>
+<g data-metric="collisions_per_hour" data-configuration="track_instability-medium" data-value="6.460961699525399">
+<line x1="1132.0" y1="190.1637737552956" x2="1242.0" y2="179.68463593943187" stroke="#197278" stroke-width="2" />
+<circle cx="1242.0" cy="179.68463593943187" r="4" fill="#197278" />
+<text x="1222.0" y="266.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">medium</text>
+<text x="1094.0" y="307.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">medium: 6.460961699525399</text>
+</g>
+<g data-metric="collisions_per_hour" data-configuration="track_instability-high" data-value="5.498701695433023">
+<line x1="1242.0" y1="179.68463593943187" x2="1352.0" y2="190.15701848174743" stroke="#197278" stroke-width="2" />
+<circle cx="1352.0" cy="190.15701848174743" r="4" fill="#197278" />
+<text x="1332.0" y="266.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">high</text>
+<text x="1094.0" y="324.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">high: 5.498701695433023</text>
+</g>
+<text x="32" y="375.0" font-family="system-ui, sans-serif" font-size="18" font-weight="650" fill="#14213d">False events / 1,000 scenario-replicates</text>
+<text x="930" y="375.0" font-family="system-ui, sans-serif" font-size="12" font-weight="400" fill="#14213d">Shared scale: 0 to 4501.937984496124</text>
+<rect x="32.0" y="385.0" width="332" height="219" rx="8" fill="#ffffff" stroke="#d7deea" />
+<text x="44.0" y="407.0" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="#14213d">dropout</text>
+<line x1="62.0" y1="505.0" x2="334.0" y2="505.0" stroke="#d7deea" />
+<g data-metric="false_per_1000_replicates" data-configuration="dropout-low" data-value="2737.403100775194">
+<circle cx="82.0" cy="456.35600516573396" r="4" fill="#197278" />
+<text x="62.0" y="521.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">low</text>
+<text x="44.0" y="545.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">low: 2737.403100775194</text>
+</g>
+<g data-metric="false_per_1000_replicates" data-configuration="dropout-medium" data-value="3025.1937984496126">
+<line x1="82.0" y1="456.35600516573396" x2="192.0" y2="451.24192854068014" stroke="#197278" stroke-width="2" />
+<circle cx="192.0" cy="451.24192854068014" r="4" fill="#197278" />
+<text x="172.0" y="521.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">medium</text>
+<text x="44.0" y="562.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">medium: 3025.1937984496126</text>
+</g>
+<g data-metric="false_per_1000_replicates" data-configuration="dropout-high" data-value="3356.589147286822">
+<line x1="192.0" y1="451.24192854068014" x2="302.0" y2="445.3529918209212" stroke="#197278" stroke-width="2" />
+<circle cx="302.0" cy="445.3529918209212" r="4" fill="#197278" />
+<text x="282.0" y="521.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">high</text>
+<text x="44.0" y="579.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">high: 3356.589147286822</text>
+</g>
+<rect x="382.0" y="385.0" width="332" height="219" rx="8" fill="#ffffff" stroke="#d7deea" />
+<text x="394.0" y="407.0" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="#14213d">localization_shape</text>
+<line x1="412.0" y1="505.0" x2="684.0" y2="505.0" stroke="#d7deea" />
+<g data-metric="false_per_1000_replicates" data-configuration="localization_shape-low" data-value="4301.356589147286">
+<circle cx="432.0" cy="428.56435643564356" r="4" fill="#197278" />
+<text x="412.0" y="521.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">low</text>
+<text x="394.0" y="545.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">low: 4301.356589147286</text>
+</g>
+<g data-metric="false_per_1000_replicates" data-configuration="localization_shape-medium" data-value="4501.937984496124">
+<line x1="432.0" y1="428.56435643564356" x2="542.0" y2="425.0" stroke="#197278" stroke-width="2" />
+<circle cx="542.0" cy="425.0" r="4" fill="#197278" />
+<text x="522.0" y="521.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">medium</text>
+<text x="394.0" y="562.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">medium: 4501.937984496124</text>
+</g>
+<g data-metric="false_per_1000_replicates" data-configuration="localization_shape-high" data-value="1390.5038759689924">
+<line x1="542.0" y1="425.0" x2="652.0" y2="480.2905725355144" stroke="#197278" stroke-width="2" />
+<circle cx="652.0" cy="480.2905725355144" r="4" fill="#197278" />
+<text x="632.0" y="521.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">high</text>
+<text x="394.0" y="579.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">high: 1390.5038759689924</text>
+</g>
+<rect x="732.0" y="385.0" width="332" height="219" rx="8" fill="#ffffff" stroke="#d7deea" />
+<text x="744.0" y="407.0" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="#14213d">latency</text>
+<line x1="762.0" y1="505.0" x2="1034.0" y2="505.0" stroke="#d7deea" />
+<g data-metric="false_per_1000_replicates" data-configuration="latency-low" data-value="2383.7209302325577">
+<circle cx="782.0" cy="462.6409814894533" r="4" fill="#197278" />
+<text x="762.0" y="521.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">low</text>
+<text x="744.0" y="545.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">low: 2383.7209302325577</text>
+</g>
+<g data-metric="false_per_1000_replicates" data-configuration="latency-medium" data-value="2395.348837209302">
+<line x1="782.0" y1="462.6409814894533" x2="892.0" y2="462.43435213086525" stroke="#197278" stroke-width="2" />
+<circle cx="892.0" cy="462.43435213086525" r="4" fill="#197278" />
+<text x="872.0" y="521.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">medium</text>
+<text x="744.0" y="562.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">medium: 2395.348837209302</text>
+</g>
+<g data-metric="false_per_1000_replicates" data-configuration="latency-high" data-value="2494.186046511628">
+<line x1="892.0" y1="462.43435213086525" x2="1002.0" y2="460.67800258286695" stroke="#197278" stroke-width="2" />
+<circle cx="1002.0" cy="460.67800258286695" r="4" fill="#197278" />
+<text x="982.0" y="521.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">high</text>
+<text x="744.0" y="579.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">high: 2494.186046511628</text>
+</g>
+<rect x="1082.0" y="385.0" width="332" height="219" rx="8" fill="#ffffff" stroke="#d7deea" />
+<text x="1094.0" y="407.0" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="#14213d">track_instability</text>
+<line x1="1112.0" y1="505.0" x2="1384.0" y2="505.0" stroke="#d7deea" />
+<g data-metric="false_per_1000_replicates" data-configuration="track_instability-low" data-value="2508.7209302325577">
+<circle cx="1132.0" cy="460.41971588463196" r="4" fill="#197278" />
+<text x="1112.0" y="521.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">low</text>
+<text x="1094.0" y="545.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">low: 2508.7209302325577</text>
+</g>
+<g data-metric="false_per_1000_replicates" data-configuration="track_instability-medium" data-value="2562.984496124031">
+<line x1="1132.0" y1="460.41971588463196" x2="1242.0" y2="459.45544554455444" stroke="#197278" stroke-width="2" />
+<circle cx="1242.0" cy="459.45544554455444" r="4" fill="#197278" />
+<text x="1222.0" y="521.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">medium</text>
+<text x="1094.0" y="562.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">medium: 2562.984496124031</text>
+</g>
+<g data-metric="false_per_1000_replicates" data-configuration="track_instability-high" data-value="2682.170542635659">
+<line x1="1242.0" y1="459.45544554455444" x2="1352.0" y2="457.3374946190271" stroke="#197278" stroke-width="2" />
+<circle cx="1352.0" cy="457.3374946190271" r="4" fill="#197278" />
+<text x="1332.0" y="521.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">high</text>
+<text x="1094.0" y="579.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">high: 2682.170542635659</text>
+</g>
+<text x="32" y="630.0" font-family="system-ui, sans-serif" font-size="18" font-weight="650" fill="#14213d">Missed events / 1,000 scenario-replicates</text>
+<text x="930" y="630.0" font-family="system-ui, sans-serif" font-size="12" font-weight="400" fill="#14213d">Shared scale: 0 to 3822.6744186046512</text>
+<rect x="32.0" y="640.0" width="332" height="219" rx="8" fill="#ffffff" stroke="#d7deea" />
+<text x="44.0" y="662.0" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="#14213d">dropout</text>
+<line x1="62.0" y1="760.0" x2="334.0" y2="760.0" stroke="#d7deea" />
+<g data-metric="missed_per_1000_replicates" data-configuration="dropout-low" data-value="1190.8914728682169">
+<circle cx="82.0" cy="735.0773130544994" r="4" fill="#197278" />
+<text x="62.0" y="776.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">low</text>
+<text x="44.0" y="800.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">low: 1190.8914728682169</text>
+</g>
+<g data-metric="missed_per_1000_replicates" data-configuration="dropout-medium" data-value="1252.906976744186">
+<line x1="82.0" y1="735.0773130544994" x2="192.0" y2="733.7794676806084" stroke="#197278" stroke-width="2" />
+<circle cx="192.0" cy="733.7794676806084" r="4" fill="#197278" />
+<text x="172.0" y="776.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">medium</text>
+<text x="44.0" y="817.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">medium: 1252.906976744186</text>
+</g>
+<g data-metric="missed_per_1000_replicates" data-configuration="dropout-high" data-value="1350.7751937984497">
+<line x1="192.0" y1="733.7794676806084" x2="302.0" y2="731.7313054499366" stroke="#197278" stroke-width="2" />
+<circle cx="302.0" cy="731.7313054499366" r="4" fill="#197278" />
+<text x="282.0" y="776.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">high</text>
+<text x="44.0" y="834.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">high: 1350.7751937984497</text>
+</g>
+<rect x="382.0" y="640.0" width="332" height="219" rx="8" fill="#ffffff" stroke="#d7deea" />
+<text x="394.0" y="662.0" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="#14213d">localization_shape</text>
+<line x1="412.0" y1="760.0" x2="684.0" y2="760.0" stroke="#d7deea" />
+<g data-metric="missed_per_1000_replicates" data-configuration="localization_shape-low" data-value="2330.4263565891474">
+<circle cx="432.0" cy="711.2294043092522" r="4" fill="#197278" />
+<text x="412.0" y="776.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">low</text>
+<text x="394.0" y="800.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">low: 2330.4263565891474</text>
+</g>
+<g data-metric="missed_per_1000_replicates" data-configuration="localization_shape-medium" data-value="2883.7209302325577">
+<line x1="432.0" y1="711.2294043092522" x2="542.0" y2="699.6501901140684" stroke="#197278" stroke-width="2" />
+<circle cx="542.0" cy="699.6501901140684" r="4" fill="#197278" />
+<text x="522.0" y="776.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">medium</text>
+<text x="394.0" y="817.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">medium: 2883.7209302325577</text>
+</g>
+<g data-metric="missed_per_1000_replicates" data-configuration="localization_shape-high" data-value="3822.6744186046512">
+<line x1="542.0" y1="699.6501901140684" x2="652.0" y2="680.0" stroke="#197278" stroke-width="2" />
+<circle cx="652.0" cy="680.0" r="4" fill="#197278" />
+<text x="632.0" y="776.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">high</text>
+<text x="394.0" y="834.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">high: 3822.6744186046512</text>
+</g>
+<rect x="732.0" y="640.0" width="332" height="219" rx="8" fill="#ffffff" stroke="#d7deea" />
+<text x="744.0" y="662.0" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="#14213d">latency</text>
+<line x1="762.0" y1="760.0" x2="1034.0" y2="760.0" stroke="#d7deea" />
+<g data-metric="missed_per_1000_replicates" data-configuration="latency-low" data-value="1366.2790697674418">
+<circle cx="782.0" cy="731.4068441064638" r="4" fill="#197278" />
+<text x="762.0" y="776.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">low</text>
+<text x="744.0" y="800.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">low: 1366.2790697674418</text>
+</g>
+<g data-metric="missed_per_1000_replicates" data-configuration="latency-medium" data-value="1441.8604651162789">
+<line x1="782.0" y1="731.4068441064638" x2="892.0" y2="729.8250950570342" stroke="#197278" stroke-width="2" />
+<circle cx="892.0" cy="729.8250950570342" r="4" fill="#197278" />
+<text x="872.0" y="776.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">medium</text>
+<text x="744.0" y="817.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">medium: 1441.8604651162789</text>
+</g>
+<g data-metric="missed_per_1000_replicates" data-configuration="latency-high" data-value="2671.5116279069766">
+<line x1="892.0" y1="729.8250950570342" x2="1002.0" y2="704.0912547528517" stroke="#197278" stroke-width="2" />
+<circle cx="1002.0" cy="704.0912547528517" r="4" fill="#197278" />
+<text x="982.0" y="776.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">high</text>
+<text x="744.0" y="834.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">high: 2671.5116279069766</text>
+</g>
+<rect x="1082.0" y="640.0" width="332" height="219" rx="8" fill="#ffffff" stroke="#d7deea" />
+<text x="1094.0" y="662.0" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="#14213d">track_instability</text>
+<line x1="1112.0" y1="760.0" x2="1384.0" y2="760.0" stroke="#d7deea" />
+<g data-metric="missed_per_1000_replicates" data-configuration="track_instability-low" data-value="1171.5116279069769">
+<circle cx="1132.0" cy="735.4828897338404" r="4" fill="#197278" />
+<text x="1112.0" y="776.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">low</text>
+<text x="1094.0" y="800.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">low: 1171.5116279069769</text>
+</g>
+<g data-metric="missed_per_1000_replicates" data-configuration="track_instability-medium" data-value="1215.1162790697674">
+<line x1="1132.0" y1="735.4828897338404" x2="1242.0" y2="734.5703422053232" stroke="#197278" stroke-width="2" />
+<circle cx="1242.0" cy="734.5703422053232" r="4" fill="#197278" />
+<text x="1222.0" y="776.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">medium</text>
+<text x="1094.0" y="817.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">medium: 1215.1162790697674</text>
+</g>
+<g data-metric="missed_per_1000_replicates" data-configuration="track_instability-high" data-value="1252.906976744186">
+<line x1="1242.0" y1="734.5703422053232" x2="1352.0" y2="733.7794676806084" stroke="#197278" stroke-width="2" />
+<circle cx="1352.0" cy="733.7794676806084" r="4" fill="#197278" />
+<text x="1332.0" y="776.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">high</text>
+<text x="1094.0" y="834.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">high: 1252.906976744186</text>
+</g>
+<text x="32" y="885.0" font-family="system-ui, sans-serif" font-size="18" font-weight="650" fill="#14213d">Mean intervention duration (s)</text>
+<text x="930" y="885.0" font-family="system-ui, sans-serif" font-size="12" font-weight="400" fill="#14213d">Shared scale: 0 to 14.727810077519347</text>
+<rect x="32.0" y="895.0" width="332" height="219" rx="8" fill="#ffffff" stroke="#d7deea" />
+<text x="44.0" y="917.0" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="#14213d">dropout</text>
+<line x1="62.0" y1="1015.0" x2="334.0" y2="1015.0" stroke="#d7deea" />
+<g data-metric="mean_intervention_duration_s" data-configuration="dropout-low" data-value="9.571608527131794">
+<circle cx="82.0" cy="963.0079741563643" r="4" fill="#197278" />
+<text x="62.0" y="1031.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">low</text>
+<text x="44.0" y="1055.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">low: 9.571608527131794</text>
+</g>
+<g data-metric="mean_intervention_duration_s" data-configuration="dropout-medium" data-value="9.52693798449614">
+<line x1="82.0" y1="963.0079741563643" x2="192.0" y2="963.2506201025059" stroke="#197278" stroke-width="2" />
+<circle cx="192.0" cy="963.2506201025059" r="4" fill="#197278" />
+<text x="172.0" y="1031.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">medium</text>
+<text x="44.0" y="1072.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">medium: 9.52693798449614</text>
+</g>
+<g data-metric="mean_intervention_duration_s" data-configuration="dropout-high" data-value="9.414244186046504">
+<line x1="192.0" y1="963.2506201025059" x2="302.0" y2="963.8627616108848" stroke="#197278" stroke-width="2" />
+<circle cx="302.0" cy="963.8627616108848" r="4" fill="#197278" />
+<text x="282.0" y="1031.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">high</text>
+<text x="44.0" y="1089.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">high: 9.414244186046504</text>
+</g>
+<rect x="382.0" y="895.0" width="332" height="219" rx="8" fill="#ffffff" stroke="#d7deea" />
+<text x="394.0" y="917.0" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="#14213d">localization_shape</text>
+<line x1="412.0" y1="1015.0" x2="684.0" y2="1015.0" stroke="#d7deea" />
+<g data-metric="mean_intervention_duration_s" data-configuration="localization_shape-low" data-value="12.919767441860452">
+<circle cx="432.0" cy="944.8211078287529" r="4" fill="#197278" />
+<text x="412.0" y="1031.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">low</text>
+<text x="394.0" y="1055.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">low: 12.919767441860452</text>
+</g>
+<g data-metric="mean_intervention_duration_s" data-configuration="localization_shape-medium" data-value="13.70910852713176">
+<line x1="432.0" y1="944.8211078287529" x2="542.0" y2="940.5334855353277" stroke="#197278" stroke-width="2" />
+<circle cx="542.0" cy="940.5334855353277" r="4" fill="#197278" />
+<text x="522.0" y="1031.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">medium</text>
+<text x="394.0" y="1072.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">medium: 13.70910852713176</text>
+</g>
+<g data-metric="mean_intervention_duration_s" data-configuration="localization_shape-high" data-value="14.727810077519347">
+<line x1="542.0" y1="940.5334855353277" x2="652.0" y2="935.0" stroke="#197278" stroke-width="2" />
+<circle cx="652.0" cy="935.0" r="4" fill="#197278" />
+<text x="632.0" y="1031.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">high</text>
+<text x="394.0" y="1089.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">high: 14.727810077519347</text>
+</g>
+<rect x="732.0" y="895.0" width="332" height="219" rx="8" fill="#ffffff" stroke="#d7deea" />
+<text x="744.0" y="917.0" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="#14213d">latency</text>
+<line x1="762.0" y1="1015.0" x2="1034.0" y2="1015.0" stroke="#d7deea" />
+<g data-metric="mean_intervention_duration_s" data-configuration="latency-low" data-value="9.453488372093013">
+<circle cx="782.0" cy="963.6495910942094" r="4" fill="#197278" />
+<text x="762.0" y="1031.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">low</text>
+<text x="744.0" y="1055.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">low: 9.453488372093013</text>
+</g>
+<g data-metric="mean_intervention_duration_s" data-configuration="latency-medium" data-value="9.35348837209302">
+<line x1="782.0" y1="963.6495910942094" x2="892.0" y2="964.1927811515154" stroke="#197278" stroke-width="2" />
+<circle cx="892.0" cy="964.1927811515154" r="4" fill="#197278" />
+<text x="872.0" y="1031.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">medium</text>
+<text x="744.0" y="1072.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">medium: 9.35348837209302</text>
+</g>
+<g data-metric="mean_intervention_duration_s" data-configuration="latency-high" data-value="9.134011627906986">
+<line x1="892.0" y1="964.1927811515154" x2="1002.0" y2="965.3849570040329" stroke="#197278" stroke-width="2" />
+<circle cx="1002.0" cy="965.3849570040329" r="4" fill="#197278" />
+<text x="982.0" y="1031.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">high</text>
+<text x="744.0" y="1089.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">high: 9.134011627906986</text>
+</g>
+<rect x="1082.0" y="895.0" width="332" height="219" rx="8" fill="#ffffff" stroke="#d7deea" />
+<text x="1094.0" y="917.0" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="#14213d">track_instability</text>
+<line x1="1112.0" y1="1015.0" x2="1384.0" y2="1015.0" stroke="#d7deea" />
+<g data-metric="mean_intervention_duration_s" data-configuration="track_instability-low" data-value="9.608042635658943">
+<circle cx="1132.0" cy="962.8100677013767" r="4" fill="#197278" />
+<text x="1112.0" y="1031.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">low</text>
+<text x="1094.0" y="1055.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">low: 9.608042635658943</text>
+</g>
+<g data-metric="mean_intervention_duration_s" data-configuration="track_instability-medium" data-value="9.571027131782975">
+<line x1="1132.0" y1="962.8100677013767" x2="1242.0" y2="963.0111322380927" stroke="#197278" stroke-width="2" />
+<circle cx="1242.0" cy="963.0111322380927" r="4" fill="#197278" />
+<text x="1222.0" y="1031.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">medium</text>
+<text x="1094.0" y="1072.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">medium: 9.571027131782975</text>
+</g>
+<g data-metric="mean_intervention_duration_s" data-configuration="track_instability-high" data-value="9.425387596899236">
+<line x1="1242.0" y1="963.0111322380927" x2="1352.0" y2="963.802231711088" stroke="#197278" stroke-width="2" />
+<circle cx="1352.0" cy="963.802231711088" r="4" fill="#197278" />
+<text x="1332.0" y="1031.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">high</text>
+<text x="1094.0" y="1089.0" font-family="system-ui, sans-serif" font-size="11" font-weight="400" fill="#14213d">high: 9.425387596899236</text>
+</g>
+</svg>

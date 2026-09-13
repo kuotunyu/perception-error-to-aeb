@@ -16,6 +16,14 @@
 | oracle AEB | `scenarios` = 1032 <!-- claim: p3.baseline.scenarios.oracle_aeb --> | `collisions` = 39 <!-- claim: p3.baseline.collisions.oracle_aeb --> | `contacts_not_at_fault` = 1095 <!-- claim: p3.baseline.contacts_not_at_fault.oracle_aeb --> | `simulated_seconds` = 14901.900000000001 <!-- claim: p3.baseline.simulated_seconds.oracle_aeb --> |
 | 全通道 medium coalition | `scenarios` = 1032 <!-- claim: p3.coalition.scenarios.coalition-dropout-localization_shape-latency-track_instability --> | `collisions` = 0 <!-- claim: p3.coalition.collisions.coalition-dropout-localization_shape-latency-track_instability --> | `contacts_not_at_fault` = 1150 <!-- claim: p3.coalition.contacts_not_at_fault.coalition-dropout-localization_shape-latency-track_instability --> | `simulated_seconds` = 15395.8 <!-- claim: p3.coalition.simulated_seconds.coalition-dropout-localization_shape-latency-track_instability --> |
 
+同時看煞車代價：下表的 false/missed 是事件數，不是獨立場景數，可能超過 scenario-replicates。no AEB 的兩欄依契約記為零，不能解讀成沒有漏煞車；[研究卡](docs/experiment-card.md)說明比較方式。
+
+| 設定 | 平均介入時間（秒） | False events | Missed events |
+| --- | ---: | ---: | ---: |
+| no AEB | `mean_intervention_duration_s` = 0.0 <!-- claim: p3.baseline.mean_intervention_duration_s.no_aeb --> | `false_interventions` = 0 <!-- claim: p3.baseline.false_interventions.no_aeb --> | `missed_interventions` = 0 <!-- claim: p3.baseline.missed_interventions.no_aeb --> |
+| oracle AEB | `mean_intervention_duration_s` = 9.150872093023263 <!-- claim: p3.baseline.mean_intervention_duration_s.oracle_aeb --> | `false_interventions` = 0 <!-- claim: p3.baseline.false_interventions.oracle_aeb --> | `missed_interventions` = 0 <!-- claim: p3.baseline.missed_interventions.oracle_aeb --> |
+| 全通道 medium coalition | `mean_intervention_duration_s` = 13.265503875969005 <!-- claim: p3.coalition.mean_intervention_duration_s.coalition-dropout-localization_shape-latency-track_instability --> | `false_interventions` = 4881 <!-- claim: p3.coalition.false_interventions.coalition-dropout-localization_shape-latency-track_instability --> | `missed_interventions` = 2685 <!-- claim: p3.coalition.missed_interventions.coalition-dropout-localization_shape-latency-track_instability --> |
+
 Shapley 的 collision game 中，localization/shape 的觀察平均貢獻為 `collision_indicator` = -0.027374031007751935。<!-- claim: p3.shapley.collision_indicator-values-localization_shape -->
 
 Shapley 的 intervention-duration game 中，同一 channel 的觀察平均貢獻為 `intervention_duration_s` = 4.0670219638242875。<!-- claim: p3.shapley.intervention_duration_s-values-localization_shape -->
@@ -26,6 +34,7 @@ Shapley 的 intervention-duration game 中，同一 channel 的觀察平均貢�
 
 ## 圖表與回放
 
+- [單通道 severity sensitivity](docs/figures/error-severity-sensitivity.svg)依固定嚴重度比較碰撞率、false/missed 事件率與介入時間；各指標分開尺度，使用各設定的實測曝光與 replicate 分母。
 - [Shapley 觀察平均貢獻](docs/figures/shapley-contributions.svg)把 collision indicator 與 intervention duration 分成不同單位的 panel。
 - [各 family 介入事件率](docs/figures/intervention-rates-by-family.svg)以 scenario-replicates 為分母，沒有借用全體 cohort 的 bootstrap error bar。
 - 預先固定的 median-nearest 展示各有 oracle、empty coalition 與 full coalition 的 replicate-zero 版本：

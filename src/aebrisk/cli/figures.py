@@ -14,7 +14,7 @@ def figures(
     evidence_dir: Annotated[Path, typer.Option("--evidence-dir")],
     output_dir: Annotated[Path, typer.Option("--output-dir")],
 ) -> None:
-    """Write the two release figures, or explain why evidence was refused."""
+    """Write the three release figures, or explain why evidence was refused."""
 
     try:
         written = write_figures(evidence_dir, output_dir)
