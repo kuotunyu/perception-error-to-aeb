@@ -34,6 +34,7 @@ import plotly.io as pio
 from aebrisk.aeb.state_machine import AEBState
 from aebrisk.aeb.threat import oriented_box_polygon
 from aebrisk.observation.models import TrackState
+from aebrisk.report.replay_page import replay_page
 
 #: How an object the controller could see is drawn, and how one it could not is.
 #: Two names that resolved to one value would make the distinction invisible.
@@ -103,19 +104,12 @@ def frame_styles(frame: ReplayFrame) -> dict[str, str]:
     }
 
 
-def _frame_title(title: str, frame: ReplayFrame) -> str:
-    time_to_collision = "none" if frame.ttc_s is None else f"{frame.ttc_s:.2f} s"
-    status = (
-        f"t={frame.time_s:.1f} s — {frame.aeb_state.value} — "
-        f"{frame.ego_speed_mps:.1f} m/s — ttc {time_to_collision}"
+def _frame_title(frame: ReplayFrame) -> str:
+    time_to_collision = "unavailable" if frame.ttc_s is None else f"{frame.ttc_s:.2f} s"
+    return (
+        f"{frame.time_s:.1f} s · {frame.aeb_state.value}<br>"
+        f"{frame.ego_speed_mps:.1f} m/s · TTC {time_to_collision}"
     )
-    return f"{_wrap_title(title)}<br>{_wrap_title(status)}"
-
-
-def _wrap_title(title: str, width: int = 32) -> str:
-    """Insert display-only line breaks without changing scenario identity."""
-
-    return "<br>".join(title[index : index + width] for index in range(0, len(title), width))
 
 
 def _traces(frame: ReplayFrame, identities: tuple[str, ...]) -> list[go.Scatter]:
@@ -129,6 +123,9 @@ def _traces(frame: ReplayFrame, identities: tuple[str, ...]) -> list[go.Scatter]
             mode="lines",
             fill="toself",
             name="ego",
+            line={"color": "#254fc4", "width": 3},
+            fillcolor="rgba(37,79,196,0.22)",
+            hoverinfo="name+x+y",
         )
     ]
     for identity in identities:
@@ -142,7 +139,13 @@ def _traces(frame: ReplayFrame, identities: tuple[str, ...]) -> list[go.Scatter]
                 # An unobserved track is drawn dashed and unfilled: present in
                 # the world, absent from what the controller was given.
                 fill="toself" if observed else "none",
-                line={"dash": "solid" if observed else "dash"},
+                line={
+                    "dash": "solid" if observed else "dash",
+                    "color": "#087f8c" if observed else "#b65a17",
+                    "width": 2,
+                },
+                fillcolor="rgba(8,127,140,0.14)",
+                hoverinfo="name+x+y",
                 name=identity,
             )
         )
@@ -170,8 +173,6 @@ def build_replay_figure(frames: tuple[ReplayFrame, ...], title: str) -> go.Figur
         raise ValueError("title must name the scenario and configuration shown")
 
     identities = tuple(sorted({track.track_id for frame in frames for track in frame.tracks}))
-    title_lines = max(_frame_title(title, frame).count("<br>") + 1 for frame in frames)
-    top_margin = title_lines * 30 + 70
     label_stride = max(1, math.ceil((len(frames) - 1) / 6))
     slider_steps = [
         {
@@ -189,10 +190,13 @@ def build_replay_figure(frames: tuple[ReplayFrame, ...], title: str) -> go.Figur
     figure = go.Figure(
         data=_traces(frames[0], identities),
         layout=go.Layout(
-            font={"size": 18},
-            height=top_margin + 760,
+            font={"size": 18, "family": "Segoe UI, Arial, sans-serif", "color": "#142033"},
+            height=760,
+            meta={"scenario": title},
+            paper_bgcolor="white",
+            plot_bgcolor="white",
             title={
-                "text": _frame_title(title, frames[0]),
+                "text": _frame_title(frames[0]),
                 "font": {"size": 22},
                 "y": 0.98,
                 "yref": "container",
@@ -207,11 +211,15 @@ def build_replay_figure(frames: tuple[ReplayFrame, ...], title: str) -> go.Figur
                 "scaleanchor": "y",
                 "range": _axis_range(frames, 0),
                 "tickfont": {"size": 16},
+                "gridcolor": "#dfe8ed",
+                "zerolinecolor": "#bacbd6",
             },
             yaxis={
                 "title": {"text": ""},
                 "range": _axis_range(frames, 1),
                 "tickfont": {"size": 16},
+                "gridcolor": "#dfe8ed",
+                "zerolinecolor": "#bacbd6",
             },
             annotations=[
                 {
@@ -224,11 +232,11 @@ def build_replay_figure(frames: tuple[ReplayFrame, ...], title: str) -> go.Figur
                     "xanchor": "left",
                     "yanchor": "bottom",
                     "showarrow": False,
-                    "font": {"size": 18},
+                    "font": {"size": 16},
                 }
             ],
-            margin={"t": top_margin, "b": 220},
-            showlegend=True,
+            margin={"t": 110, "b": 200, "l": 62, "r": 24},
+            showlegend=False,
             legend={"font": {"size": 16}},
             hoverlabel={"font": {"size": 18}},
             updatemenus=[
@@ -236,6 +244,10 @@ def build_replay_figure(frames: tuple[ReplayFrame, ...], title: str) -> go.Figur
                     "type": "buttons",
                     "font": {"size": 18},
                     "direction": "right",
+                    "bgcolor": "#eef3f6",
+                    "bordercolor": "#c6d6df",
+                    "borderwidth": 1,
+                    "pad": {"t": 8, "b": 8},
                     "x": 0,
                     "y": -0.3,
                     "xanchor": "left",
@@ -252,15 +264,38 @@ def build_replay_figure(frames: tuple[ReplayFrame, ...], title: str) -> go.Figur
                             "args": [[None], {"mode": "immediate", "frame": {"duration": 0}}],
                         },
                     ],
-                }
+                },
+                {
+                    "type": "buttons",
+                    "active": -1,
+                    "x": 1,
+                    "y": -0.3,
+                    "xanchor": "right",
+                    "yanchor": "top",
+                    "font": {"size": 16},
+                    "bgcolor": "#eef3f6",
+                    "bordercolor": "#c6d6df",
+                    "buttons": [
+                        {
+                            "label": "Tracks",
+                            "method": "relayout",
+                            "args": [{"showlegend": True}],
+                            "args2": [{"showlegend": False}],
+                        }
+                    ],
+                },
             ],
             sliders=[
                 {
                     "active": 0,
                     "ticklen": 0,
-                    "x": 0.22,
+                    "x": 0,
                     "y": -0.12,
-                    "len": 0.78,
+                    "len": 1,
+                    "activebgcolor": "#087f8c",
+                    "bgcolor": "#dfe8ed",
+                    "bordercolor": "#9db5c4",
+                    "minorticklen": 0,
                     "font": {"size": 16},
                     "currentvalue": {"prefix": "time ", "xanchor": "left", "font": {"size": 20}},
                     "pad": {"t": 12, "b": 12},
@@ -272,7 +307,7 @@ def build_replay_figure(frames: tuple[ReplayFrame, ...], title: str) -> go.Figur
             go.Frame(
                 data=_traces(frame, identities),
                 name=f"{frame.time_s:.1f}",
-                layout=go.Layout(title={"text": _frame_title(title, frame)}),
+                layout=go.Layout(title={"text": _frame_title(frame)}),
             )
             for frame in frames
         ],
@@ -295,17 +330,16 @@ def write_replay_html(
     html = pio.to_html(
         build_replay_figure(frames, title),
         include_plotlyjs=True,
-        full_html=True,
+        full_html=False,
         div_id=REPLAY_DIV_ID,
         auto_play=False,
+        config={
+            "responsive": True,
+            "displayModeBar": "hover",
+            "displaylogo": False,
+            "scrollZoom": False,
+        },
     )
-    notice = f'<footer role="contentinfo"><p>{REPLAY_NOTICE}</p></footer>'
-    html = html.replace(
-        "<head>",
-        '<head><meta name="viewport" content="width=device-width, initial-scale=1">'
-        "<style>body{margin:0;padding:24px;font:18px/1.5 sans-serif;}"
-        "footer{max-width:80ch;margin-top:24px;}</style>",
-    )
-    html = html.replace("</body>", f"{notice}\n</body>")
+    html = replay_page(html, title, frames[0].time_s, frames[-1].time_s, REPLAY_NOTICE)
     with path.open("w", encoding="utf-8", newline="\n") as handle:
         handle.write(html)

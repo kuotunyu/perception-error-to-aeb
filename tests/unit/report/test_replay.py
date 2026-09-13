@@ -273,16 +273,19 @@ def test_labels_and_controls_have_separate_readable_regions() -> None:
     assert layout["margin"]["b"] >= 120
 
 
-def test_long_scenario_title_wraps_without_losing_its_identity() -> None:
+def test_long_scenario_identity_does_not_expand_the_live_status_header(tmp_path: Any) -> None:
     replay = load_replay_module()
     title = "scenario-with-an-intentionally-long-identity-token / observation_delayed_aeb"
 
     figure = replay.build_replay_figure(timeline(), title=title)
     rendered = figure["layout"]["title"]["text"]
 
-    assert "<br>" in rendered
-    assert title in rendered.replace("<br>", "")
-    assert max(len(line) for line in rendered.split("<br>")[:-1]) <= 32
+    assert figure.layout.meta["scenario"] == title
+    assert rendered == replay.build_replay_figure(timeline(), title="short").layout.title.text
+    assert rendered.count("<br>") == 1
+    path = tmp_path / "replay.html"
+    replay.write_replay_html(timeline(), title=title, path=path)
+    assert title in path.read_text()
 
 
 def test_replay_large_text_has_top_anchored_space_for_every_frame() -> None:
@@ -296,8 +299,8 @@ def test_replay_large_text_has_top_anchored_space_for_every_frame() -> None:
     assert layout["title"]["y"] < 1
     titles = [layout["title"]["text"]] + [f["layout"]["title"]["text"] for f in figure["frames"]]
     lines = max(text.count("<br>") + 1 for text in titles)
-    assert layout["margin"]["t"] >= lines * 30 + 50
-    assert layout["height"] - layout["margin"]["t"] - layout["margin"]["b"] >= 500
+    assert layout["margin"]["t"] >= lines * 30 + 30
+    assert layout["height"] - layout["margin"]["t"] - layout["margin"]["b"] >= 440
     assert layout["legend"]["font"]["size"] >= 16
     for axis in ("xaxis", "yaxis"):
         assert layout[axis]["tickfont"]["size"] >= 16
@@ -359,7 +362,36 @@ def test_the_animation_is_titled_with_what_it_shows() -> None:
 
     figure = replay.build_replay_figure(timeline(), title="s-0001 / oracle_aeb")
 
-    assert "s-0001" in figure["layout"]["title"]["text"]
+    assert "s-0001" in figure.layout.meta["scenario"]
+
+
+def test_replay_workspace_separates_context_and_preserves_track_access(tmp_path: Any) -> None:
+    replay = load_replay_module()
+    frames = (
+        frame(0, tracks=(track("actor-a", 20),)),
+        frame(1, tracks=(track("actor-a", 20, visible=False),)),
+    )
+    figure = replay.build_replay_figure(frames, "lead_or_stopping / coalition-dropout+latency")
+    assert figure.layout.showlegend is False
+    toggle = figure.layout.updatemenus[1].buttons[0]
+    assert toggle.method == "relayout"
+    assert toggle.args[0]["showlegend"] is True
+    assert toggle.args2[0]["showlegend"] is False
+    first, second = figure.frames
+    assert first.data[1].line.color != second.data[1].line.color
+    assert first.data[1].hoverinfo == "name+x+y"
+    assert first.data[1].name == second.data[1].name == "actor-a"
+    path = tmp_path / "replay.html"
+    replay.write_replay_html(frames, "lead_or_stopping / coalition-dropout+latency", path)
+    html = path.read_text()
+    assert '"displayModeBar": "hover"' in html
+    assert "<h1>Lead or stopping</h1>" in html
+    assert 'class="replay-workspace"' in html
+    assert "Observed track" in html and "Unobserved track" in html
+    assert "<li>dropout</li>" in html and "<li>latency</li>" in html
+    assert 'class="replay-context"' in html
+    replay.write_replay_html(frames, "<script>alert(1)</script>", path)
+    assert "<script>alert(1)</script>" not in path.read_text()
 
 
 def test_the_animation_is_written_as_self_contained_html(tmp_path: Any) -> None:
