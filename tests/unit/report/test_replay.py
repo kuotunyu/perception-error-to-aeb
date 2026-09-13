@@ -285,6 +285,27 @@ def test_long_scenario_title_wraps_without_losing_its_identity() -> None:
     assert max(len(line) for line in rendered.split("<br>")[:-1]) <= 32
 
 
+def test_replay_large_text_has_top_anchored_space_for_every_frame() -> None:
+    replay = load_replay_module()
+    figure = replay.build_replay_figure(timeline(), title="long-scenario / " + "coalition-" * 12)
+    layout = figure["layout"]
+    assert layout["font"]["size"] >= 18
+    assert layout["title"]["font"]["size"] >= 22
+    assert layout["title"]["yanchor"] == "top"
+    assert layout["title"]["yref"] == "container"
+    assert layout["title"]["y"] < 1
+    titles = [layout["title"]["text"]] + [f["layout"]["title"]["text"] for f in figure["frames"]]
+    lines = max(text.count("<br>") + 1 for text in titles)
+    assert layout["margin"]["t"] >= lines * 30 + 50
+    assert layout["height"] - layout["margin"]["t"] - layout["margin"]["b"] >= 500
+    assert layout["legend"]["font"]["size"] >= 16
+    for axis in ("xaxis", "yaxis"):
+        assert layout[axis]["tickfont"]["size"] >= 16
+    assert layout["sliders"][0]["font"]["size"] >= 16
+    assert layout["sliders"][0]["currentvalue"]["font"]["size"] >= 20
+    assert layout["updatemenus"][0]["font"]["size"] >= 18
+
+
 def test_actor_trace_indices_stay_stable_when_actors_enter_exit_or_reorder() -> None:
     replay = load_replay_module()
     frames = (

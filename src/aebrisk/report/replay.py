@@ -105,10 +105,11 @@ def frame_styles(frame: ReplayFrame) -> dict[str, str]:
 
 def _frame_title(title: str, frame: ReplayFrame) -> str:
     time_to_collision = "none" if frame.ttc_s is None else f"{frame.ttc_s:.2f} s"
-    return (
-        f"{_wrap_title(title)}<br>t={frame.time_s:.1f} s — {frame.aeb_state.value} — "
+    status = (
+        f"t={frame.time_s:.1f} s — {frame.aeb_state.value} — "
         f"{frame.ego_speed_mps:.1f} m/s — ttc {time_to_collision}"
     )
+    return f"{_wrap_title(title)}<br>{_wrap_title(status)}"
 
 
 def _wrap_title(title: str, width: int = 32) -> str:
@@ -169,6 +170,8 @@ def build_replay_figure(frames: tuple[ReplayFrame, ...], title: str) -> go.Figur
         raise ValueError("title must name the scenario and configuration shown")
 
     identities = tuple(sorted({track.track_id for frame in frames for track in frame.tracks}))
+    title_lines = max(_frame_title(title, frame).count("<br>") + 1 for frame in frames)
+    top_margin = title_lines * 30 + 70
     label_stride = max(1, math.ceil((len(frames) - 1) / 6))
     slider_steps = [
         {
@@ -186,13 +189,30 @@ def build_replay_figure(frames: tuple[ReplayFrame, ...], title: str) -> go.Figur
     figure = go.Figure(
         data=_traces(frames[0], identities),
         layout=go.Layout(
-            title={"text": _frame_title(title, frames[0]), "automargin": True},
+            font={"size": 18},
+            height=top_margin + 760,
+            title={
+                "text": _frame_title(title, frames[0]),
+                "font": {"size": 22},
+                "y": 0.98,
+                "yref": "container",
+                "yanchor": "top",
+                "x": 0.02,
+                "xref": "container",
+                "xanchor": "left",
+                "automargin": True,
+            },
             xaxis={
                 "title": {"text": "scenario-local x (m)", "standoff": 16},
                 "scaleanchor": "y",
                 "range": _axis_range(frames, 0),
+                "tickfont": {"size": 16},
             },
-            yaxis={"title": {"text": ""}, "range": _axis_range(frames, 1)},
+            yaxis={
+                "title": {"text": ""},
+                "range": _axis_range(frames, 1),
+                "tickfont": {"size": 16},
+            },
             annotations=[
                 {
                     "text": "scenario-local y (m)",
@@ -204,13 +224,18 @@ def build_replay_figure(frames: tuple[ReplayFrame, ...], title: str) -> go.Figur
                     "xanchor": "left",
                     "yanchor": "bottom",
                     "showarrow": False,
+                    "font": {"size": 18},
                 }
             ],
-            margin={"t": 110, "b": 150},
+            margin={"t": top_margin, "b": 220},
             showlegend=True,
+            legend={"font": {"size": 16}},
+            hoverlabel={"font": {"size": 18}},
             updatemenus=[
                 {
                     "type": "buttons",
+                    "font": {"size": 18},
+                    "direction": "right",
                     "x": 0,
                     "y": -0.3,
                     "xanchor": "left",
@@ -236,7 +261,8 @@ def build_replay_figure(frames: tuple[ReplayFrame, ...], title: str) -> go.Figur
                     "x": 0.22,
                     "y": -0.12,
                     "len": 0.78,
-                    "currentvalue": {"prefix": "time ", "xanchor": "left"},
+                    "font": {"size": 16},
+                    "currentvalue": {"prefix": "time ", "xanchor": "left", "font": {"size": 20}},
                     "pad": {"t": 12, "b": 12},
                     "steps": slider_steps,
                 }
@@ -274,6 +300,12 @@ def write_replay_html(
         auto_play=False,
     )
     notice = f'<footer role="contentinfo"><p>{REPLAY_NOTICE}</p></footer>'
+    html = html.replace(
+        "<head>",
+        '<head><meta name="viewport" content="width=device-width, initial-scale=1">'
+        "<style>body{margin:0;padding:24px;font:18px/1.5 sans-serif;}"
+        "footer{max-width:80ch;margin-top:24px;}</style>",
+    )
     html = html.replace("</body>", f"{notice}\n</body>")
     with path.open("w", encoding="utf-8", newline="\n") as handle:
         handle.write(html)
