@@ -139,6 +139,7 @@ def build_site(claims_path: Path, artifacts_dir: Path, output_dir: Path) -> Path
     figure_names = (
         "shapley-contributions.svg",
         "intervention-rates-by-family.svg",
+        "error-severity-sensitivity.svg",
     )
     figure_roots = (artifacts_dir.parent / "figures", artifacts_dir.parent.parent / "figures")
     source_figures = next((root for root in figure_roots if root.is_dir()), None)

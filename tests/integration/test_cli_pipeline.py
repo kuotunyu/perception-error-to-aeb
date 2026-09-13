@@ -791,6 +791,9 @@ def test_report_copies_derived_figures_and_replays_with_relative_links(workspace
     (figures / "intervention-rates-by-family.svg").write_text(
         "<svg>families</svg>\n", encoding="utf-8"
     )
+    (figures / "error-severity-sensitivity.svg").write_text(
+        "<svg>severity</svg>\n", encoding="utf-8"
+    )
     replays = workspace / "artifacts" / "replays"
     replays.mkdir()
     (replays / "lead_or_stopping--oracle_aeb.html").write_text(
@@ -809,6 +812,10 @@ def test_report_copies_derived_figures_and_replays_with_relative_links(workspace
     page = (workspace / "site" / "index.html").read_text(encoding="utf-8")
 
     assert 'src="figures/shapley-contributions.svg"' in page
+    assert 'src="figures/error-severity-sensitivity.svg"' in page
+    assert (workspace / "site" / "figures" / "error-severity-sensitivity.svg").read_text() == (
+        "<svg>severity</svg>\n"
+    )
     assert 'href="replays/lead_or_stopping--oracle_aeb.html"' in page
     assert (workspace / "site" / "figures" / "shapley-contributions.svg").read_text() == (
         "<svg>shapley</svg>\n"
