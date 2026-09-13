@@ -106,9 +106,15 @@ def frame_styles(frame: ReplayFrame) -> dict[str, str]:
 def _frame_title(title: str, frame: ReplayFrame) -> str:
     time_to_collision = "none" if frame.ttc_s is None else f"{frame.ttc_s:.2f} s"
     return (
-        f"{title} — t={frame.time_s:.1f} s — {frame.aeb_state.value} — "
+        f"{_wrap_title(title)}<br>t={frame.time_s:.1f} s — {frame.aeb_state.value} — "
         f"{frame.ego_speed_mps:.1f} m/s — ttc {time_to_collision}"
     )
+
+
+def _wrap_title(title: str, width: int = 32) -> str:
+    """Insert display-only line breaks without changing scenario identity."""
+
+    return "<br>".join(title[index : index + width] for index in range(0, len(title), width))
 
 
 def _traces(frame: ReplayFrame, identities: tuple[str, ...]) -> list[go.Scatter]:
@@ -163,28 +169,52 @@ def build_replay_figure(frames: tuple[ReplayFrame, ...], title: str) -> go.Figur
         raise ValueError("title must name the scenario and configuration shown")
 
     identities = tuple(sorted({track.track_id for frame in frames for track in frame.tracks}))
+    label_stride = max(1, math.ceil((len(frames) - 1) / 6))
     slider_steps = [
         {
             "args": [[f"{frame.time_s:.1f}"], {"frame": {"duration": 0, "redraw": True}}],
-            "label": f"{frame.time_s:.1f} s",
+            "label": (
+                f"{frame.time_s:.1f} s"
+                if index == 0 or index == len(frames) - 1 or index % label_stride == 0
+                else ""
+            ),
+            "value": f"{frame.time_s:.1f} s",
             "method": "animate",
         }
-        for frame in frames
+        for index, frame in enumerate(frames)
     ]
     figure = go.Figure(
         data=_traces(frames[0], identities),
         layout=go.Layout(
-            title={"text": _frame_title(title, frames[0])},
+            title={"text": _frame_title(title, frames[0]), "automargin": True},
             xaxis={
-                "title": {"text": "scenario-local x (m)"},
+                "title": {"text": "scenario-local x (m)", "standoff": 16},
                 "scaleanchor": "y",
                 "range": _axis_range(frames, 0),
             },
-            yaxis={"title": {"text": "scenario-local y (m)"}, "range": _axis_range(frames, 1)},
+            yaxis={"title": {"text": ""}, "range": _axis_range(frames, 1)},
+            annotations=[
+                {
+                    "text": "scenario-local y (m)",
+                    "textangle": 0,
+                    "xref": "paper",
+                    "yref": "paper",
+                    "x": 0,
+                    "y": 1.03,
+                    "xanchor": "left",
+                    "yanchor": "bottom",
+                    "showarrow": False,
+                }
+            ],
+            margin={"t": 110, "b": 150},
             showlegend=True,
             updatemenus=[
                 {
                     "type": "buttons",
+                    "x": 0,
+                    "y": -0.3,
+                    "xanchor": "left",
+                    "yanchor": "top",
                     "buttons": [
                         {
                             "label": "Play",
@@ -199,7 +229,18 @@ def build_replay_figure(frames: tuple[ReplayFrame, ...], title: str) -> go.Figur
                     ],
                 }
             ],
-            sliders=[{"active": 0, "currentvalue": {"prefix": "time "}, "steps": slider_steps}],
+            sliders=[
+                {
+                    "active": 0,
+                    "ticklen": 0,
+                    "x": 0.22,
+                    "y": -0.12,
+                    "len": 0.78,
+                    "currentvalue": {"prefix": "time ", "xanchor": "left"},
+                    "pad": {"t": 12, "b": 12},
+                    "steps": slider_steps,
+                }
+            ],
         ),
         frames=[
             go.Frame(

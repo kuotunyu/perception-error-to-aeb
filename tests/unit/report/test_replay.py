@@ -237,6 +237,54 @@ def test_animation_has_plotly_generated_play_pause_and_time_slider() -> None:
     ]
 
 
+def test_dense_timeline_keeps_every_frame_reachable_with_sparse_visible_ticks() -> None:
+    replay = load_replay_module()
+
+    figure = replay.build_replay_figure(timeline(31), title="t")
+    steps = figure["layout"]["sliders"][0]["steps"]
+
+    assert len(steps) == 31
+    assert [step["args"][0][0] for step in steps] == [frame["name"] for frame in figure["frames"]]
+    assert [step["value"] for step in steps] == [f"{index * 0.1:.1f} s" for index in range(31)]
+    visible_labels = [step["label"] for step in steps if step["label"]]
+    assert visible_labels[0] == "0.0 s"
+    assert visible_labels[-1] == "3.0 s"
+    assert len(visible_labels) <= 7
+    assert figure["layout"]["sliders"][0]["ticklen"] == 0
+
+
+def test_labels_and_controls_have_separate_readable_regions() -> None:
+    replay = load_replay_module()
+
+    figure = replay.build_replay_figure(timeline(), title="t")
+    layout = figure["layout"]
+
+    assert layout["yaxis"]["title"]["text"] in (None, "")
+    y_explanation = next(
+        annotation
+        for annotation in layout["annotations"]
+        if annotation["text"] == "scenario-local y (m)"
+    )
+    assert y_explanation["textangle"] == 0
+    assert y_explanation["xref"] == "paper"
+    assert y_explanation["yref"] == "paper"
+    assert layout["updatemenus"][0]["y"] != layout["sliders"][0]["y"]
+    assert layout["sliders"][0]["currentvalue"]["prefix"] == "time "
+    assert layout["margin"]["b"] >= 120
+
+
+def test_long_scenario_title_wraps_without_losing_its_identity() -> None:
+    replay = load_replay_module()
+    title = "scenario-with-an-intentionally-long-identity-token / observation_delayed_aeb"
+
+    figure = replay.build_replay_figure(timeline(), title=title)
+    rendered = figure["layout"]["title"]["text"]
+
+    assert "<br>" in rendered
+    assert title in rendered.replace("<br>", "")
+    assert max(len(line) for line in rendered.split("<br>")[:-1]) <= 32
+
+
 def test_actor_trace_indices_stay_stable_when_actors_enter_exit_or_reorder() -> None:
     replay = load_replay_module()
     frames = (
