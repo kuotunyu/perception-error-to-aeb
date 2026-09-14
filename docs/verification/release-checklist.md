@@ -8,8 +8,9 @@ described below.
 
 ## 0. Release identity and open human gate
 
-- [ ] The E2 browser replay is accepted by a human against SHA-256
-      `04c681d7bc3604ccb361bf88f89a9f615cebeebcccc1e6334ab59136f2dba59e`.
+- [ ] A human accepts the final candidate replay; record its SHA-256 with the
+      acceptance result and confirm it matches the release site's replay.
+      Acceptance of an earlier UI revision does not cover later changes.
       This remains pending; a local render or automated test cannot check it off.
 - [ ] `main` is clean at the release commit and the private handoff records that
       exact full commit. Before E4 authorization, the repository has zero remotes.
@@ -42,6 +43,32 @@ docker compose run --rm dev uv run --frozen python -m aebrisk.dev verify
       retained. A setup failure is labelled as such rather than as behavioral RED.
 
 ## 2. Mutation audit
+
+### Replay status adapter (separate required check)
+
+Python coverage does not measure JavaScript. With an empty read-only dataset
+mount and the approved CPU/memory compose override, generate a fresh synthetic
+151-frame contract in the pinned Python container, then run the dependency-free
+Node.js >=18 check on the host (commands run from the repository root):
+
+```text
+docker compose run --rm dev uv run --frozen python -m pytest tests/unit/report/test_replay.py::test_replay_status_contract_fixture --no-cov -p no:cacheprovider --basetemp=/work/artifacts/replay-status-contract
+node tests/js/check-replay-status.cjs artifacts/replay-status-contract
+node tests/js/check-replay-status.cjs artifacts/replay-status-contract missing-event
+node tests/js/check-replay-status.cjs artifacts/replay-status-contract stale
+```
+
+- [ ] The fixture and normal Node check exit 0; both intentional negative
+      variants exit nonzero with a frame-status assertion. Save all four exits.
+      Variants mutate only the generated script in memory, never repository source.
+- [ ] Record the candidate source identity with these results. The check exercises
+      initial state, 151 sequential frame events, five native-slider targets in
+      nonsequential order, and unknown events preserving valid status. It executes
+      the actual generated adapter against minimal DOM/event doubles; it does not
+      run Plotly transitions or prove browser synchronization. Human playback,
+      pause and slider acceptance remains required.
+
+### Python mutation audit
 
 Mutation testing rewrites source and therefore runs only in a dedicated Linux
 clean clone. The denominator contains every generated mutant in all declared
