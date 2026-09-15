@@ -32,7 +32,11 @@ Shapley 的 intervention-duration game 中，同一 channel 的觀察平均貢�
 
 `bicycle_or_vru` 的 `valid_tokens` = 44 <!-- claim: p3.family-interventions.bicycle_or_vru.oracle_aeb.valid_tokens -->，低於 protocol 的 `evaluation_per_family` = 100。<!-- claim: p3.family-interventions.evaluation_per_family --> 這兩個值只說明樣本不足，不是 efficacy claim；首頁不對該 family 的介入率提出正式結論。
 
-## 圖表與回放
+## 圖表與情境重播
+
+初次閱讀可先比較下表同一 family 的 oracle、empty coalition、full medium coalition。將各頁拖到相同時間，觀察 Ego 的速度、AEB 狀態、TTC 與周圍軌跡，再回看上方整體結果中的碰撞、接觸與介入代價。TTC 無可用數值不代表沒有風險。
+
+這些例子依預先固定的 median-nearest 規則選取，適合解釋機制，不能用單一畫面證明整體效果。Zero counted collisions 也不能脫離接觸分類與煞車代價單獨閱讀。
 
 - [單通道 severity sensitivity](docs/figures/error-severity-sensitivity.svg)依固定嚴重度比較碰撞率、false/missed 事件率與介入時間；各指標分開尺度，使用各設定的實測曝光與 replicate 分母。
 - [Shapley 觀察平均貢獻](docs/figures/shapley-contributions.svg)把 collision indicator 與 intervention duration 分成不同單位的 panel。
@@ -46,7 +50,7 @@ Shapley 的 intervention-duration game 中，同一 channel 的觀察平均貢�
 | pedestrian/crosswalk | [開啟](docs/evidence/nuplan_aeb_v2/replays/pedestrian_or_crosswalk--oracle_aeb.html) | [開啟](docs/evidence/nuplan_aeb_v2/replays/pedestrian_or_crosswalk--coalition-none.html) | [開啟](docs/evidence/nuplan_aeb_v2/replays/pedestrian_or_crosswalk--coalition-dropout+localization_shape+latency+track_instability.html) |
 | bicycle/VRU | [開啟](docs/evidence/nuplan_aeb_v2/replays/bicycle_or_vru--oracle_aeb.html) | [開啟](docs/evidence/nuplan_aeb_v2/replays/bicycle_or_vru--coalition-none.html) | [開啟](docs/evidence/nuplan_aeb_v2/replays/bicycle_or_vru--coalition-dropout+localization_shape+latency+track_instability.html) |
 
-回放是從指定 replicate 重新建構的衍生 timeline，使用 scenario-local 原點與匿名 actor ID；它不是 raw trajectory export、地圖畫面或 nuBoard log。每個重建結果先與凍結 formal record 共有的碰撞、接觸、曝光與介入量測逐項比對；formal schema 不保存最終 pose 或 speed，兩者改以同一次 fresh simulator outcome 檢查。
+重播是從指定 replicate 重新建構的衍生 timeline，使用 scenario-local 原點與匿名 actor ID；它不是 raw trajectory export、地圖畫面或 nuBoard log。每個重建結果先與凍結 formal record 共有的碰撞、接觸、曝光與介入量測逐項比對；formal schema 不保存最終 pose 或 speed，兩者改以同一次 fresh simulator outcome 檢查。
 
 ## 解釋邊界
 
@@ -68,4 +72,4 @@ docker compose run --rm dev uv run --frozen python -m aebrisk.dev verify
 
 完整 provenance、hash 與解釋限制見[分析重現紀錄](docs/verification/analysis-reproduction.md)。資料受 nuPlan/Motional 條款與 [CC BY-NC-SA 4.0](docs/evidence/nuplan_aeb_v2-NOTICE.md) 規範；原始碼使用 MIT license。
 
-同一 portfolio 的 [P1 driving-risk-metrics](https://github.com/kuotunyu/driving-risk-metrics)提供評估與不確定性工具；[P2 bev-calibration-lab](https://github.com/kuotunyu/bev-calibration-lab)研究相機/LiDAR calibration fault，目前尚未公開發布。
+同一 portfolio 的 [P1 driving-risk-metrics](https://github.com/kuotunyu/driving-risk-metrics)提供評估與不確定性工具；[P2 bev-calibration-lab](https://github.com/kuotunyu/bev-calibration-lab)研究相機/LiDAR calibration fault，已發布 v1.0.0。三案使用不同資料集與研究設定；這個研究脈絡與描述性資料互通，不代表已驗證同一套模型從感知驅動 AEB。
