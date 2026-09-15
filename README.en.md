@@ -38,6 +38,15 @@ For `bicycle_or_vru`, `valid_tokens` = 44 <!-- claim: p3.family-interventions.bi
 
 ## Figures and replays
 
+Start with oracle, empty coalition and full medium coalition within the same
+family in the table below. Seek to the same time and compare Ego speed, AEB state,
+TTC and surrounding tracks, then return to the aggregate collision, contact and
+intervention tables. Unavailable TTC does not establish absence of risk.
+
+These examples follow the predeclared median-nearest selection rule. They explain
+mechanisms; a single frame cannot establish aggregate performance. Read zero
+counted collisions together with contact classification and braking costs.
+
 - [Single-channel severity sensitivity](docs/figures/error-severity-sensitivity.svg) compares the fixed levels using separate scales for collision rate, false/missed event rates and intervention duration, with each configuration's measured exposure and replicate denominator.
 - [Observed mean Shapley contributions](docs/figures/shapley-contributions.svg) separate collision indicator and intervention duration into panels with their own units.
 - [Intervention event rates by family](docs/figures/intervention-rates-by-family.svg) use scenario-replicates as the denominator and do not borrow whole-cohort bootstrap error bars.
@@ -74,4 +83,4 @@ docker compose run --rm dev uv run --frozen python -m aebrisk.dev verify
 
 See the [analysis reproduction record](docs/verification/analysis-reproduction.md) for full provenance, hashes, and interpretation limits. Data-derived material is governed by the nuPlan/Motional terms and [CC BY-NC-SA 4.0](docs/evidence/nuplan_aeb_v2-NOTICE.md); independently authored source code is MIT licensed.
 
-Within the same portfolio, [P1 driving-risk-metrics](https://github.com/kuotunyu/driving-risk-metrics) provides evaluation and uncertainty tooling. [P2 bev-calibration-lab](https://github.com/kuotunyu/bev-calibration-lab) studies camera/LiDAR calibration faults and is not yet published.
+Within the same portfolio, [P1 driving-risk-metrics](https://github.com/kuotunyu/driving-risk-metrics) provides evaluation and uncertainty tooling. [P2 bev-calibration-lab](https://github.com/kuotunyu/bev-calibration-lab) studies camera/LiDAR calibration faults and has published v1.0.0. The projects use different datasets and study settings; their research narrative and descriptive artifact interchange do not establish a validated perception-to-AEB model pipeline.
