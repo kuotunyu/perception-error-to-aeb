@@ -35,3 +35,6 @@ venv/
 reports/figures/
 reports/replay*.html
 runs/
+
+# local agent working agreement (kept on disk, not published)
+/AGENTS.md
