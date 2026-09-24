@@ -2,14 +2,26 @@
 
 from __future__ import annotations
 
+import shutil
+import subprocess
 from pathlib import Path
+from typing import Optional
 
+import pytest
 import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 MATCH_RUNNER_IDS = (
     'echo "HOST_UID=$(id -u)" >> "$GITHUB_ENV"\necho "HOST_GID=$(id -g)" >> "$GITHUB_ENV"\n'
 )
+REPLAY_STATUS_STEP = "Check the replay status script against a freshly generated contract"
+FIXTURE_COMMAND = (
+    "docker compose run --rm dev uv run --frozen python -m pytest "
+    "tests/unit/report/test_replay.py::test_replay_status_contract_fixture "
+    "--no-cov -p no:cacheprovider --basetemp=/work/artifacts/replay-status-contract"
+)
+NODE_COMMAND = "node tests/js/check-replay-status.cjs artifacts/replay-status-contract"
+FRAME_FAILURE = "AssertionError [ERR_ASSERTION]: play frame 0.1"
 
 
 def workflow(name: str) -> dict[object, object]:
@@ -27,6 +39,16 @@ def runs(document: dict[object, object], job: str) -> tuple[str, ...]:
     steps = selected["steps"]
     assert isinstance(steps, list)
     return tuple(str(step["run"]) for step in steps if isinstance(step, dict) and "run" in step)
+
+
+def step(document: dict[object, object], job: str, name: str) -> dict[str, object]:
+    jobs = document["jobs"]
+    assert isinstance(jobs, dict)
+    steps = jobs[job]["steps"]
+    matches = [item for item in steps if isinstance(item, dict) and item.get("name") == name]
+    assert len(matches) == 1, name
+    selected: dict[str, object] = matches[0]
+    return selected
 
 
 def test_workflows_build_a_nonroot_user_matching_the_runner_checkout() -> None:
@@ -53,11 +75,112 @@ def test_ci_builds_the_locked_container_and_runs_the_shared_gate() -> None:
     document = workflow("ci.yml")
     commands = runs(document, "verify")
 
-    assert commands == (
+    assert commands[:4] == (
         MATCH_RUNNER_IDS,
         "docker compose build",
         "docker compose run --rm dev uv lock --check",
         "docker compose run --rm dev uv run --frozen python -m aebrisk.dev verify",
+    )
+    # The last step checks the replay status script; the tests below execute it.
+    assert commands[4:] == (str(step(document, "verify", REPLAY_STATUS_STEP)["run"]),)
+
+
+def run_replay_status_step(
+    tmp_path: Path,
+    *,
+    fixture: int = 0,
+    normal: int = 0,
+    mutations: Optional[dict[str, tuple[int, str]]] = None,
+) -> tuple[subprocess.CompletedProcess[str], list[str]]:
+    """Run the CI step's script with only docker and node replaced by recorders.
+
+    GitHub runs a `shell: bash` step as `bash --noprofile --norc -eo pipefail`.
+    """
+
+    selected = step(workflow("ci.yml"), "verify", REPLAY_STATUS_STEP)
+    assert selected["shell"] == "bash"
+    outcomes = {"missing-event": (1, FRAME_FAILURE), "stale": (1, FRAME_FAILURE)}
+    outcomes.update(mutations or {})
+    doubles = [
+        f'docker() {{ echo "docker $*" >> calls.log; return {fixture}; }}',
+        "node() {",
+        '  echo "node $*" >> calls.log',
+        '  case "${3:-}" in',
+    ]
+    for mutation, (code, message) in outcomes.items():
+        doubles.append(f"    {mutation}) echo '{message}' >&2; return {code} ;;")
+    doubles += [f"    *) return {normal} ;;", "  esac", "}", ""]
+    result = subprocess.run(
+        [
+            str(shutil.which("bash")),
+            "--noprofile",
+            "--norc",
+            "-eo",
+            "pipefail",
+            "-c",
+            "\n".join(doubles) + str(selected["run"]),
+        ],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    log = tmp_path / "calls.log"
+    calls = log.read_text(encoding="utf-8").splitlines() if log.exists() else []
+    return result, calls
+
+
+def test_ci_runs_the_replay_status_contract_and_both_mutations(tmp_path: Path) -> None:
+    """The generated status adapter is JavaScript, so Python coverage cannot see it."""
+
+    result, calls = run_replay_status_step(tmp_path)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert calls == [
+        FIXTURE_COMMAND,
+        NODE_COMMAND,
+        f"{NODE_COMMAND} missing-event",
+        f"{NODE_COMMAND} stale",
+    ]
+
+
+@pytest.mark.parametrize(
+    ("fixture", "normal", "expected_calls"),
+    [(1, 0, [FIXTURE_COMMAND]), (0, 1, [FIXTURE_COMMAND, NODE_COMMAND])],
+    ids=["fixture-fails", "contract-fails"],
+)
+def test_ci_replay_status_step_stops_when_the_fixture_or_contract_fails(
+    tmp_path: Path, fixture: int, normal: int, expected_calls: list[str]
+) -> None:
+    result, calls = run_replay_status_step(tmp_path, fixture=fixture, normal=normal)
+
+    assert result.returncode == 1
+    assert calls == expected_calls
+
+
+@pytest.mark.parametrize("mutation", ["missing-event", "stale"])
+def test_ci_replay_status_step_fails_when_a_mutation_survives(
+    tmp_path: Path, mutation: str
+) -> None:
+    result, _ = run_replay_status_step(tmp_path, mutations={mutation: (0, "")})
+
+    assert result.returncode == 1
+    assert f"::error::the {mutation} mutation passed the replay status contract" in result.stdout
+
+
+@pytest.mark.parametrize("mutation", ["missing-event", "stale"])
+def test_ci_replay_status_step_requires_a_frame_status_failure(
+    tmp_path: Path, mutation: str
+) -> None:
+    """A mutation that fails for another reason, such as a missing fixture, proves nothing."""
+
+    message = "AssertionError [ERR_ASSERTION]: Mutation must affect the real event update"
+    result, _ = run_replay_status_step(tmp_path, mutations={mutation: (1, message)})
+
+    assert result.returncode == 1
+    assert message in result.stdout
+    assert f"::error::the {mutation} mutation failed without a frame-status assertion" in (
+        result.stdout
     )
 
 

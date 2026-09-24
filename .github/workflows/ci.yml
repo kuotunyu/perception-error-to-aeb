@@ -30,6 +30,27 @@ jobs:
       - name: Run the deterministic verification gate inside the container
         run: docker compose run --rm dev uv run --frozen python -m aebrisk.dev verify
 
+      # Python coverage cannot see the status script each replay embeds. A
+      # fresh 151-frame contract is generated in the container and checked with
+      # the runner's Node.js; both deliberate mutations must fail on a frame.
+      - name: Check the replay status script against a freshly generated contract
+        shell: bash
+        run: |
+          contract=artifacts/replay-status-contract
+          docker compose run --rm dev uv run --frozen python -m pytest tests/unit/report/test_replay.py::test_replay_status_contract_fixture --no-cov -p no:cacheprovider "--basetemp=/work/$contract"
+          node tests/js/check-replay-status.cjs "$contract"
+          for mutation in missing-event stale; do
+            if output=$(node tests/js/check-replay-status.cjs "$contract" "$mutation" 2>&1); then
+              echo "::error::the $mutation mutation passed the replay status contract"
+              exit 1
+            fi
+            if ! grep -q 'play frame' <<<"$output"; then
+              printf '%s\n' "$output"
+              echo "::error::the $mutation mutation failed without a frame-status assertion"
+              exit 1
+            fi
+          done
+
   commit-identity:
     runs-on: ubuntu-latest
     timeout-minutes: 5
