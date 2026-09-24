@@ -3,8 +3,8 @@
 Printed values are shortened with the project's one rounding rule
 (`aebrisk.analysis.rounding`): seconds and event rates to one decimal,
 collisions per hour to two, and Shapley contributions to three significant
-figures. The exact value stays in a `data-*` attribute beside each printed one,
-and in the evidence JSON the figure was drawn from.
+figures. The exact value stays in a `data-*` attribute beside each printed
+contribution or rate, and in the evidence JSON the figure was drawn from.
 """
 
 from __future__ import annotations
