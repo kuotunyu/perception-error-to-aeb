@@ -22,7 +22,7 @@ further down are evidence from specific runs, not instructions.
 
 | Purpose | Document |
 | --- | --- |
-| Design, comparisons and how to read the braking numbers | [Experiment card](experiment-card.md) |
+| Design, comparisons, how to read the braking numbers, related standards and research | [Experiment card](experiment-card.md) |
 | Controller, termination, contact classification, known modelling choices | [Simulation contract](simulation-contract.md) |
 | Frozen evidence files and what each contains | [Evidence index](evidence/README.md) |
 | Data selection, limits and licensing | [Dataset card](dataset-card.md), [evidence notice](evidence/nuplan_aeb_v2-NOTICE.md) |

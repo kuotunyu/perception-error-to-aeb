@@ -52,6 +52,14 @@ estimate means it is not interchangeable with the oracle baseline.
 - Rates per hour use measured exposure. Rates per scenario-replicate use the
   reported replicate count. A per-distance collision rate is unavailable.
 
+The [bilingual results](../README.md) bind every value to the
+[claims registry](claims.yaml), either exactly or with a declared rounding that
+the attribution audit recomputes. Configuration intervals are not intervals for
+differences between configurations. Shapley collision and duration games use
+different units; their observed mean contributions cannot be added, compared as
+effect sizes, or interpreted as statistical significance. No channel ranking is
+established by the current uncertainty evidence.
+
 ## Reading the braking numbers
 
 Counted collisions and braking are coupled in this study through the fixed
@@ -73,13 +81,6 @@ these mechanisms; the
 [simulation contract](simulation-contract.md#known-controller-and-modelling-choices)
 lists them, and characterization tests pin them.
 
-The [bilingual results](../README.md) bind exact values to the
-[claims registry](claims.yaml). Configuration intervals are not intervals for
-differences between configurations. Shapley collision and duration games use
-different units; their observed mean contributions cannot be added, compared as
-effect sizes, or interpreted as statistical significance. No channel ranking is
-established by the current uncertainty evidence.
-
 ## Reproduction and inspection
 
 The [analysis reproduction record](verification/analysis-reproduction.md) binds
@@ -92,6 +93,61 @@ Every Python command runs in the pinned Linux container. The package's tests and
 report reproduction use data-independent fixtures or approved derived evidence.
 Reproducing the formal simulation additionally requires the licensed nuPlan input
 and the original frozen study inputs; it is not part of ordinary installation.
+
+## Relation to standards and prior work
+
+This section places the study's measurements beside the vocabulary of
+established standards and research so that a reader can locate them. It is not
+a compliance claim: the study did not follow, test against or assess
+conformance with any standard named here, and its simulated measurements are
+not the quantities those documents specify.
+
+- **ISO 21448 (SOTIF).** SOTIF concerns hazards that arise from functional
+  insufficiencies of an intended function, including performance limitations of
+  perception, and from the triggering conditions that expose them. The four
+  error channels act as controlled perception insufficiencies. A false
+  intervention corresponds to unintended braking and a missed intervention to
+  braking that did not occur where the oracle AEB braked, which is why both are
+  reported beside counted collisions.
+- **ANSI/UL 4600.** UL 4600 asks for safety performance indicators that are
+  monitored over operation. Event counts, intervention duration and excluded
+  contacts are the kind of measurement such an indicator could be built on; the
+  study defines no indicator and no threshold.
+- **Euro NCAP AEB Car-to-Car and VRU protocols; UN Regulation No. 152.** These
+  assess an AEB on defined test scenarios with physical or surrogate targets,
+  scoring collision avoidance and impact-speed reduction, and UN R152 also sets
+  requirements against false reactions. This study replays logged nuPlan
+  scenarios with non-reactive actors, records collision energy rather than a
+  test-track impact speed, and its results are not comparable to those ratings
+  or approval tests.
+- **ISO 26262.** Functional safety of electrical and electronic malfunctions is
+  out of scope. The channels model perception performance limits, not hardware
+  or software faults.
+- **nuPlan closed-loop modes.** nuPlan distinguishes closed-loop simulation in
+  which other agents replay the log (non-reactive, scored as CLS-NR) from one in
+  which they follow an intelligent driver model (reactive, CLS-R). This study
+  runs its own closed loop in the non-reactive setting, which is why a braking
+  ego can be struck from behind, and it does not use the nuPlan planner scores.
+
+Related research:
+
+- Philion, Kar and Fidler, "Learning to Evaluate Perception Models Using
+  Planner-Centric Metrics", CVPR 2020, evaluate detections by their effect on
+  a planner rather than by detection metrics alone. This study asks a similar
+  question with a fixed AEB policy in place of a learned planner.
+- Piazzoni, Cherian, Slavik and Dauwels, "Modeling Perception Errors towards
+  Robust Decision Making in Autonomous Vehicles", IJCAI 2020, perturb
+  ground-truth objects with perception error models in simulation, the same
+  kind of approach as this study's error channels.
+- Weng, Wang, Held and Kitani, "3D Multi-Object Tracking: A Baseline and New
+  Evaluation Metrics" (AB3DMOT), IROS 2020, is a Kalman-filter tracking
+  baseline. This study's tracker differences observed positions instead, one of
+  the choices listed in the simulation contract.
+- Grabisch and Roubens, "An axiomatic approach to the concept of interaction
+  among players in cooperative games", International Journal of Game Theory,
+  1999, extend Shapley values to interaction indices over pairs and larger
+  coalitions. This study reports first-order Shapley values only and does not
+  decompose interactions between channels.
 
 ## Limits and intended use
 
