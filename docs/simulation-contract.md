@@ -184,12 +184,13 @@ rollout and therefore both braking conditions. Together with target selection
 that is not path-gated, noise on any nearby track can raise the required
 deceleration the controller acts on.
 
-**One error key seeds every channel.** The step loop builds a single `ErrorKey`
-that names the dropout channel and carries the configuration's dropout severity
-(`simulation/step_loop.py`), and the dropout, localization/shape and
-fragmentation draws are all derived from it. Two configurations that differ only
-in dropout severity therefore draw different localization/shape and
-fragmentation noise for the same token and replicate. Common random numbers
+**One error key seeds every random channel.** The step loop builds a single
+`ErrorKey` that names the dropout channel and carries the configuration's
+dropout severity (`simulation/step_loop.py`), and the dropout, localization/shape
+and track-instability (fragmentation) draws are all derived from it; latency
+draws nothing. Two configurations that differ only in dropout severity therefore
+draw different localization/shape and track-instability noise for the same
+token and replicate. Common random numbers
 hold across configurations that share a dropout severity, not across a change in
 it, so a difference between such configurations, including the dropout
 contributions in the Shapley decomposition, combines the dropout effect with a

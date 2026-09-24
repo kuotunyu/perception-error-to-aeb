@@ -355,36 +355,41 @@ def test_a_different_replicate_of_a_stochastic_configuration_differs() -> None:
     )
 
 
-def test_every_channel_draws_from_one_key_that_carries_the_dropout_severity(
+def test_every_random_channel_draws_from_one_key_that_carries_the_dropout_severity(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Changing only dropout's severity changes the localization noise as well.
+    """Changing only dropout's severity moves the localization noise the loop observes.
 
     This pins released behaviour rather than endorsing it. The loop builds one
-    error key that names the dropout channel and carries its severity, and every
-    channel seeds its per-track draws from that key. Two configurations that
-    differ only in dropout therefore do not share the other channels' noise
-    realisation, which the simulation contract states as a known modelling
-    choice.
+    error key that names the dropout channel and carries its severity, and the
+    localization stage draws from that key as the loop passed it. Two
+    configurations that differ only in dropout therefore do not share the other
+    channels' noise realisation, which the simulation contract states as a
+    known modelling choice. The lead stays visible in every run below and no
+    other channel moves a track, so its observed centre is the localization
+    draw alone, read from what the loop's own pipeline returned.
     """
 
     module = load_step_loop_module()
     keys: list[Any] = []
+    observed: list[tuple[TrackState, ...]] = []
     original = module.APPLY_ERRORS
 
     def capturing(history: Any, index: int, config: Any, key: Any, **keywords: Any) -> Any:
+        tracks = original(history, index, config, key, **keywords)
         keys.append(key)
-        return original(history, index, config, key, **keywords)
+        observed.append(tracks)
+        return tracks
 
     monkeypatch.setattr(module, "APPLY_ERRORS", capturing)
-    for dropout in ("zero", "medium"):
+    for name, dropout in (("first", "zero"), ("changed", "low"), ("second", "zero")):
         severities = dict.fromkeys(CHANNELS, "zero")
         severities.update(dropout=dropout, localization_shape="medium")
         run(
             module,
             lead_at(60.0),
             config=ExperimentConfiguration(
-                configuration_id=f"dropout-{dropout}-with-localization",
+                configuration_id=f"{name}-dropout-{dropout}-with-localization",
                 aeb_enabled=True,
                 observation_mode="corrupted",
                 severity_by_channel=severities,
@@ -393,24 +398,18 @@ def test_every_channel_draws_from_one_key_that_carries_the_dropout_severity(
             steps=1,
         )
 
-    from aebrisk.errors.localization import perturb_localization_shape
-
-    zero_key, medium_key = keys
-    assert module.KEY_CHANNEL == zero_key.channel == medium_key.channel == "dropout"
-    assert (zero_key.severity, medium_key.severity) == ("zero", "medium")
-    [lead] = lead_at(60.0)(0, FIRST_TIMESTAMP_US)
-    moved = [
-        perturb_localization_shape(
-            (lead,),
-            position_std_m=0.5,
-            yaw_std_deg=0.0,
-            size_relative_std=0.0,
-            key=key,
-            step=0,
-        )[0].center_xy_m
-        for key in (zero_key, medium_key)
-    ]
-    assert moved[0] != moved[1]
+    assert module.KEY_CHANNEL == "dropout"
+    assert [key.channel for key in keys] == ["dropout"] * 3
+    assert [key.severity for key in keys] == ["zero", "low", "zero"]
+    leads = [next(track for track in tracks if track.track_id == "lead-1") for tracks in observed]
+    assert all(lead.visible for lead in leads)
+    [truth] = lead_at(60.0)(0, FIRST_TIMESTAMP_US)
+    first, changed, second = (lead.center_xy_m for lead in leads)
+    assert first != truth.center_xy_m
+    # The same dropout severity reproduces the draw, whatever the configuration is called.
+    assert first == second
+    # Only dropout's severity changed, and the localization draw moved with it.
+    assert first != changed
 
 
 def test_the_ego_follows_the_route_rather_than_a_straight_line() -> None:
