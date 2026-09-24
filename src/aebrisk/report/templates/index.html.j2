@@ -4,6 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Perception error to AEB — evidence report</title>
+<meta name="description" content="{{ site.description }}">
+<meta name="author" content="{{ site.author }}">
+<link rel="canonical" href="{{ site.url }}">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Perception error to AEB — evidence report">
+<meta property="og:description" content="{{ site.description }}">
+<meta property="og:url" content="{{ site.url }}">
 <style>
   :root {
     color: #142033;
@@ -11,9 +18,11 @@
     font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   }
   * { box-sizing: border-box; }
-  body { margin: 0; line-height: 1.55; }
+  body { margin: 0; line-height: 1.55; overflow-wrap: break-word; }
   header { background: #10243a; color: #f8fbfd; padding: 4.5rem max(1.25rem, calc((100vw - 78rem) / 2)); }
   header p { color: #bbd7e8; max-width: 54rem; font-size: 1.15rem; }
+  header .lede { color: #f8fbfd; font-size: 1.3rem; }
+  header a, footer a { color: #9fe3f3; }
   main { max-width: 78rem; margin: 0 auto; padding: 2.5rem 1.25rem 5rem; }
   h1 { font: 700 clamp(2.3rem, 6vw, 5rem)/0.98 Georgia, serif; letter-spacing: -0.04em; max-width: 15ch; margin: 0; }
   h2 { font: 700 clamp(1.65rem, 3vw, 2.4rem)/1.1 Georgia, serif; margin: 3.5rem 0 1rem; }
@@ -24,30 +33,39 @@
   .grid { display: grid; grid-template-columns: 1fr; gap: 1rem; }
   .card, .figure-card { background: #fff; border: 1px solid #d4e0e7; border-radius: .45rem; box-shadow: 0 12px 28px #29445b12; }
   .card { padding: 1.25rem; }
-  .figure-card { padding: 1rem; overflow-x: auto; }
-  .figure-card img { display: block; width: 100%; min-width: 46rem; height: auto; }
+  .figure-card { padding: 1rem; margin: 0; }
+  .figure-card img { display: block; width: 100%; max-width: 100%; height: auto; }
+  figcaption { color: #43576b; font-size: .9rem; margin-top: .6rem; }
   .metric { font: 700 1.75rem/1 ui-monospace, monospace; color: #006a88; }
   .note { border-left: .25rem solid #ef8d32; background: #fff7ed; padding: .9rem 1rem; }
   table { border-collapse: collapse; width: 100%; background: #fff; font-size: .9rem; }
   th, td { border-bottom: 1px solid #d9e3e9; padding: .65rem .75rem; text-align: left; vertical-align: top; }
   th { background: #e7f1f5; color: #31475b; font-size: .75rem; letter-spacing: .05em; text-transform: uppercase; }
+  td.number { text-align: right; font-variant-numeric: tabular-nums; }
   .scroll { overflow-x: auto; border: 1px solid #d4e0e7; border-radius: .45rem; }
   .empty { color: #627487; font-style: italic; }
-  .replays { columns: 2 22rem; padding-left: 1.25rem; }
-  .replays li { break-inside: avoid; margin-bottom: .5rem; }
   details { margin-top: 3rem; background: #fff; border: 1px solid #d4e0e7; border-radius: .45rem; padding: 1rem; }
   summary { cursor: pointer; font-weight: 700; color: #10243a; }
-  code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
-  @media (max-width: 45rem) { header { padding-block: 3rem; } .replays { columns: 1; } }
+  code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; overflow-wrap: anywhere; }
+  footer { background: #10243a; color: #cfe0ea; padding: 2rem max(1.25rem, calc((100vw - 78rem) / 2)); font-size: .9rem; }
+  footer p { max-width: 65rem; margin: .4rem 0; }
+  @media (max-width: 45rem) { header { padding-block: 3rem; } th, td { padding: .5rem; } }
 </style>
 </head>
 <body>
 <header>
   <p class="eyebrow">Locked nuPlan cohort · deterministic AEB</p>
   <h1>What changes when perception errors reach emergency braking?</h1>
-  <p>The same scenarios, route, controller, rate, and termination rules are held fixed while the observed tracks change.</p>
+  <p class="lede">{{ site.lede }}</p>
+  <p>The same scenarios, route, controller, rate, and termination rules are held fixed while the observed tracks change. Source, documentation and the known controller and modelling choices are in the <a href="{{ site.repository }}">repository</a>.</p>
 </header>
 <main>
+{% if finding_figure %}<section id="finding">
+  <h2>Finding</h2>
+  <figure class="figure-card"><img src="figures/{{ finding_figure.name }}" alt="{{ finding_figure.alt }}"><figcaption>{{ finding_figure.caption }}</figcaption></figure>
+  <p>The fixed AEB brakes for the tracked object with the highest required deceleration whether or not it is in the ego's path, the nominal controller does not slow for other road users, and tracked velocity is a finite difference of noisy positions. The evaluation harness surfaced these properties; the <a href="{{ site.repository }}/blob/main/docs/simulation-contract.md#known-controller-and-modelling-choices">simulation contract</a> describes them.</p>
+</section>{% endif %}
+
 <section id="question">
   <h2>Research question</h2>
   <p class="lede">How do dropout, localization and shape error, latency, and track instability change collisions and braking behavior under one fixed AEB policy?</p>
@@ -59,27 +77,31 @@
   {% if common_valid_tokens is not none %}<p><span class="metric">{{ common_valid_tokens }}</span> common-valid tokens were evaluated in every configuration.</p>{% endif %}
   {% if observed %}
   <div class="scroll"><table>
-    <thead><tr><th>Configuration</th><th>Scenario-replicates</th><th>Counted collisions</th><th>contacts_not_at_fault</th><th>Measured exposure (s)</th></tr></thead>
-    <tbody>{% for row in observed %}<tr><td><code>{{ row.configuration_id }}</code></td><td>{{ row.scenarios }}</td><td>{{ row.collisions }}</td><td>{{ row.contacts_not_at_fault | default("—") }}</td><td>{{ row.simulated_seconds | default("—") }}</td></tr>{% endfor %}</tbody>
+    <thead><tr><th>Configuration</th><th>Scenario-replicates</th><th>Counted collisions</th><th>contacts_not_at_fault</th><th>Measured exposure (s)</th><th>Mean intervention duration (s)</th><th>False events</th><th>Missed events</th></tr></thead>
+    <tbody>{% for row in observed %}<tr><td>{{ row.label }}<br><code>{{ row.configuration_id }}</code></td><td class="number">{{ row.scenarios }}</td><td class="number">{{ row.collisions }}</td><td class="number">{{ row.contacts_not_at_fault }}</td><td class="number">{{ row.simulated_seconds | fixed(1) }}</td><td class="number">{{ row.mean_intervention_duration_s | fixed(1) }}</td><td class="number">{{ row.false_interventions }}</td><td class="number">{{ row.missed_interventions }}</td></tr>{% endfor %}</tbody>
   </table></div>
   {% else %}<p class="empty">No results in this group.</p>{% endif %}
-  <p>Scenario-replicates are repeated runs, not independent tokens. <code>contacts_not_at_fault</code> records operationally excluded contacts; zero counted collisions does not mean zero contact or real-world safety.</p>
+  <p>Seconds are rounded to one decimal; the complete numeric trace below keeps every exact value. Scenario-replicates are repeated runs, not independent tokens. False and missed counts are events matched against the oracle AEB's braking, not unique scenarios. <code>contacts_not_at_fault</code> records operationally excluded contacts; zero counted collisions does not mean zero contact or real-world safety.</p>
   <p>A contact is excluded when the ego is stopped, or when a body is behind the ego and has the greater speed magnitude. This operational rule is not a closing velocity test, proof of upstream nuPlan equivalence, or an assignment of legal responsibility.</p>
   {% if family_shortfall %}<p><code>bicycle_or_vru</code> has {{ family_shortfall.valid_tokens }} valid tokens against the protocol target of {{ family_shortfall.evaluation_per_family }}. This is a sample shortfall, so the report makes no efficacy claim for that family's event rates.</p>{% endif %}
 </section>
 
 <section id="figures">
   <h2>Figures</h2>
-  {% if figures %}<div class="grid">{% for name in figures %}<figure class="figure-card"><img src="figures/{{ name }}" alt="{{ name | replace('-', ' ') | replace('.svg', '') }}"></figure>{% endfor %}</div>
+  {% if figures %}<div class="grid">{% for figure in figures %}<figure class="figure-card"><img src="figures/{{ figure.name }}" alt="{{ figure.alt }}"><figcaption>{{ figure.caption }}</figcaption></figure>{% endfor %}</div>
   {% else %}<p class="empty">No generated figures were supplied to this build.</p>{% endif %}
   <p>The Shapley panels use separate scales and units. They show observed mean contributions for the full-minus-empty <code>coalition-none</code> game; the arithmetic residual is not an uncertainty interval. The empty coalition still estimates velocity from position differences and is not the oracle. There is no uncertainty interval for Shapley values or configuration differences and no evidence for a channel ranking. Family event rates use scenario-replicates as their denominator and carry no borrowed whole-cohort error bars.</p>
 </section>
 
 <section id="replays">
   <h2>Replays</h2>
-  <p>Each derived timeline uses a predeclared family selection and three replicate-0 configurations. Geometry has a scenario-local display origin and anonymous actor IDs.</p>
-  {% if replays %}<ul class="replays">{% for name in replays %}<li><a href="replays/{{ name }}">{{ name | replace('.html', '') }}</a></li>{% endfor %}</ul>
-  {% else %}<p class="empty">No replay files were supplied to this build.</p>{% endif %}
+  <p>Each derived timeline uses a predeclared family selection and three replicate-0 configurations. Geometry has a scenario-local display origin and anonymous actor IDs. Each replay is a self-contained page of several megabytes, best opened in a desktop browser; its controls are labelled in Traditional Chinese (播放 = Play, 暫停 = Pause).</p>
+  {% if replay_rows %}<div class="scroll"><table>
+    <thead><tr><th>Family</th>{% for label in replay_columns %}<th>{{ label }}</th>{% endfor %}</tr></thead>
+    <tbody>{% for row in replay_rows %}<tr><td>{{ row.label }}</td>{% for name in row.cells %}{% if name %}<td><a href="replays/{{ name }}">Open replay</a></td>{% else %}<td>—</td>{% endif %}{% endfor %}</tr>{% endfor %}</tbody>
+  </table></div>{% endif %}
+  {% if other_replays %}<ul>{% for name in other_replays %}<li><a href="replays/{{ name }}">{{ name | replace('.html', '') }}</a></li>{% endfor %}</ul>{% endif %}
+  {% if not replays %}<p class="empty">No replay files were supplied to this build.</p>{% endif %}
   <p>These timelines contain no sensor pixels, maps, nuBoard logs, native tokens, or raw trajectory exports. The study also has no per-distance collision rate and compares no AEB policy beyond the fixed controller.</p>
 </section>
 
@@ -103,5 +125,9 @@
 {% if family_rows %}<h2>Family intervention event counts</h2><div class="scroll"><table><thead><tr><th>Family</th><th>Configuration</th><th>Scenario-replicates</th><th>Missed</th><th>False</th></tr></thead><tbody>{% for row in family_rows %}<tr><td>{{ row.family }}</td><td>{{ row.configuration_id }}</td><td>{{ row.scenario_replicates }}</td><td>{{ row.missed_interventions }}</td><td>{{ row.false_interventions }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
 </details>
 </main>
+<footer>
+  <p><a href="{{ site.repository }}">Source repository</a> · <a href="{{ site.release }}">Release {{ site.release_tag }}</a> · Author: <a href="{{ site.author_url }}">{{ site.author }}</a></p>
+  <p>Software is released under the MIT License. The nuPlan-derived data, tables and figures on this page are shared under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> and the <a href="https://www.nuscenes.org/terms-of-use">Motional dataset terms</a>; Motional does not sponsor or endorse this project. See the <a href="{{ site.notice }}">NOTICE</a> for which paths fall under which terms.</p>
+</footer>
 </body>
 </html>

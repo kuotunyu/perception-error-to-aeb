@@ -1,0 +1,36 @@
+perception-error-to-aeb
+Copyright (c) 2026 Kuo Tun-Yu
+
+This repository contains material under two sets of terms. This notice lists
+which paths fall under which; it does not change either licence.
+
+1. Independently authored software and documentation: MIT License (LICENSE)
+
+   - src/, tests/, schemas/, configs/, .agents/, .github/
+   - pyproject.toml, uv.lock, Dockerfile, compose.yaml and the other build and
+     configuration files at the repository root
+   - the prose of README.md, README.en.md and docs/, apart from the derived
+     values and figures listed in section 2
+
+2. Material derived from nuPlan v1.1 (Motional): Creative Commons
+   Attribution-NonCommercial-ShareAlike 4.0 and the Motional dataset terms
+   (https://creativecommons.org/licenses/by-nc-sa/4.0/,
+   https://www.nuscenes.org/terms-of-use)
+
+   - docs/evidence/nuplan_aeb_v2/: evidence JSON, cohort manifests and replay
+     timelines; see docs/evidence/nuplan_aeb_v2-NOTICE.md
+   - docs/figures/: SVG figures generated from that evidence
+   - docs/claims.yaml: the registry of values copied from that evidence
+   - the result tables and values in README.md, README.en.md and
+     docs/release-notes/ that restate those values
+   - the published report site, which is built from the same evidence
+
+   Copyright and creator notices supplied with nuPlan remain with Motional and
+   the identified contributors. Motional does not sponsor or endorse this
+   project. No nuPlan database, map, sensor data or raw trajectory export is
+   included.
+
+3. Third-party code in derived files
+
+   Each replay timeline embeds Plotly.js, distributed under the MIT License;
+   its notice remains inside each self-contained HTML file.
