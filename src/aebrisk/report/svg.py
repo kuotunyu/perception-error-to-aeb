@@ -1,4 +1,11 @@
-"""Deterministic, dependency-free SVG figures derived from committed evidence."""
+"""Deterministic, dependency-free SVG figures derived from committed evidence.
+
+Printed values are shortened with the project's one rounding rule
+(`aebrisk.analysis.rounding`): seconds and event rates to one decimal,
+collisions per hour to two, and Shapley contributions to three significant
+figures. The exact value stays in a `data-*` attribute beside each printed one,
+and in the evidence JSON the figure was drawn from.
+"""
 
 from __future__ import annotations
 
@@ -6,6 +13,7 @@ import html
 from pathlib import Path
 from typing import Any, Optional
 
+from aebrisk.analysis.rounding import fixed, scientific, significant
 from aebrisk.artifacts.documents import AEBEvaluationV1, AEBShapleyV1
 from aebrisk.artifacts.family_interventions import FamilyInterventionsV1
 from aebrisk.attribution.factorial import SWEPT_SEVERITIES
@@ -19,8 +27,12 @@ NEGATIVE = "#197278"
 PAPER = "#f7f9fc"
 
 
+def _attribute(value: object) -> str:
+    return html.escape(str(value), quote=True)
+
+
 def _text(x: float, y: float, value: object, *, size: int = 13, weight: int = 400) -> str:
-    escaped = html.escape(str(value), quote=True)
+    escaped = _attribute(value)
     return (
         f'<text x="{x}" y="{y}" font-family="system-ui, sans-serif" '
         f'font-size="{size}" font-weight="{weight}" fill="{INK}">{escaped}</text>'
@@ -67,12 +79,15 @@ def shapley_svg(shapley: dict[str, Any]) -> str:
             y = top + 76 + index * 38
             parts.extend(
                 [
+                    f'<g data-channel="{_attribute(channel)}" '
+                    f'data-value="{_attribute(values[channel])}">',
                     _text(52, y + 12, channel),
                     _bar(480, y, value, maximum),
-                    _text(754, y + 12, str(values[channel]), size=12),
+                    _text(754, y + 12, significant(value), size=12),
+                    "</g>",
                 ]
             )
-        residual = metric["efficiency_max_abs_residual"]
+        residual = scientific(metric["efficiency_max_abs_residual"], 2)
         parts.append(
             _text(
                 52,
@@ -86,7 +101,13 @@ def shapley_svg(shapley: dict[str, Any]) -> str:
 
 
 def _rate_text(rate: Optional[float]) -> str:
-    return "not estimable" if rate is None else str(rate)
+    return "not estimable" if rate is None else fixed(rate, 1)
+
+
+def _exact(value: Optional[float]) -> str:
+    """The machine-readable value kept beside a printed one; absence is not zero."""
+
+    return "unavailable" if value is None else _attribute(value)
 
 
 def intervention_rates_svg(family_interventions: dict[str, Any]) -> str:
@@ -118,6 +139,10 @@ def intervention_rates_svg(family_interventions: dict[str, Any]) -> str:
         false = row["false_per_1000_scenario_replicates"]
         parts.extend(
             [
+                f'<g data-family="{_attribute(row["family"])}" '
+                f'data-configuration="{_attribute(row["configuration_id"])}" '
+                f'data-missed-per-1000="{_exact(missed)}" '
+                f'data-false-per-1000="{_exact(false)}">',
                 _text(44, y + 13, row["family"], size=12, weight=600),
                 _text(214, y + 13, row["configuration_id"], size=11),
                 _bar(672, y, 0.0 if missed is None else float(missed), maximum, 150.0),
@@ -126,6 +151,7 @@ def intervention_rates_svg(family_interventions: dict[str, Any]) -> str:
                 _text(830, y + 32, f"false {_rate_text(false)}", size=11),
                 _text(1040, y + 22, f"{row['scenario_replicates']} scenario-replicates", size=10),
                 f'<line x1="44" y1="{y + 45}" x2="1156" y2="{y + 45}" stroke="{GRID}" />',
+                "</g>",
             ]
         )
     parts.append("</svg>\n")
@@ -161,10 +187,10 @@ def severity_svg(evaluation: dict[str, Any]) -> str:
             "mean_intervention_duration_s": row.mean_intervention_duration_s,
         }
     panels = (
-        ("collisions_per_hour", "Counted collisions / measured hour"),
-        ("false_per_1000_replicates", "False events / 1,000 scenario-replicates"),
-        ("missed_per_1000_replicates", "Missed events / 1,000 scenario-replicates"),
-        ("mean_intervention_duration_s", "Mean intervention duration (s)"),
+        ("collisions_per_hour", "Counted collisions / measured hour", 2),
+        ("false_per_1000_replicates", "False events / 1,000 scenario-replicates", 1),
+        ("missed_per_1000_replicates", "Missed events / 1,000 scenario-replicates", 1),
+        ("mean_intervention_duration_s", "Mean intervention duration (s)", 1),
     )
     parts = [
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 1160" '
@@ -187,11 +213,12 @@ def severity_svg(evaluation: dict[str, Any]) -> str:
             size=13,
         ),
     ]
-    for index, (metric, label) in enumerate(panels):
+    for index, (metric, label, places) in enumerate(panels):
         top = 106.0 + index * 255.0
         maximum = max([value[metric] or 0.0 for value in values.values()] + [1e-12])
         parts.append(_text(32, top + 14, label, size=18, weight=650))
-        parts.append(_text(930, top + 14, f"Shared scale: 0 to {maximum}", size=12))
+        shared = fixed(maximum, places)
+        parts.append(_text(930, top + 14, f"Shared scale: 0 to {shared}", size=12))
         for column, channel in enumerate(CHANNELS):
             left = 32.0 + column * 350.0
             parts.extend(
@@ -208,7 +235,8 @@ def severity_svg(evaluation: dict[str, Any]) -> str:
                 name = f"{channel}-{level}"
                 value = values[name][metric]
                 x = left + 50 + position * 110
-                raw = "unavailable" if value is None else str(value)
+                raw = _exact(value)
+                printed = "unavailable" if value is None else fixed(value, places)
                 parts.append(
                     f'<g data-metric="{metric}" data-configuration="{name}" data-value="{raw}">'
                 )
@@ -226,7 +254,7 @@ def severity_svg(evaluation: dict[str, Any]) -> str:
                 parts.extend(
                     [
                         _text(x - 20, top + 160, level, size=11),
-                        _text(left + 12, top + 184 + position * 17, f"{level}: {raw}", size=11),
+                        _text(left + 12, top + 184 + position * 17, f"{level}: {printed}", size=11),
                         "</g>",
                     ]
                 )
