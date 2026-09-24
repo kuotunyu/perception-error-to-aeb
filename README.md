@@ -79,7 +79,7 @@ Shapley 的 intervention-duration game 中，同一 channel 的觀察平均貢�
 - [各 family 介入事件率](docs/figures/intervention-rates-by-family.svg)以 scenario-replicates 為分母，沒有借用全體 cohort 的 bootstrap error bar。
 - 預先固定的 median-nearest 展示各有 oracle、empty coalition 與 full coalition 的 replicate-zero 版本：
 
-每個重播都從線上報告開啟，是 7.5 至 11.7 MB 的獨立 HTML 頁面，建議使用桌機瀏覽器。
+每個重播都是放在線上報告網站上的獨立 HTML 頁面，大小 7.5 至 11.7 MB，建議使用桌機瀏覽器。
 
 | Family | Oracle | Empty coalition | Full medium coalition |
 | --- | --- | --- | --- |

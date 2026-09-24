@@ -82,7 +82,7 @@ counted collisions together with contact classification and braking costs.
 - [Intervention event rates by family](docs/figures/intervention-rates-by-family.svg) use scenario-replicates as the denominator and do not borrow whole-cohort bootstrap error bars.
 - The predeclared median-nearest examples each have oracle, empty-coalition, and full-coalition replicate-zero views:
 
-Each replay opens from the live report as a self-contained HTML page of 7.5 to 11.7 MB, so a desktop browser is recommended. The replay controls are labelled in Traditional Chinese: 播放 = Play, 暫停 = Pause.
+Each replay is a self-contained HTML page of 7.5 to 11.7 MB served from the live report site, so a desktop browser is recommended. The replay controls are labelled in Traditional Chinese: 播放 = Play, 暫停 = Pause.
 
 | Family | Oracle | Empty coalition | Full medium coalition |
 | --- | --- | --- | --- |
