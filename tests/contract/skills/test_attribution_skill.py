@@ -822,6 +822,61 @@ def test_a_malformed_marker_cannot_hide_beside_a_valid_marker(
     assert any("invalid claim marker" in violation for violation in violations), violations
 
 
+def test_a_proposal_may_carry_its_well_formed_markers(workspace: dict[str, Path]) -> None:
+    """A drafted README line pasted with its markers is audited, not refused as malformed."""
+
+    proposal = _write(
+        workspace["root"],
+        "proposal.yaml",
+        yaml.safe_dump(
+            {
+                "proposals": [
+                    {
+                        "claim_ids": [
+                            "p3.baseline.collisions.oracle_aeb",
+                            "p3.baseline.contacts_not_at_fault.oracle_aeb",
+                        ],
+                        "text": "Oracle AEB recorded `collisions` = 39 "
+                        "<!-- claim: p3.baseline.collisions.oracle_aeb --> and "
+                        "`contacts_not_at_fault` = 1095. "
+                        "<!-- claim: p3.baseline.contacts_not_at_fault.oracle_aeb -->",
+                    }
+                ]
+            }
+        ),
+    )
+
+    violations, status = _validate(workspace, proposal=proposal)
+
+    assert violations == ()
+    assert len(status["statements"]) == 2
+
+
+def test_a_malformed_marker_in_a_proposal_is_still_rejected(workspace: dict[str, Path]) -> None:
+    """Only the well-formed markers are exempt; a broken one in a proposal still fails."""
+
+    proposal = _write(
+        workspace["root"],
+        "proposal.yaml",
+        yaml.safe_dump(
+            {
+                "proposals": [
+                    {
+                        "claim_ids": ["p3.shapley.collision_indicator-values-dropout"],
+                        "text": "Dropout's Shapley `collision_indicator` = -0.00218. "
+                        "<!-- claim: p3.shapley.collision_indicator-values-dropout; "
+                        "rounded: 10 -->",
+                    }
+                ]
+            }
+        ),
+    )
+
+    violations, _ = _validate(workspace, proposal=proposal)
+
+    assert any("proposal[0]: invalid claim marker" in item for item in violations), violations
+
+
 def test_exit_one_lists_every_violation_in_one_run(
     workspace: dict[str, Path], capsys: pytest.CaptureFixture[str]
 ) -> None:

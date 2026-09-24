@@ -349,7 +349,9 @@ def validate_attribution(
 
     traces: list[dict[str, Any]] = []
     for source, text, markers in statements:
-        if CLAIM_COMMENT.search(text):
+        # Document text arrives with its valid markers removed; proposal text
+        # may still quote them, so only a leftover claim-like comment is malformed.
+        if CLAIM_COMMENT.search(MARKER.sub("", text)):
             violations.append(
                 f"{source}: invalid claim marker; write <!-- claim: <id> --> or "
                 "<!-- claim: <id>; rounded: N --> with N from 0 to 9"
