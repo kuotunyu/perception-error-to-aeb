@@ -9,12 +9,19 @@
 > [Pages run 34949967680](https://github.com/kuotunyu/perception-error-to-aeb/actions/runs/34949967680)
 > and
 > [Release run 34950888651](https://github.com/kuotunyu/perception-error-to-aeb/actions/runs/34950888651)
-> succeeded. The Release run repeated the eight-stage gate on the tagged source
-> before it built and attached the wheel, the sdist and `SHA256SUMS`. The report
-> is published at <https://kuotunyu.github.io/perception-error-to-aeb/>. The
-> maintainer reviewed the replay pages and accepted the replay set on
-> 2026-09-15. The boxes below were never ticked in this file; they are kept as
-> written before publication. This block was added on 2026-09-24.
+> succeeded. No separate `workflow_dispatch` Pages run was made; the
+> push-triggered run deployed the site for the tagged commit. The Release run
+> repeated the eight-stage gate on the tagged source before it built and
+> attached the wheel, the sdist and `SHA256SUMS`. The report is published at
+> <https://kuotunyu.github.io/perception-error-to-aeb/>. On 2026-09-15 the
+> repository owner opened the final candidate replay,
+> `docs/evidence/nuplan_aeb_v2/replays/lead_or_stopping--coalition-dropout+localization_shape+latency+track_instability.html`
+> (SHA-256 `3439fe13e37b03e60ea6574aca21eebcfd6be0351988f6f6ecd9cba0f1cd25b2`),
+> checked play, pause, scrubbing and the track controls, and accepted it.
+> The boxes below were never ticked in this file. They keep their
+> pre-publication content, except that on 2026-09-24, when this block was
+> added, private step labels, private file references and a private approval
+> keyword in this checklist were replaced with plain wording.
 
 This checklist turns one verified `main` commit into the first public release.
 Every unchecked box is a stop condition. Local preparation may complete before
@@ -28,8 +35,9 @@ described below.
       acceptance result and confirm it matches the release site's replay.
       Acceptance of an earlier UI revision does not cover later changes.
       This remains pending; a local render or automated test cannot check it off.
-- [ ] `main` is clean at the release commit, and that exact full commit is
-      recorded. Before that authorization, the repository has zero remotes.
+- [ ] `main` is clean at the release commit, and the owner has recorded that
+      exact full commit. Until the owner approves publication in section 6, the
+      repository has zero remotes.
 - [ ] Package metadata, installed metadata, wheel, sdist, release note
       [`v1.0.0.md`](../release-notes/v1.0.0.md), and the proposed tag all identify
       `perception-error-to-aeb` version `1.0.0`.

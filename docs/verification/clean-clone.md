@@ -217,8 +217,13 @@ points at commit `0ac2fa063b64d21fd3e01b2ee51e446c00380b82`, whose
 push-triggered
 [Pages run](https://github.com/kuotunyu/perception-error-to-aeb/actions/runs/34949967680)
 and [Release run](https://github.com/kuotunyu/perception-error-to-aeb/actions/runs/34950888651)
-succeeded. The Release run repeated the eight-stage gate on the tagged source
-before it built and attached the wheel, the sdist and `SHA256SUMS`. The
-maintainer reviewed the replay pages and accepted the replay set on
-2026-09-15. This section was added on 2026-09-24; the records above keep their
-original dates and results.
+succeeded. No separate `workflow_dispatch` Pages run was made; the
+push-triggered run deployed the site for the tagged commit. The Release run
+repeated the eight-stage gate on the tagged source before it built and attached
+the wheel, the sdist and `SHA256SUMS`. On 2026-09-15 the repository owner opened
+the final candidate replay,
+`docs/evidence/nuplan_aeb_v2/replays/lead_or_stopping--coalition-dropout+localization_shape+latency+track_instability.html`
+(SHA-256 `3439fe13e37b03e60ea6574aca21eebcfd6be0351988f6f6ecd9cba0f1cd25b2`),
+checked play, pause, scrubbing and the track controls, and accepted it. This
+section was added on 2026-09-24; the records above keep their original dates and
+results.
