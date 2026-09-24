@@ -20,10 +20,16 @@ number belongs to which claim.
 
 Write each Markdown result line or result-table cell in this shape:
 
-1. Bind each stable metric key to its exact artifact value, without rounding or
-   percent conversion: `` `metric_key` = exact_value ``.
+1. Bind each stable metric key to its exact artifact value, without percent
+   conversion: `` `metric_key` = exact_value ``.
 2. Add one `<!-- claim: <claim_id> -->` on the same line for every binding, in
    the same order as the bindings. A marker authorizes only its paired binding.
+   To display fewer digits, declare the precision in that marker instead:
+   `<!-- claim: <claim_id>; rounded: N -->` with N from 0 to 9. The audit then
+   recomputes the value from the artifact: its decimal text rounded half to even
+   to exactly N decimal places, spelled with N decimals
+   (`aebrisk.analysis.rounding.fixed`). Keep the exact value somewhere in the
+   same document, for example in a `<details>` block.
 3. State `collision_indicator` and `intervention_duration_s` on separate lines.
    Their units differ, so they do not form one sum, comparison, ranking, or predictor.
 4. If the line states `oracle_aeb` collisions, include the exact
@@ -34,6 +40,7 @@ Write each Markdown result line or result-table cell in this shape:
 ```markdown
 Dropout's Shapley `collision_indicator` = -0.0021802325581395357. <!-- claim: p3.shapley.collision_indicator-values-dropout -->
 Oracle AEB recorded `collisions` = 39 <!-- claim: p3.baseline.collisions.oracle_aeb --> and `contacts_not_at_fault` = 1095. <!-- claim: p3.baseline.contacts_not_at_fault.oracle_aeb -->
+Dropout's Shapley `collision_indicator` = -0.00218, shown to three significant figures. <!-- claim: p3.shapley.collision_indicator-values-dropout; rounded: 5 -->
 ```
 
 `collisions_per_100km` is `null` in this release. Describe the rate as
@@ -64,13 +71,17 @@ not evidence of a pass.
 | Result | Required shape |
 | --- | --- |
 | Shapley value | `` `metric_key` = exact_value ``, one metric per line, claim from `shapley.json` |
+| Shorter display | `` `metric_key` = rounded_value `` with `<!-- claim: <id>; rounded: N -->`, exact value kept elsewhere in the document |
 | Cohort | `` `common_valid_tokens` = exact_value `` plus its claim marker |
 | `oracle_aeb` collisions | Bound `collisions` and `contacts_not_at_fault` values plus both markers |
 | Per-100 km | No numeric claim in this release |
 
 ## Common mistakes
 
-- Rounding `-0.0021802325581395357` to `-0.00218` breaks artifact traceability.
+- Rounding `-0.0021802325581395357` to `-0.00218` without `; rounded: 5` in its
+  marker breaks artifact traceability; a malformed marker is rejected outright.
+- A declared rounding must be the canonical spelling: `-0.002180`, `-2.18e-3`
+  or a value rounded to a different precision than the marker states is rejected.
 - Calling seconds a stronger collision effect compares different estimands.
 - Writing a claim ID as visible prose does not create the required HTML marker.
 - Putting a valid value beside the wrong metric key or swapping two values is rejected.
