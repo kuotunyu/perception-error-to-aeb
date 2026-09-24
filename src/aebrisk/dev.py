@@ -17,9 +17,10 @@ from pathlib import Path
 from typing import Callable
 from urllib.parse import unquote, urlsplit
 
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 from aebrisk.artifacts.documents import DOCUMENT_MODELS
+from aebrisk.cohort.manifest import CohortEligibilityV1, CohortManifestV1
 
 VERIFY_STAGES: tuple[str, ...] = (
     "private_guard",
@@ -31,6 +32,14 @@ VERIFY_STAGES: tuple[str, ...] = (
     "schema_contracts",
     "docs_links",
 )
+
+#: Every document kind published under docs/evidence, by its schema_version.
+#: A document whose version is not listed fails the gate instead of passing unread.
+EVIDENCE_MODELS: dict[str, type[BaseModel]] = {
+    **DOCUMENT_MODELS,
+    "aeb-cohort-manifest/v1": CohortManifestV1,
+    "aeb-cohort-eligibility/v1": CohortEligibilityV1,
+}
 
 StageRunner = Callable[[str, Sequence[str], Path], int]
 _MARKDOWN_LINK = re.compile(r"!?\[[^]]*\]\((?P<target><[^>]+>|[^)\s]+)")
@@ -94,7 +103,7 @@ def verify_repository(repo_root: Path, runner: StageRunner = subprocess_runner) 
 
 
 def verify_schema_contracts(repo_root: Path) -> int:
-    """Parse schemas and validate every registered published evidence document."""
+    """Parse schemas and validate every published evidence document against its model."""
 
     invalid: list[Path] = []
     for path in sorted((repo_root / "schemas").glob("**/*.json")):
@@ -104,12 +113,15 @@ def verify_schema_contracts(repo_root: Path) -> int:
             invalid.append(path)
 
     invalid_evidence: list[Path] = []
+    unregistered_evidence: list[Path] = []
     for path in sorted((repo_root / "docs" / "evidence").glob("**/*.json")):
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
             version = payload.get("schema_version") if isinstance(payload, dict) else None
-            model = DOCUMENT_MODELS.get(version) if isinstance(version, str) else None
-            if model is not None:
+            model = EVIDENCE_MODELS.get(version) if isinstance(version, str) else None
+            if model is None:
+                unregistered_evidence.append(path)
+            else:
                 model.model_validate(payload)
         except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValidationError):
             invalid_evidence.append(path)
@@ -124,7 +136,12 @@ def verify_schema_contracts(repo_root: Path) -> int:
             f"invalid evidence document: {path.relative_to(repo_root).as_posix()}",
             file=sys.stderr,
         )
-    return 1 if invalid or invalid_evidence else 0
+    for path in unregistered_evidence:
+        print(
+            f"unregistered evidence document: {path.relative_to(repo_root).as_posix()}",
+            file=sys.stderr,
+        )
+    return 1 if invalid or invalid_evidence or unregistered_evidence else 0
 
 
 def _iter_markdown_files(repo_root: Path) -> list[Path]:
