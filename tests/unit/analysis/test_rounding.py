@@ -66,10 +66,28 @@ def test_significant_shows_three_figures_without_dropping_integer_digits(
     assert significant(value) == expected
 
 
+@pytest.mark.parametrize(
+    ("value", "figures", "expected"),
+    [
+        # Rounding can carry into a new leading digit; the spelling still has
+        # exactly the requested figures rather than one more.
+        (9.996, 3, "10.0"),
+        (-0.0009996, 3, "-0.00100"),
+        (9.95, 2, "10"),
+        (999.6, 3, "1000"),
+    ],
+)
+def test_significant_keeps_the_requested_figures_when_rounding_carries(
+    value: float, figures: int, expected: str
+) -> None:
+    assert significant(value, figures) == expected
+
+
 def test_significant_places_is_what_a_rounded_marker_declares() -> None:
     assert significant_places(4.0670219638242875, 3) == 2
     assert significant_places(-0.027374031007751935, 3) == 4
     assert significant_places(0.0, 2) == 1
+    assert significant_places(9.996, 3) == 1
 
 
 @pytest.mark.parametrize("figures", [0, True, 2.0])
@@ -83,3 +101,11 @@ def test_significant_figures_must_be_a_positive_integer(figures: Any) -> None:
 def test_scientific_spells_an_arithmetic_residual_compactly() -> None:
     assert scientific(2.220446049250313e-16, 2) == "2.2e-16"
     assert scientific(2.6645352591003757e-15) == "2.66e-15"
+
+
+@pytest.mark.parametrize("zero", [0, 0.0, -0.0, Decimal("0E-5")])
+def test_scientific_spells_every_zero_alike(zero: Any) -> None:
+    """An exact residual of zero reads the same however the zero was written."""
+
+    assert scientific(zero, 2) == "0.0e+0"
+    assert scientific(zero, 1) == "0e+0"

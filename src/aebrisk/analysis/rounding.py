@@ -17,7 +17,7 @@ as zero.
 
 from __future__ import annotations
 
-from decimal import ROUND_HALF_EVEN, Decimal
+from decimal import ROUND_HALF_EVEN, Context, Decimal
 from typing import Union
 
 #: The widest fixed spelling a marker may declare. Nine places already exceeds
@@ -61,14 +61,28 @@ def fixed(value: Number, places: int) -> str:
 def significant_places(value: Number, figures: int) -> int:
     """How many decimal places show ``figures`` significant figures of ``value``.
 
-    Zero shows ``figures - 1`` places. Integer digits are never rounded away, and
-    the answer is clamped to what a marker can declare, so a value too small to
-    show at this precision is spelled as zero rather than refused.
+    Zero shows ``figures - 1`` places. When rounding carries into a new leading
+    digit (9.996 to three figures is 10.0, not 10.00), one place fewer keeps the
+    count exact. Integer digits are never rounded away, and the answer is
+    clamped to what a marker can declare, so a value too small to show at this
+    precision is spelled as zero rather than refused.
     """
 
     _require_figures(figures)
     number = _decimal(value)
-    places = figures - 1 if number.is_zero() else figures - 1 - number.adjusted()
+    if number.is_zero():
+        places = figures - 1
+    else:
+        places = figures - 1 - number.adjusted()
+        # The rounded coefficient has at most ``figures + 1`` digits, the extra
+        # one being the carry, so this precision always holds it.
+        rounded = number.quantize(
+            Decimal(1).scaleb(-places),
+            rounding=ROUND_HALF_EVEN,
+            context=Context(prec=figures + 1),
+        )
+        if rounded.adjusted() > number.adjusted():
+            places -= 1
     return max(0, min(MAX_DECIMAL_PLACES, places))
 
 
@@ -79,7 +93,15 @@ def significant(value: Number, figures: int = 3) -> str:
 
 
 def scientific(value: Number, figures: int = 3) -> str:
-    """Spell a tiny arithmetic check, such as an efficiency residual, in E notation."""
+    """Spell a tiny arithmetic check, such as an efficiency residual, in E notation.
+
+    Every zero is spelled with exponent zero (``0.0e+0`` at two figures): a zero
+    has no leading digit to scale by, and ``Decimal`` would otherwise take the
+    exponent from how the zero happened to be written.
+    """
 
     _require_figures(figures)
-    return f"{_decimal(value):.{figures - 1}e}"
+    number = _decimal(value)
+    if number.is_zero():
+        return f"{Decimal(0):.{figures - 1}f}e+0"
+    return f"{number:.{figures - 1}e}"
