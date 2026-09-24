@@ -163,6 +163,12 @@ published `protocol_sha256`. To check a clone by hand:
 sha256sum configs/protocols/nuplan_aeb_v2.yaml
 ```
 
-It should print the `bbf0b6d3...` value above. A future protocol version should
-be hashed over text with normalised line endings, so that the hash does not
-depend on how a checkout writes them.
+It should print the `bbf0b6d3...` value above. A clone made before this change
+keeps the LF bytes when it is updated, because git does not rewrite a file whose
+committed content did not change, and `git status` still reports a clean tree.
+If the command prints `9d3957387d7d...` instead, run
+`rm configs/protocols/nuplan_aeb_v2.yaml && git checkout -- configs/protocols/nuplan_aeb_v2.yaml`
+and check again.
+
+A future protocol version should be hashed over text with normalised line
+endings, so that the hash does not depend on how a checkout writes them.
