@@ -45,8 +45,6 @@ jobs:
         run: docker compose run --rm dev uv run --frozen aeb-risk figures --evidence-dir docs/evidence/nuplan_aeb_v2 --output-dir docs/figures
       - name: Build the report with the committed replay assets
         run: docker compose run --rm dev uv run --frozen aeb-risk report --claims docs/claims.yaml --artifacts-dir docs/evidence/nuplan_aeb_v2 --output-dir site
-      - name: Configure Pages
-        uses: actions/configure-pages@v5
       - name: Upload the site
         uses: actions/upload-pages-artifact@v3
         with:

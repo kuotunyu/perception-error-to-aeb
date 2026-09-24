@@ -261,6 +261,23 @@ def test_only_the_pages_deploy_job_holds_deploy_credentials() -> None:
     assert deploy["permissions"] == {"pages": "write", "id-token": "write"}
 
 
+def test_the_pages_build_job_uses_only_actions_that_need_no_pages_access() -> None:
+    """With contents:read alone, the build job cannot read the Pages API.
+
+    actions/configure-pages fetches the Pages site with the job token and stops
+    the build when that call is refused. No step reads its outputs, and neither
+    uploading nor deploying the site needs it.
+    """
+
+    steps = job(workflow("pages.yml"), "build")["steps"]
+    assert isinstance(steps, list)
+
+    assert [item["uses"] for item in steps if "uses" in item] == [
+        "actions/checkout@v6",
+        "actions/upload-pages-artifact@v3",
+    ]
+
+
 def test_release_verifies_tag_version_and_writes_checksums_from_two_artifacts() -> None:
     """A tag must never publish archives whose internal version or hashes are stale."""
 
