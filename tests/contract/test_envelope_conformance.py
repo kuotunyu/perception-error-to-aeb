@@ -25,7 +25,8 @@ from aebrisk.artifacts.schemas import SCHEMA_MODELS, schema_bytes
 REPO_ROOT = Path(__file__).resolve().parents[2]
 FIXTURE = REPO_ROOT / "tests" / "fixtures" / "portfolio_artifact_envelope_v1.json"
 SCHEMA_DIR = REPO_ROOT / "schemas"
-#: Every committed schema is checked, so a new one cannot be added unchecked.
+#: Every schema model is checked, and schemas/ must hold exactly these files,
+#: so a new schema cannot be committed unchecked.
 SCHEMA_NAMES = [name for name, _ in SCHEMA_MODELS]
 CALIBRATION_ARTIFACT_TYPE = "calibration-error-distribution/v1"
 
@@ -115,6 +116,12 @@ def test_consuming_a_p2_artifact_is_never_implicit(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match=r"^unexpected artifact type: "):
         envelope.verify_envelope(path, "portfolio-contract-fixture/v1")
+
+
+def test_the_schema_directory_holds_exactly_the_modelled_schemas() -> None:
+    """A schema committed without a model would never be regenerated or checked."""
+
+    assert sorted(path.stem for path in SCHEMA_DIR.glob("*.json")) == sorted(SCHEMA_NAMES)
 
 
 @pytest.mark.parametrize("name", SCHEMA_NAMES)
