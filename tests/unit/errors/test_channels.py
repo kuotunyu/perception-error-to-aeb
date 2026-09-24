@@ -279,10 +279,10 @@ def test_each_scenario_run_gets_its_own_state() -> None:
 def test_an_injected_error_document_controls_the_bound_geometry() -> None:
     """A validated caller-supplied calibration must not be discarded for the default file."""
 
-    from aebrisk.errors.pipeline import validate_error_config
+    from aebrisk.errors.pipeline import load_error_config, validate_error_config
 
     channels = load_channels_module()
-    document = copy.deepcopy(channels.load_error_config())
+    document = copy.deepcopy(load_error_config())
     document["channels"]["localization_shape"]["position_std_m"] = [0.0, 0.1, 2.0, 3.0]
     validate_error_config(document)
     bound = channels.ScenarioChannels(
@@ -349,9 +349,10 @@ def test_default_and_nondefault_step_lengths_reach_real_fragmentation(
     """A draw between the 0.1 s and 0.2 s hazards exposes both bound durations."""
 
     from aebrisk.errors import fragmentation
+    from aebrisk.errors.pipeline import load_error_config
 
     channels = load_channels_module()
-    document = copy.deepcopy(channels.load_error_config())
+    document = copy.deepcopy(load_error_config())
     document["channels"]["track_instability"]["fragmentation_rate_per_s"][2] = 1.0
     monkeypatch.setattr(fragmentation, "fragmentation_draw", lambda *args: 0.15)
     config = configuration("zero", track_instability="medium")
@@ -369,10 +370,10 @@ def test_default_and_nondefault_step_lengths_reach_real_fragmentation(
 def test_latency_and_dropout_stages_each_change_the_composed_pipeline_alone() -> None:
     """The bound stage table must expose each actual channel, not an identity placeholder."""
 
-    from aebrisk.errors.pipeline import apply_error_pipeline
+    from aebrisk.errors.pipeline import apply_error_pipeline, load_error_config
 
     channels = load_channels_module()
-    document = copy.deepcopy(channels.load_error_config())
+    document = copy.deepcopy(load_error_config())
     document["channels"]["latency"]["latency_s"][2] = 0.1
     document["channels"]["dropout"]["dropout_probability"][2] = 1.0
     frames = history(3)
@@ -424,3 +425,22 @@ def test_latency_selection_is_optional_until_the_first_observation() -> None:
     bound.latency(frames[1].tracks, history=frames, current_index=1)
     assert bound.latency_selection is not None
     assert bound.latency_selection.selected_index == 1
+
+
+def test_channels_bound_without_a_document_use_the_validated_committed_config(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The default grid must pass the same validation as any caller-supplied one."""
+
+    from aebrisk.errors import pipeline
+
+    channels = load_channels_module()
+    config = pipeline.load_error_config()
+    del config["channels"]["latency"]
+    monkeypatch.setattr(pipeline, "load_error_config", lambda path=None: config)
+    pipeline.committed_error_config.cache_clear()
+    try:
+        with pytest.raises(ValueError, match=r"^missing error channels in configuration: "):
+            channels.ScenarioChannels(configuration("zero"))
+    finally:
+        pipeline.committed_error_config.cache_clear()

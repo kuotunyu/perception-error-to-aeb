@@ -16,6 +16,8 @@ while entering takes one, because a threat that flickers is still a threat.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from pathlib import Path
 from types import ModuleType
 from typing import Any, Optional
 
@@ -653,3 +655,95 @@ def test_the_committed_policy_passes_its_own_validator() -> None:
     state_machine = load_state_machine_module()
 
     state_machine.validate_policy(state_machine.load_policy())
+
+
+# --------------------------------------------------------------------------
+# The policy every step actually uses
+# --------------------------------------------------------------------------
+
+
+@pytest.fixture
+def uncached_policy() -> Iterator[ModuleType]:
+    """Clear the per-process policy around a test that substitutes the file's contents."""
+
+    state_machine = load_state_machine_module()
+    state_machine.committed_policy.cache_clear()
+    yield state_machine
+    state_machine.committed_policy.cache_clear()
+
+
+def test_the_policy_file_is_read_once_however_many_steps_run(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Every step asks for the same thresholds; parsing the file again reads nothing new."""
+
+    state_machine = load_state_machine_module()
+    reads: list[Optional[Path]] = []
+    read_policy = state_machine.load_policy
+
+    def counting_load_policy(path: Optional[Path] = None) -> dict[str, Any]:
+        reads.append(path)
+        return read_policy(path)
+
+    monkeypatch.setattr(state_machine, "load_policy", counting_load_policy)
+    memory = monitoring()
+    for _ in range(3):
+        memory, _command = state_machine.update_aeb(memory, (threat(2.0, 1.0),))
+
+    assert len(reads) <= 1
+
+
+def test_a_policy_file_that_fails_validation_stops_the_state_machine(
+    uncached_policy: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The validator's rules must hold for the policy the runs read, not only in tests."""
+
+    state_machine = uncached_policy
+    policy = state_machine.load_policy()
+    policy["full"]["target_accel_mps2"] = 1.0
+    monkeypatch.setattr(state_machine, "load_policy", lambda path=None: policy)
+
+    with pytest.raises(ValueError, match=r"^full target_accel_mps2 must be a deceleration"):
+        state_machine.update_aeb(monitoring(), (threat(1.0, 6.0),))
+
+
+def test_the_policy_in_use_cannot_be_changed_by_a_caller() -> None:
+    """One caller editing the shared thresholds would change every later step."""
+
+    state_machine = load_state_machine_module()
+    policy = state_machine.committed_policy()
+
+    with pytest.raises(TypeError):
+        policy["full"]["target_accel_mps2"] = 1.0
+    with pytest.raises(TypeError):
+        policy["acceleration_bounds_mps2"][0] = -9.0
+    assert policy["full"]["target_accel_mps2"] == -6.0
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        ("nominal_step_s", 0.2, r"^nominal_step_s must be 0\.1, "),
+        (
+            "acceleration_bounds_mps2",
+            [-8.0, 2.0],
+            r"^acceleration_bounds_mps2 must be \(-6\.0, 2\.0\), ",
+        ),
+        ("jerk_limit_mps3", 10.0, r"^jerk_limit_mps3 must be 5\.0, "),
+    ],
+)
+def test_a_policy_whose_limiter_disagrees_with_the_code_is_refused(
+    field: str, value: Any, message: str
+) -> None:
+    """These fields describe the limiter and the step rate; the code, not the file, applies them.
+
+    A file that said otherwise would describe a controller the simulation does
+    not run, and a reader of the committed policy would be misled.
+    """
+
+    state_machine = load_state_machine_module()
+    policy = state_machine.load_policy()
+    policy[field] = value
+
+    with pytest.raises(ValueError, match=message):
+        state_machine.validate_policy(policy)

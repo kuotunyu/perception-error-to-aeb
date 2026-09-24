@@ -36,7 +36,7 @@ from typing import Any, Callable, Optional
 import numpy as np
 import yaml
 
-from aebrisk.committed_config import read_committed_config
+from aebrisk.committed_config import frozen, read_committed_config
 from aebrisk.observation.models import TrackState, WorldFrame
 
 ERROR_CHANNELS: tuple[str, ...] = (
@@ -210,6 +210,22 @@ def load_error_config(path: Optional[Path] = None) -> dict[str, Any]:
     return document
 
 
+@lru_cache(maxsize=1)
+def committed_error_config() -> Mapping[str, Any]:
+    """The committed error configuration, read and validated once per process, then read-only.
+
+    Every scenario run binds the same severity grid, so the file is parsed once
+    rather than once per run. Validating here makes the rules in
+    `validate_error_config` hold for the grid the simulation actually uses, and
+    the read-only copy means no run can change a severity for the runs after it.
+    """
+
+    config = load_error_config()
+    validate_error_config(config)
+    result: Mapping[str, Any] = frozen(config)
+    return result
+
+
 def validate_error_config(config: Mapping[str, Any]) -> None:
     """Refuse a configuration that would silently change what the study measures."""
 
@@ -257,7 +273,7 @@ def parameter(
 ) -> float:
     """Return one channel parameter at one severity."""
 
-    document = load_error_config() if config is None else config
+    document = committed_error_config() if config is None else config
     return float(document["channels"][channel][name][SEVERITIES.index(severity)])
 
 

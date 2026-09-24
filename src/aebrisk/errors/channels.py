@@ -26,6 +26,7 @@ the Shapley baseline is the latter.
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping
 from typing import Any, Optional
 
 from aebrisk.errors.dropout import DropoutState, apply_dropout
@@ -35,7 +36,7 @@ from aebrisk.errors.localization import perturb_localization_shape
 from aebrisk.errors.pipeline import (
     ChannelStages,
     ErrorConfiguration,
-    load_error_config,
+    committed_error_config,
     parameter,
 )
 from aebrisk.observation.models import TrackState
@@ -52,7 +53,7 @@ class ScenarioChannels:
     def __init__(
         self,
         config: ErrorConfiguration,
-        error_config: Optional[dict[str, Any]] = None,
+        error_config: Optional[Mapping[str, Any]] = None,
         dt_s: float = 0.1,
     ) -> None:
         if config.imported:
@@ -68,7 +69,7 @@ class ScenarioChannels:
             raise ValueError(f"dt_s must be finite and positive, got {dt_s!r}")
 
         self._severities = dict(config.severity_by_channel)
-        self._document = load_error_config() if error_config is None else error_config
+        self._document = committed_error_config() if error_config is None else error_config
         self._dt_s = float(dt_s)
 
         self.dropout_state: Optional[DropoutState] = None
