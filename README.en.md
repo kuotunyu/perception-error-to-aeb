@@ -75,16 +75,16 @@ Every Python command runs in the pinned Linux container defined by [`Dockerfile`
 
 ### Where the code is
 
-- `src/aebrisk/observation/`: the zero-error observation, and the tracker that estimates velocity from successive positions.
-- `src/aebrisk/errors/`: the four error channels, applied in a fixed order with keyed, reproducible random draws.
+- `src/aebrisk/observation/`: the oracle (ground-truth) observation that `oracle_aeb` uses, and the tracker that estimates velocity from successive positions. Every configuration that passes through the error channels uses that tracker, including the zero-severity `coalition-none`.
+- `src/aebrisk/errors/`: the four error channels, applied in a fixed order. Their random draws are seeded from a hash of the scenario, the channel and its severity, the replicate and the protocol hash, so a rerun reproduces them exactly.
 - `src/aebrisk/aeb/threat.py`: time to collision and required deceleration for each observed track.
 - `src/aebrisk/aeb/state_machine.py` and `controller.py`: warning, partial and full braking from the committed policy, then the acceleration bounds and jerk limit.
-- `src/aebrisk/simulation/step_loop.py`: the closed loop that runs these stages at every step, beside a nominal controller that never sees other road users.
+- `src/aebrisk/simulation/step_loop.py`: the closed loop, which runs these stages at every step. While the AEB commands partial or full braking, that command replaces the acceleration from the nominal route-following controller (`simulation/route_follower.py`), which never sees other road users.
 - `src/aebrisk/metrics/`, `attribution/` and `analysis/`: collision and braking-event metrics, intervals, the experiment matrix and Shapley values.
 
 ### Quick check without the dataset
 
-This needs Docker and a clone of this repository, not nuPlan. It audits every published number against [`docs/claims.yaml`](docs/claims.yaml), rebuilds the figures and the report from the committed evidence, checks that the rebuilt figures match the committed ones byte for byte, and runs the full verification gate.
+This needs Docker and a clone of this repository, not nuPlan. It checks every claim in [`docs/claims.yaml`](docs/claims.yaml) against the committed evidence files, and every result number in both READMEs and the v1.0.0 release note against those claims. It then rebuilds the figures and the report from the committed evidence, checks that the rebuilt figures match the committed ones byte for byte, and runs the full verification gate.
 
 ```bash
 docker compose build

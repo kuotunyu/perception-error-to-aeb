@@ -64,16 +64,16 @@ protocol 要求的 maximum horizon 是 15 秒上限；到碰撞、路徑結束�
 
 ### 程式碼位置
 
-- `src/aebrisk/observation/`：零誤差觀測，以及由連續位置差分估計速度的 tracker。
-- `src/aebrisk/errors/`：四種誤差通道，依固定順序套用，隨機抽樣由固定鍵值決定，可重現。
+- `src/aebrisk/observation/`：`oracle_aeb` 使用的 oracle（真值）觀測，以及由連續位置差分估計速度的 tracker；經過誤差通道的設定（包括零嚴重度的 `coalition-none`）都使用這個 tracker。
+- `src/aebrisk/errors/`：四種誤差通道，依固定順序套用；隨機抽樣的種子取自場景、通道與其嚴重度、replicate 與 protocol hash 的雜湊，重跑可完全重現。
 - `src/aebrisk/aeb/threat.py`：每個觀測 track 的 time to collision 與所需減速度。
 - `src/aebrisk/aeb/state_machine.py` 與 `controller.py`：依已提交的 policy 決定警示、部分煞車與全力煞車，再套用加速度上下限與 jerk 限制。
-- `src/aebrisk/simulation/step_loop.py`：閉環模擬，每一步依序執行上述階段；與它並行的名義控制器看不到其他道路使用者。
+- `src/aebrisk/simulation/step_loop.py`：閉環模擬，每一步依序執行上述階段；AEB 下達部分或全力煞車時，以該指令取代名義路線跟隨控制器（`simulation/route_follower.py`）的加速度，而名義控制器本身看不到其他道路使用者。
 - `src/aebrisk/metrics/`、`attribution/` 與 `analysis/`：碰撞與煞車事件指標、區間、實驗矩陣與 Shapley 值。
 
 ### 快速檢查（不需資料集）
 
-只需要 Docker 與這個 repository 的 clone，不需要 nuPlan。這組指令以 [`docs/claims.yaml`](docs/claims.yaml) 核對每個公開數值，從已提交的證據重建圖表與報告，確認重建的圖表與已提交版本逐位元組相同，最後執行完整驗證關卡。
+只需要 Docker 與這個 repository 的 clone，不需要 nuPlan。這組指令確認 [`docs/claims.yaml`](docs/claims.yaml) 的每筆 claim 都能由已提交的證據檔重算，並確認兩份 README 與 v1.0.0 release note 的每個結果數值都對應到這些 claim；接著從已提交的證據重建圖表與報告，確認重建的圖表與已提交版本逐位元組相同，最後執行完整驗證關卡。
 
 ```bash
 docker compose build
