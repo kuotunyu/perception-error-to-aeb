@@ -96,10 +96,10 @@ export NUPLAN_DATA_ROOT=/path/to/nuplan
 docker compose run --rm dev uv run --frozen aeb-risk simulate --protocol configs/protocols/nuplan_aeb_v2.yaml --manifest docs/evidence/nuplan_aeb_v2/cohort/evaluation.json --config-id all --split val --workers 8 --output-dir artifacts/formal/nuplan_aeb_v2
 docker compose run --rm dev uv run --frozen aeb-risk evaluate --results-dir artifacts/formal/nuplan_aeb_v2 --manifest docs/evidence/nuplan_aeb_v2/cohort/evaluation.json --output-dir artifacts/reproduction/nuplan_aeb_v2
 docker compose run --rm dev uv run --frozen aeb-risk summarize-families --results-dir artifacts/formal/nuplan_aeb_v2 --manifest docs/evidence/nuplan_aeb_v2/cohort/evaluation.json --protocol configs/protocols/nuplan_aeb_v2.yaml --output-dir artifacts/reproduction/nuplan_aeb_v2
-docker compose run --rm dev bash -c "cd docs/evidence/nuplan_aeb_v2 && sha256sum *.json cohort/*.json | (cd /work/artifacts/reproduction/nuplan_aeb_v2 && sha256sum -c -)"
+docker compose run --rm dev bash -c "cd docs/evidence/nuplan_aeb_v2 && sha256sum *.json | (cd /work/artifacts/reproduction/nuplan_aeb_v2 && sha256sum -c -)"
 ```
 
-在 PowerShell 中，把 `export` 那一行換成 `$env:NUPLAN_DATA_ROOT = '<drive>:/path/to/nuplan'`，其餘指令相同。最後一行逐一比對重新產生的證據檔與已提交版本的雜湊，相同者印出 `OK`。
+在 PowerShell 中，把 `export` 那一行換成 `$env:NUPLAN_DATA_ROOT = '<drive>:/path/to/nuplan'`，其餘指令相同。最後一行比對重新產生的五個分析檔（`evaluation.json`、`intervals.json`、`shapley.json`、`exclusions.json`、`family-interventions.json`）與已提交版本的雜湊，相同者印出 `OK`。`evaluate` 也會寫出 `cohort/` 目錄，但其中的檔案是從已提交 manifest 所在目錄直接複製，不是重新計算的結果：這套流程沿用已提交的 cohort，不重跑 cohort 選取。
 
 完整 provenance、hash 與解釋限制見[分析重現紀錄](docs/verification/analysis-reproduction.md)。資料受 nuPlan/Motional 條款與 [CC BY-NC-SA 4.0](docs/evidence/nuplan_aeb_v2-NOTICE.md) 規範；原始碼使用 MIT license。
 

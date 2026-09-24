@@ -107,10 +107,10 @@ export NUPLAN_DATA_ROOT=/path/to/nuplan
 docker compose run --rm dev uv run --frozen aeb-risk simulate --protocol configs/protocols/nuplan_aeb_v2.yaml --manifest docs/evidence/nuplan_aeb_v2/cohort/evaluation.json --config-id all --split val --workers 8 --output-dir artifacts/formal/nuplan_aeb_v2
 docker compose run --rm dev uv run --frozen aeb-risk evaluate --results-dir artifacts/formal/nuplan_aeb_v2 --manifest docs/evidence/nuplan_aeb_v2/cohort/evaluation.json --output-dir artifacts/reproduction/nuplan_aeb_v2
 docker compose run --rm dev uv run --frozen aeb-risk summarize-families --results-dir artifacts/formal/nuplan_aeb_v2 --manifest docs/evidence/nuplan_aeb_v2/cohort/evaluation.json --protocol configs/protocols/nuplan_aeb_v2.yaml --output-dir artifacts/reproduction/nuplan_aeb_v2
-docker compose run --rm dev bash -c "cd docs/evidence/nuplan_aeb_v2 && sha256sum *.json cohort/*.json | (cd /work/artifacts/reproduction/nuplan_aeb_v2 && sha256sum -c -)"
+docker compose run --rm dev bash -c "cd docs/evidence/nuplan_aeb_v2 && sha256sum *.json | (cd /work/artifacts/reproduction/nuplan_aeb_v2 && sha256sum -c -)"
 ```
 
-In PowerShell, set the dataset root with `$env:NUPLAN_DATA_ROOT = '<drive>:/path/to/nuplan'` instead of `export`; the other commands are the same. The last command compares every regenerated evidence file with the committed one and prints `OK` for each match.
+In PowerShell, set the dataset root with `$env:NUPLAN_DATA_ROOT = '<drive>:/path/to/nuplan'` instead of `export`; the other commands are the same. The last command compares the five regenerated analysis files (`evaluation.json`, `intervals.json`, `shapley.json`, `exclusions.json` and `family-interventions.json`) with the committed ones and prints `OK` for each match. `evaluate` also writes a `cohort/` directory, but it copies those files from the committed manifest's directory rather than computing them: this sequence reuses the committed cohort and does not rerun cohort selection.
 
 See the [analysis reproduction record](docs/verification/analysis-reproduction.md) for full provenance, hashes, and interpretation limits. Data-derived material is governed by the nuPlan/Motional terms and [CC BY-NC-SA 4.0](docs/evidence/nuplan_aeb_v2-NOTICE.md); independently authored source code is MIT licensed.
 
