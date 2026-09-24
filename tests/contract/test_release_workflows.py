@@ -14,7 +14,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 MATCH_RUNNER_IDS = (
     'echo "HOST_UID=$(id -u)" >> "$GITHUB_ENV"\necho "HOST_GID=$(id -g)" >> "$GITHUB_ENV"\n'
 )
-REPLAY_STATUS_STEP = "Check the replay status script against a freshly generated contract"
+REPLAY_STATUS_STEP = "Check the replay status script on a synthetic 151-frame replay"
 FIXTURE_COMMAND = (
     "docker compose run --rm dev uv run --frozen python -m pytest "
     "tests/unit/report/test_replay.py::test_replay_status_contract_fixture "
@@ -88,7 +88,7 @@ def test_ci_builds_the_locked_container_and_runs_the_shared_gate() -> None:
 def test_ci_cancels_superseded_pull_request_runs_but_verifies_every_push() -> None:
     """A newer push to a pull request makes its running check moot.
 
-    Each push to main gets a group of its own, so no main commit's gate or
+    Each push to main gets a group of its own, so no main push's gate or
     identity check is cancelled or left pending behind a later push.
     """
 

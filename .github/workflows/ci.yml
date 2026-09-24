@@ -9,8 +9,9 @@ on:
 permissions:
   contents: read
 
-# A newer push to a pull request cancels its running check. Each push to main
-# gets a group of its own, so every main commit is verified in full.
+# A newer push to a pull request cancels that pull request's running CI. Each
+# push to main gets a group of its own, so no push to main is cancelled by a
+# later one.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
@@ -37,9 +38,10 @@ jobs:
         run: docker compose run --rm dev uv run --frozen python -m aebrisk.dev verify
 
       # Python coverage cannot see the status script each replay embeds. A
-      # fresh 151-frame contract is generated in the container and checked with
-      # the runner's Node.js; both deliberate mutations must fail on a frame.
-      - name: Check the replay status script against a freshly generated contract
+      # synthetic 151-frame replay is generated in the container, and the
+      # script it embeds is checked with the runner's Node.js; both deliberate
+      # mutations must fail on a frame.
+      - name: Check the replay status script on a synthetic 151-frame replay
         shell: bash
         run: |
           contract=artifacts/replay-status-contract

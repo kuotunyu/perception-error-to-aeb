@@ -46,11 +46,11 @@ dependencies = [
     "pydantic>=2.5,<3",
     "pyyaml>=6.0,<7",
     "typer>=0.12,<1",
-    # The report is a static site with one animated top-down replay. Plotly
-    # writes that animation as self-contained HTML from Python, so there is no
+    # The report is a static site with animated top-down replays. Plotly
+    # writes each animation as self-contained HTML from Python, so there is no
     # hand-written JavaScript player: it would be untested code between a
     # result and the person reading it. The only first-party script is the
-    # small read-only status adapter each replay embeds; CI checks it with
+    # small display-only status adapter each replay embeds; CI checks it with
     # tests/js/check-replay-status.cjs, including two deliberate mutations.
     "plotly>=5.20,<6",
     "jinja2>=3.1,<4",

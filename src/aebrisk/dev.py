@@ -1,8 +1,10 @@
 """Deterministic, fail-fast repository verification.
 
 One command, one fixed order, no arguments that change what "verified" means.
-The stage list is identical to the other two portfolio repositories so that a
-release gate can be compared across all three; only the package name differs.
+The stage names and their order are identical to the other two portfolio
+repositories so that a release gate can be compared across all three. Here the
+test stage records branch coverage once and branch_coverage_100 reports on that
+data, instead of running the suite a second time.
 """
 
 from __future__ import annotations
