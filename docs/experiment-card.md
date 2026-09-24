@@ -68,11 +68,11 @@ tracked object with the highest required deceleration whether or not it is in
 the ego's path, the nominal controller does not slow for other road users, and
 outside the oracle every tracked velocity is a finite difference of observed
 positions. In the released evaluation, every configuration that includes
-localization/shape error spends a larger share of its measured exposure braking
-than oracle AEB and records fewer counted collisions. Read those low counts as a
-braking result: set them beside false and missed events, intervention duration
-and `contacts_not_at_fault`, and do not read them as better perception or as
-real-world safety. The
+localization/shape error spends a larger share of its measured exposure braking,
+and records fewer counted collisions, than every AEB configuration without it,
+oracle AEB included. Read those low counts as a braking result: set them beside
+false and missed events, intervention duration and `contacts_not_at_fault`, and
+do not read them as better perception or as real-world safety. The
 [collisions-vs-braking figure](figures/collisions-vs-braking.svg) plots counted
 collisions per 1,000 scenario-replicates against the share of measured exposure
 spent braking for every configuration; it is descriptive, derived from

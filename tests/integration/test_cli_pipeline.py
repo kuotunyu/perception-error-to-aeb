@@ -855,6 +855,8 @@ def test_report_opens_with_a_lede_and_the_braking_figure(workspace: Path) -> Non
 
     header = page[: page.index("</header>")]
     assert "fewest counted collisions" in header
+    assert "largest share of their measured exposure braking" in header
+    assert "most of their measured exposure" not in header
     finding = page[page.index('<section id="finding">') : page.index('<section id="question">')]
     assert 'src="figures/collisions-vs-braking.svg"' in finding
     assert "<figcaption>" in finding

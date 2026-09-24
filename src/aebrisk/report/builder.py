@@ -55,8 +55,8 @@ SITE: dict[str, str] = {
     ),
     "lede": (
         "In this study, the configurations with the fewest counted collisions are the ones "
-        "that spend most of their measured exposure braking, so counted collisions are "
-        "read here together with braking cost, never alone."
+        "that spend the largest share of their measured exposure braking, so counted "
+        "collisions are read here together with braking cost, never alone."
     ),
 }
 
