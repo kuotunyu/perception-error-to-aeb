@@ -2,7 +2,9 @@
 
 **On the same nuPlan scenarios under one fixed AEB policy, how do dropout, localization and shape error, latency, and track instability propagate into collisions and braking behavior?**
 
-[繁體中文](README.md) · [Evidence guide](docs/README.md)
+[繁體中文](README.md) · [Live report](https://kuotunyu.github.io/perception-error-to-aeb/) · [Release v1.0.0](https://github.com/kuotunyu/perception-error-to-aeb/releases/tag/v1.0.0) · [Documentation guide](docs/README.md#english-guide)
+
+[![CI](https://github.com/kuotunyu/perception-error-to-aeb/actions/workflows/ci.yml/badge.svg)](https://github.com/kuotunyu/perception-error-to-aeb/actions/workflows/ci.yml) [![Pages](https://github.com/kuotunyu/perception-error-to-aeb/actions/workflows/pages.yml/badge.svg)](https://github.com/kuotunyu/perception-error-to-aeb/actions/workflows/pages.yml)
 
 ## Finding
 
@@ -80,12 +82,14 @@ counted collisions together with contact classification and braking costs.
 - [Intervention event rates by family](docs/figures/intervention-rates-by-family.svg) use scenario-replicates as the denominator and do not borrow whole-cohort bootstrap error bars.
 - The predeclared median-nearest examples each have oracle, empty-coalition, and full-coalition replicate-zero views:
 
+Each replay opens from the live report as a self-contained HTML page of 7.5 to 11.7 MB, so a desktop browser is recommended. The replay controls are labelled in Traditional Chinese: 播放 = Play, 暫停 = Pause.
+
 | Family | Oracle | Empty coalition | Full medium coalition |
 | --- | --- | --- | --- |
-| lead/stopping | [Open](docs/evidence/nuplan_aeb_v2/replays/lead_or_stopping--oracle_aeb.html) | [Open](docs/evidence/nuplan_aeb_v2/replays/lead_or_stopping--coalition-none.html) | [Open](docs/evidence/nuplan_aeb_v2/replays/lead_or_stopping--coalition-dropout+localization_shape+latency+track_instability.html) |
-| cut-in/crossing | [Open](docs/evidence/nuplan_aeb_v2/replays/cut_in_or_crossing--oracle_aeb.html) | [Open](docs/evidence/nuplan_aeb_v2/replays/cut_in_or_crossing--coalition-none.html) | [Open](docs/evidence/nuplan_aeb_v2/replays/cut_in_or_crossing--coalition-dropout+localization_shape+latency+track_instability.html) |
-| pedestrian/crosswalk | [Open](docs/evidence/nuplan_aeb_v2/replays/pedestrian_or_crosswalk--oracle_aeb.html) | [Open](docs/evidence/nuplan_aeb_v2/replays/pedestrian_or_crosswalk--coalition-none.html) | [Open](docs/evidence/nuplan_aeb_v2/replays/pedestrian_or_crosswalk--coalition-dropout+localization_shape+latency+track_instability.html) |
-| bicycle/VRU | [Open](docs/evidence/nuplan_aeb_v2/replays/bicycle_or_vru--oracle_aeb.html) | [Open](docs/evidence/nuplan_aeb_v2/replays/bicycle_or_vru--coalition-none.html) | [Open](docs/evidence/nuplan_aeb_v2/replays/bicycle_or_vru--coalition-dropout+localization_shape+latency+track_instability.html) |
+| lead/stopping | [Open](https://kuotunyu.github.io/perception-error-to-aeb/replays/lead_or_stopping--oracle_aeb.html) | [Open](https://kuotunyu.github.io/perception-error-to-aeb/replays/lead_or_stopping--coalition-none.html) | [Open](https://kuotunyu.github.io/perception-error-to-aeb/replays/lead_or_stopping--coalition-dropout+localization_shape+latency+track_instability.html) |
+| cut-in/crossing | [Open](https://kuotunyu.github.io/perception-error-to-aeb/replays/cut_in_or_crossing--oracle_aeb.html) | [Open](https://kuotunyu.github.io/perception-error-to-aeb/replays/cut_in_or_crossing--coalition-none.html) | [Open](https://kuotunyu.github.io/perception-error-to-aeb/replays/cut_in_or_crossing--coalition-dropout+localization_shape+latency+track_instability.html) |
+| pedestrian/crosswalk | [Open](https://kuotunyu.github.io/perception-error-to-aeb/replays/pedestrian_or_crosswalk--oracle_aeb.html) | [Open](https://kuotunyu.github.io/perception-error-to-aeb/replays/pedestrian_or_crosswalk--coalition-none.html) | [Open](https://kuotunyu.github.io/perception-error-to-aeb/replays/pedestrian_or_crosswalk--coalition-dropout+localization_shape+latency+track_instability.html) |
+| bicycle/VRU | [Open](https://kuotunyu.github.io/perception-error-to-aeb/replays/bicycle_or_vru--oracle_aeb.html) | [Open](https://kuotunyu.github.io/perception-error-to-aeb/replays/bicycle_or_vru--coalition-none.html) | [Open](https://kuotunyu.github.io/perception-error-to-aeb/replays/bicycle_or_vru--coalition-dropout+localization_shape+latency+track_instability.html) |
 
 The replays are derived timelines rebuilt from the selected replicate. They use a scenario-local origin and anonymous actor IDs; they are not raw trajectory exports, map views, or nuBoard logs. Each rerun is checked against every collision, contact, exposure, and intervention measurement shared with its frozen formal record. The formal schema does not store final pose or speed, so those are instead checked against the same fresh simulator outcome.
 

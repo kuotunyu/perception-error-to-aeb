@@ -2,7 +2,9 @@
 
 **在同一批 nuPlan 場景與固定 AEB policy 下，dropout、定位與形狀誤差、延遲及 track instability 會如何傳遞成碰撞與煞車行為？**
 
-[English](README.en.md) · [證據導覽](docs/README.md)
+[English](README.en.md) · [線上報告](https://kuotunyu.github.io/perception-error-to-aeb/) · [v1.0.0 發布](https://github.com/kuotunyu/perception-error-to-aeb/releases/tag/v1.0.0) · [證據導覽](docs/README.md)
+
+[![CI](https://github.com/kuotunyu/perception-error-to-aeb/actions/workflows/ci.yml/badge.svg)](https://github.com/kuotunyu/perception-error-to-aeb/actions/workflows/ci.yml) [![Pages](https://github.com/kuotunyu/perception-error-to-aeb/actions/workflows/pages.yml/badge.svg)](https://github.com/kuotunyu/perception-error-to-aeb/actions/workflows/pages.yml)
 
 ## 主要發現
 
@@ -77,12 +79,14 @@ Shapley 的 intervention-duration game 中，同一 channel 的觀察平均貢�
 - [各 family 介入事件率](docs/figures/intervention-rates-by-family.svg)以 scenario-replicates 為分母，沒有借用全體 cohort 的 bootstrap error bar。
 - 預先固定的 median-nearest 展示各有 oracle、empty coalition 與 full coalition 的 replicate-zero 版本：
 
+每個重播都從線上報告開啟，是 7.5 至 11.7 MB 的獨立 HTML 頁面，建議使用桌機瀏覽器。
+
 | Family | Oracle | Empty coalition | Full medium coalition |
 | --- | --- | --- | --- |
-| lead/stopping | [開啟](docs/evidence/nuplan_aeb_v2/replays/lead_or_stopping--oracle_aeb.html) | [開啟](docs/evidence/nuplan_aeb_v2/replays/lead_or_stopping--coalition-none.html) | [開啟](docs/evidence/nuplan_aeb_v2/replays/lead_or_stopping--coalition-dropout+localization_shape+latency+track_instability.html) |
-| cut-in/crossing | [開啟](docs/evidence/nuplan_aeb_v2/replays/cut_in_or_crossing--oracle_aeb.html) | [開啟](docs/evidence/nuplan_aeb_v2/replays/cut_in_or_crossing--coalition-none.html) | [開啟](docs/evidence/nuplan_aeb_v2/replays/cut_in_or_crossing--coalition-dropout+localization_shape+latency+track_instability.html) |
-| pedestrian/crosswalk | [開啟](docs/evidence/nuplan_aeb_v2/replays/pedestrian_or_crosswalk--oracle_aeb.html) | [開啟](docs/evidence/nuplan_aeb_v2/replays/pedestrian_or_crosswalk--coalition-none.html) | [開啟](docs/evidence/nuplan_aeb_v2/replays/pedestrian_or_crosswalk--coalition-dropout+localization_shape+latency+track_instability.html) |
-| bicycle/VRU | [開啟](docs/evidence/nuplan_aeb_v2/replays/bicycle_or_vru--oracle_aeb.html) | [開啟](docs/evidence/nuplan_aeb_v2/replays/bicycle_or_vru--coalition-none.html) | [開啟](docs/evidence/nuplan_aeb_v2/replays/bicycle_or_vru--coalition-dropout+localization_shape+latency+track_instability.html) |
+| lead/stopping | [開啟](https://kuotunyu.github.io/perception-error-to-aeb/replays/lead_or_stopping--oracle_aeb.html) | [開啟](https://kuotunyu.github.io/perception-error-to-aeb/replays/lead_or_stopping--coalition-none.html) | [開啟](https://kuotunyu.github.io/perception-error-to-aeb/replays/lead_or_stopping--coalition-dropout+localization_shape+latency+track_instability.html) |
+| cut-in/crossing | [開啟](https://kuotunyu.github.io/perception-error-to-aeb/replays/cut_in_or_crossing--oracle_aeb.html) | [開啟](https://kuotunyu.github.io/perception-error-to-aeb/replays/cut_in_or_crossing--coalition-none.html) | [開啟](https://kuotunyu.github.io/perception-error-to-aeb/replays/cut_in_or_crossing--coalition-dropout+localization_shape+latency+track_instability.html) |
+| pedestrian/crosswalk | [開啟](https://kuotunyu.github.io/perception-error-to-aeb/replays/pedestrian_or_crosswalk--oracle_aeb.html) | [開啟](https://kuotunyu.github.io/perception-error-to-aeb/replays/pedestrian_or_crosswalk--coalition-none.html) | [開啟](https://kuotunyu.github.io/perception-error-to-aeb/replays/pedestrian_or_crosswalk--coalition-dropout+localization_shape+latency+track_instability.html) |
+| bicycle/VRU | [開啟](https://kuotunyu.github.io/perception-error-to-aeb/replays/bicycle_or_vru--oracle_aeb.html) | [開啟](https://kuotunyu.github.io/perception-error-to-aeb/replays/bicycle_or_vru--coalition-none.html) | [開啟](https://kuotunyu.github.io/perception-error-to-aeb/replays/bicycle_or_vru--coalition-dropout+localization_shape+latency+track_instability.html) |
 
 重播是從指定 replicate 重新建構的衍生 timeline，使用 scenario-local 原點與匿名 actor ID；它不是 raw trajectory export、地圖畫面或 nuBoard log。每個重建結果先與凍結 formal record 共有的碰撞、接觸、曝光與介入量測逐項比對；formal schema 不保存最終 pose 或 speed，兩者改以同一次 fresh simulator outcome 檢查。
 

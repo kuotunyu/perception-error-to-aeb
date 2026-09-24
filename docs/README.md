@@ -13,6 +13,23 @@
 | 理解資料選擇、限制與授權 | [資料卡](dataset-card.md)、[證據授權](evidence/nuplan_aeb_v2-NOTICE.md) |
 | 追查每一個數值的來源 | [claims registry](claims.yaml) |
 
+## English guide
+
+Start with the [English README](../README.en.md) or the
+[live report](https://kuotunyu.github.io/perception-error-to-aeb/), then open the
+document that answers your question. The dated verification records listed
+further down are evidence from specific runs, not instructions.
+
+| Purpose | Document |
+| --- | --- |
+| Design, comparisons and how to read the braking numbers | [Experiment card](experiment-card.md) |
+| Controller, termination, contact classification, known modelling choices | [Simulation contract](simulation-contract.md) |
+| Frozen evidence files and what each contains | [Evidence index](evidence/README.md) |
+| Data selection, limits and licensing | [Dataset card](dataset-card.md), [evidence notice](evidence/nuplan_aeb_v2-NOTICE.md) |
+| Reproduce the aggregates and check their hashes | [Analysis reproduction](verification/analysis-reproduction.md) |
+| Trace a published number to its artifact | [Claims registry](claims.yaml) |
+| Figures and interactive replays | [Figures](figures/), [live report](https://kuotunyu.github.io/perception-error-to-aeb/) |
+
 ## 驗證紀錄何時需要讀
 
 下列是特定時間、環境或階段的驗證證據，不是下一步施工指令。保留原有日期與結果，
