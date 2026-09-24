@@ -56,6 +56,8 @@ Shapley 的 intervention-duration game 中，同一 channel 的觀察平均貢�
 
 碰撞分類會排除 ego 已停止，或位於 ego 後方且物件速度大小較大的接觸。這是研究內的 operational rule，不是 longitudinal closing-velocity 判定、完整 nuPlan 等價證明或法律責任認定。零個計入碰撞不等於零接觸、較佳感知或實車安全。
 
+評估框架在解讀煞車結果時，找出固定控制器中影響這些數字的幾項特性：AEB 會對必要減速度最高的追蹤物件煞車，不論該物件是否在 ego 的路徑上；名義控制器不會為其他用路人減速；追蹤速度來自含雜訊位置的差分。在已發布的結果中，計入碰撞最少的設定，正是大部分曝光時間都在煞車的設定。詳見[已知的控制器與建模選擇](docs/simulation-contract.md#known-controller-and-modelling-choices)與[如何解讀煞車數字](docs/experiment-card.md#reading-the-braking-numbers)。
+
 protocol 要求的 maximum horizon 是 15 秒上限；到碰撞、路徑結束、資料結束或上限即停止，所以表中逐設定列實測曝光。logged actors 不會對 ego 反應。本版沒有 sensor pixels、地圖畫面、nuBoard log、每距離碰撞率，也只測一種固定 AEB policy。每 100 km 碰撞率為未提供。
 
 ## 重現

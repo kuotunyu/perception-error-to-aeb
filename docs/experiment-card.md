@@ -52,6 +52,22 @@ estimate means it is not interchangeable with the oracle baseline.
 - Rates per hour use measured exposure. Rates per scenario-replicate use the
   reported replicate count. A per-distance collision rate is unavailable.
 
+## Reading the braking numbers
+
+Counted collisions and braking are coupled in this study through the fixed
+controller, not only through perception quality. The policy brakes for the
+tracked object with the highest required deceleration whether or not it is in
+the ego's path, the nominal controller does not slow for other road users, and
+outside the oracle every tracked velocity is a finite difference of observed
+positions. In the released evaluation, every configuration that includes
+localization/shape error spends a larger share of its measured exposure braking
+than oracle AEB and records fewer counted collisions. Read those low counts as a
+braking result: set them beside false and missed events, intervention duration
+and `contacts_not_at_fault`, and do not read them as better perception or as
+real-world safety. The evaluation harness surfaced these mechanisms; the
+[simulation contract](simulation-contract.md#known-controller-and-modelling-choices)
+lists them, and characterization tests pin them.
+
 The [bilingual results](../README.md) bind exact values to the
 [claims registry](claims.yaml). Configuration intervals are not intervals for
 differences between configurations. Shapley collision and duration games use
