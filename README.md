@@ -73,7 +73,7 @@ protocol 要求的 maximum horizon 是 15 秒上限；到碰撞、路徑結束�
 
 ### 快速檢查（不需資料集）
 
-只需要 Docker 與這個 repository 的 clone，不需要 nuPlan。這組指令確認 [`docs/claims.yaml`](docs/claims.yaml) 的每筆 claim 都能由已提交的證據檔重算，並確認兩份 README 與 v1.0.0 release note 的每個結果數值都對應到這些 claim；接著從已提交的證據重建圖表與報告，確認重建的圖表與已提交版本逐位元組相同，最後執行完整驗證關卡。
+只需要 Docker 與這個 repository 的 clone，不需要 nuPlan。這組指令把 [`docs/claims.yaml`](docs/claims.yaml) 的 claim 逐筆對照已提交的證據檔，並確認兩份 README 與 v1.0.0 release note 的每個結果數值都對應到這些 claim；接著從已提交的證據重建圖表與報告，確認重建的圖表與已提交版本逐位元組相同，最後執行完整驗證關卡。
 
 ```bash
 docker compose build
