@@ -81,7 +81,7 @@ not evidence of a pass.
 - Rounding `-0.0021802325581395357` to `-0.00218` without `; rounded: 5` in its
   marker breaks artifact traceability; a malformed marker is rejected outright.
 - A declared rounding must be the canonical spelling: `-0.002180`, `-2.18e-3`
-  or a value rounded to a different precision than the marker states is rejected.
+  or a value rounded to a different precision than the marker states are each rejected.
 - Calling seconds a stronger collision effect compares different estimands.
 - Writing a claim ID as visible prose does not create the required HTML marker.
 - Putting a valid value beside the wrong metric key or swapping two values is rejected.
