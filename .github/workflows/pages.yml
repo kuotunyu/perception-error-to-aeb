@@ -1,14 +1,18 @@
 name: Pages
 
+# Publish only a main commit that CI has already verified: a push to main
+# runs CI, and a successful CI run starts this workflow for the same commit.
+# A manual dispatch remains for redeploying.
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
   workflow_dispatch:
 
+# Only the deploy job, which runs no repository code, may write to Pages.
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: pages
@@ -16,10 +20,13 @@ concurrency:
 
 jobs:
   build:
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - name: Match the container user to the runner
         run: |
           echo "HOST_UID=$(id -u)" >> "$GITHUB_ENV"

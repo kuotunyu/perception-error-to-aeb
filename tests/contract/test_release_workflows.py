@@ -204,6 +204,47 @@ def test_pages_audits_actual_public_text_and_skills_before_building() -> None:
     )
 
 
+def job(document: dict[object, object], name: str) -> dict[str, object]:
+    jobs = document["jobs"]
+    assert isinstance(jobs, dict)
+    selected: dict[str, object] = jobs[name]
+    return selected
+
+
+def test_pages_publishes_only_a_main_commit_that_passed_ci() -> None:
+    """A push to main must not reach the site before the verification gate passes."""
+
+    document = workflow("pages.yml")
+
+    # PyYAML reads the bare `on` key as the boolean True.
+    assert document[True] == {
+        "workflow_run": {"workflows": ["CI"], "types": ["completed"], "branches": ["main"]},
+        "workflow_dispatch": None,
+    }
+    assert job(document, "build")["if"] == (
+        "github.event_name == 'workflow_dispatch' || "
+        "(github.event.workflow_run.conclusion == 'success' && "
+        "github.event.workflow_run.event == 'push')"
+    )
+    # A workflow_run event carries the default branch's latest SHA, so the
+    # verified commit has to be named explicitly.
+    assert step(document, "build", "Check out repository")["with"] == {
+        "ref": "${{ github.event.workflow_run.head_sha || github.sha }}"
+    }
+
+
+def test_only_the_pages_deploy_job_holds_deploy_credentials() -> None:
+    """The build job runs repository code in Docker, so it must not hold the Pages token."""
+
+    document = workflow("pages.yml")
+
+    assert document["permissions"] == {"contents": "read"}
+    assert "permissions" not in job(document, "build")
+    deploy = job(document, "deploy")
+    assert deploy["needs"] == "build"
+    assert deploy["permissions"] == {"pages": "write", "id-token": "write"}
+
+
 def test_release_verifies_tag_version_and_writes_checksums_from_two_artifacts() -> None:
     """A tag must never publish archives whose internal version or hashes are stale."""
 
