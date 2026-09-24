@@ -50,6 +50,33 @@ def test_every_stage_has_a_command() -> None:
         assert len(command) > 1
 
 
+def test_the_suite_runs_once_and_the_coverage_stage_reports_its_data() -> None:
+    """Running every test twice doubles the gate for no extra evidence.
+
+    The test stage records branch coverage without judging it, so a coverage
+    shortfall is reported by the stage named for it rather than as a test
+    failure; the coverage stage then reads that data instead of rerunning pytest.
+    """
+
+    commands = dev._stage_commands()
+
+    assert commands["unit_and_integration_tests"][1:] == (
+        "-m",
+        "pytest",
+        "--cov=aebrisk",
+        "--cov-branch",
+        "--cov-report=",
+        "--cov-fail-under=0",
+    )
+    assert commands["branch_coverage_100"][1:] == (
+        "-m",
+        "coverage",
+        "report",
+        "--show-missing",
+        "--fail-under=100",
+    )
+
+
 def test_verify_runs_every_stage_in_order_and_returns_zero(tmp_path: Path) -> None:
     """The success path must run the whole gate, not stop at the first pass."""
 

@@ -44,16 +44,24 @@ def _stage_commands() -> dict[str, tuple[str, ...]]:
         "format_check": (python, "-m", "ruff", "format", "--check", "."),
         "lint": (python, "-m", "ruff", "check", "."),
         "typecheck": (python, "-m", "mypy", "src", "tests"),
-        "unit_and_integration_tests": (python, "-m", "pytest", "--no-cov"),
-        "branch_coverage_100": (
+        # The suite runs once. It records branch coverage without judging it, so
+        # a shortfall fails the stage named for it rather than the test stage.
+        "unit_and_integration_tests": (
             python,
             "-m",
             "pytest",
             "--cov=aebrisk",
             "--cov-branch",
-            "--cov-report=term-missing",
-            "--cov-report=json:coverage.json",
-            "--cov-fail-under=100",
+            "--cov-report=",
+            "--cov-fail-under=0",
+        ),
+        "branch_coverage_100": (
+            python,
+            "-m",
+            "coverage",
+            "report",
+            "--show-missing",
+            "--fail-under=100",
         ),
         "schema_contracts": (python, "-m", "aebrisk.dev", "schema-contracts"),
         "docs_links": (python, "-m", "aebrisk.dev", "docs-links"),
