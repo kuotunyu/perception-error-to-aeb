@@ -1,0 +1,34 @@
+# The four perception error channels and the severity levels each is run at.
+#
+# Every list has exactly four entries, one per severity, and the first is always
+# exactly zero. That is not a formatting convention: `zero` is the identity, the
+# reference every other severity is measured against, and a `zero` that perturbs
+# anything at all would silently move the baseline the whole study compares to.
+schema_version: aeb-error-config/v1
+
+severities: [zero, low, medium, high]
+
+channels:
+  # A detection the perception stack failed to report at all.
+  dropout:
+    dropout_probability: [0.0, 0.05, 0.10, 0.20]
+
+  # The object is seen, but where and how big it is are wrong. Position and yaw
+  # errors are absolute; size error is relative, because a 25 cm error on a
+  # pedestrian and on a truck are not the same mistake.
+  localization_shape:
+    position_std_m: [0.0, 0.25, 0.50, 1.00]
+    yaw_std_deg: [0.0, 1.0, 2.0, 4.0]
+    size_relative_std: [0.0, 0.02, 0.05, 0.10]
+
+  # The observation is correct but old. At 10 Hz, 0.40 s is four frames stale,
+  # which at 15 m/s is six metres of closing distance the AEB cannot see.
+  latency:
+    latency_s: [0.0, 0.10, 0.20, 0.40]
+
+  # A track that breaks and comes back as a new identity. The AEB's consecutive
+  # step counters reset with it, so instability delays a decision even when
+  # every individual measurement is correct.
+  track_instability:
+    fragmentation_rate_per_s: [0.0, 0.02, 0.05, 0.10]
+    reacquisition_delay_s: [0.0, 0.20, 0.50, 1.00]

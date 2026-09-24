@@ -1,0 +1,61 @@
+# The formal experiment matrix, written down before any run.
+#
+# A matrix chosen after seeing results is not an experiment, so this file is
+# committed now and a test asserts that the configurations the code generates
+# are exactly these, in exactly this order. Changing the matrix means changing
+# this file, which means a diff a reader can see.
+#
+# The list is not the source of truth for HOW each cell is built — that is
+# `aebrisk.attribution.factorial` — it is the record of WHAT was decided, in a
+# form that does not require reading Python to check.
+schema_version: aeb-experiment-matrix/v1
+
+channels:
+  - dropout
+  - localization_shape
+  - latency
+  - track_instability
+
+# Severity zero is not swept. It is the baseline, and it appears exactly once,
+# as the empty coalition.
+swept_severities: [low, medium, high]
+
+# Medium rather than high, so that an interaction is not hidden by both channels
+# already saturating the outcome on their own.
+coalition_severity: medium
+
+# The same for every cell. Unequal counts would weight some cells more than
+# others in every mean taken over the matrix.
+replicate_count: 3
+
+# Twenty-six cells: two baselines, twelve single-channel, and twelve further
+# coalitions. Twelve rather than sixteen because the four singleton coalitions
+# at medium ARE the single-channel medium cells above; running them twice would
+# let two copies of the same simulation disagree.
+configurations:
+  - no_aeb
+  - oracle_aeb
+  - dropout-low
+  - dropout-medium
+  - dropout-high
+  - localization_shape-low
+  - localization_shape-medium
+  - localization_shape-high
+  - latency-low
+  - latency-medium
+  - latency-high
+  - track_instability-low
+  - track_instability-medium
+  - track_instability-high
+  - coalition-none
+  - coalition-dropout+localization_shape
+  - coalition-dropout+latency
+  - coalition-dropout+track_instability
+  - coalition-localization_shape+latency
+  - coalition-localization_shape+track_instability
+  - coalition-latency+track_instability
+  - coalition-dropout+localization_shape+latency
+  - coalition-dropout+localization_shape+track_instability
+  - coalition-dropout+latency+track_instability
+  - coalition-localization_shape+latency+track_instability
+  - coalition-dropout+localization_shape+latency+track_instability

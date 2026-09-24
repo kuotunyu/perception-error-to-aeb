@@ -35,8 +35,7 @@ from typing import Any, Optional
 import yaml
 
 from aebrisk.aeb.threat import ThreatAssessment, select_highest_required_deceleration
-
-POLICY_PATH = Path(__file__).resolve().parents[3] / "configs" / "aeb" / "policy_v1.yaml"
+from aebrisk.committed_config import read_committed_config
 
 #: The rate the policy's `consecutive_steps` are expressed at. They are
 #: durations, not raw counts: reading them as counts would silently halve the
@@ -75,10 +74,18 @@ class AEBCommand:
 
 
 def load_policy(path: Optional[Path] = None) -> dict[str, Any]:
-    """Read the committed AEB policy."""
+    """Read the committed AEB policy, or the policy file at `path`.
 
-    source = POLICY_PATH if path is None else path
-    document: dict[str, Any] = yaml.safe_load(source.read_text(encoding="utf-8"))
+    The committed policy is the package's copy of `configs/aeb/policy_v1.yaml`,
+    so an installed wheel reads the same thresholds as a checkout.
+    """
+
+    text = (
+        read_committed_config("aeb", "policy_v1.yaml")
+        if path is None
+        else path.read_text(encoding="utf-8")
+    )
+    document: dict[str, Any] = yaml.safe_load(text)
     return document
 
 

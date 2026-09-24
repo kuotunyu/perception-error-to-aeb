@@ -1,0 +1,36 @@
+# The AEB policy this study holds fixed across every configuration.
+#
+# Nothing here is tuned. These are the numbers the plan fixed before any run,
+# and they are committed so that a result can be read against the exact policy
+# that produced it. Changing any of them invalidates every comparison already
+# made, because the study's whole claim is that the CONTROLLER was identical and
+# only the perception changed.
+#
+# Every threshold is compared strictly. A time to collision exactly equal to
+# 3.0 s does not warn; a required deceleration exactly equal to 2.0 m/s^2 does
+# not either. Strict comparison is chosen so that the boundary belongs to
+# exactly one side of it, and the tests pin both sides.
+#
+# A stage fires when ANY of its configured conditions holds. Warning must then
+# hold for two consecutive steps before it is entered, because a single frame of
+# corrupted perception should not put the vehicle into an intervention; the
+# braking stages have no such wait, because a real system that hesitated there
+# would be worse than one that occasionally brakes early.
+schema_version: aeb-policy/v1
+nominal_step_s: 0.1
+warning:
+  ttc_lt_s: 3.0
+  required_decel_gt_mps2: 2.0
+  consecutive_steps: 2
+partial:
+  ttc_lt_s: 2.5
+  target_accel_mps2: -3.0
+full:
+  ttc_lt_s: 1.5
+  required_decel_gt_mps2: 5.0
+  target_accel_mps2: -6.0
+release:
+  no_qualifying_ttc_lt_s: 4.0
+  consecutive_steps: 5
+acceleration_bounds_mps2: [-6.0, 2.0]
+jerk_limit_mps3: 5.0

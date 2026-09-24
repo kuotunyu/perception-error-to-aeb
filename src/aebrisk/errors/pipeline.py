@@ -36,6 +36,7 @@ from typing import Any, Callable, Optional
 import numpy as np
 import yaml
 
+from aebrisk.committed_config import read_committed_config
 from aebrisk.observation.models import TrackState, WorldFrame
 
 ERROR_CHANNELS: tuple[str, ...] = (
@@ -59,8 +60,6 @@ CHANNEL_PARAMETERS: dict[str, tuple[str, ...]] = {
 #: Without the separation, an imported artifact could redefine what `medium`
 #: means and every comparison against it would move silently.
 IMPORTED_PREFIX = "calibration_imported_"
-
-CONFIG_PATH = Path(__file__).resolve().parents[3] / "configs" / "errors" / "formal_v1.yaml"
 
 Stage = Callable[..., tuple[TrackState, ...]]
 
@@ -195,10 +194,19 @@ def track_field_generator(
 
 
 def load_error_config(path: Optional[Path] = None) -> dict[str, Any]:
-    """Read the committed error configuration."""
+    """Read the committed error configuration, or the file at `path`.
 
-    source = CONFIG_PATH if path is None else path
-    document: dict[str, Any] = yaml.safe_load(source.read_text(encoding="utf-8"))
+    The committed configuration is the package's copy of
+    `configs/errors/formal_v1.yaml`, so an installed wheel reads the same
+    severity grid as a checkout.
+    """
+
+    text = (
+        read_committed_config("errors", "formal_v1.yaml")
+        if path is None
+        else path.read_text(encoding="utf-8")
+    )
+    document: dict[str, Any] = yaml.safe_load(text)
     return document
 
 
