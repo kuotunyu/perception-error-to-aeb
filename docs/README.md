@@ -5,11 +5,11 @@
 | 目的 | 文件 |
 | --- | --- |
 | 看目前的分析證據 | [證據索引](evidence/README.md) |
-| 快速了解研究設計、比較方式與限制 | [研究卡](experiment-card.md) |
+| 快速了解研究設計、比較方式、限制、煞車數字的解讀與相關標準 | [研究卡](experiment-card.md) |
 | 看研究首頁與雙語結果 | [繁體中文首頁](../README.md)、[English](../README.en.md) |
-| 看圖表與預先固定選樣的回放 | [圖表](figures/)、[衍生回放](evidence/nuplan_aeb_v2/replays/) |
+| 看圖表與預先固定選樣的回放 | [圖表](figures/)、[線上報告與回放](https://kuotunyu.github.io/perception-error-to-aeb/)、[衍生回放檔案](evidence/nuplan_aeb_v2/replays/) |
 | 重現聚合結果、查原始雜湊 | [分析重現](verification/analysis-reproduction.md) |
-| 理解模擬上限、終止條件與碰撞分類 | [模擬契約](simulation-contract.md) |
+| 理解模擬上限、終止條件、碰撞分類與已知的控制器及建模選擇 | [模擬契約](simulation-contract.md) |
 | 理解資料選擇、限制與授權 | [資料卡](dataset-card.md)、[證據授權](evidence/nuplan_aeb_v2-NOTICE.md) |
 | 追查每一個數值的來源 | [claims registry](claims.yaml) |
 
