@@ -18,10 +18,15 @@ from types import ModuleType
 from typing import Any
 
 import pytest
+from pydantic import BaseModel
+
+from aebrisk.artifacts.schemas import SCHEMA_MODELS, schema_bytes
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 FIXTURE = REPO_ROOT / "tests" / "fixtures" / "portfolio_artifact_envelope_v1.json"
 SCHEMA_DIR = REPO_ROOT / "schemas"
+#: Every committed schema is checked, so a new one cannot be added unchecked.
+SCHEMA_NAMES = [name for name, _ in SCHEMA_MODELS]
 CALIBRATION_ARTIFACT_TYPE = "calibration-error-distribution/v1"
 
 
@@ -112,10 +117,7 @@ def test_consuming_a_p2_artifact_is_never_implicit(tmp_path: Path) -> None:
         envelope.verify_envelope(path, "portfolio-contract-fixture/v1")
 
 
-@pytest.mark.parametrize(
-    "name",
-    ["portfolio_artifact_envelope_v1", "run_record_v1", "aeb_result_v1", "aeb_result_v2"],
-)
+@pytest.mark.parametrize("name", SCHEMA_NAMES)
 def test_every_declared_schema_exists_and_is_valid_json(name: str) -> None:
     """A schema nobody can parse is documentation, not a contract."""
 
@@ -126,29 +128,11 @@ def test_every_declared_schema_exists_and_is_valid_json(name: str) -> None:
     assert document["additionalProperties"] is False
 
 
-@pytest.mark.parametrize(
-    ("name", "model_path"),
-    [
-        ("portfolio_artifact_envelope_v1", "envelope.PortfolioArtifactEnvelopeV1"),
-        ("run_record_v1", "run_record.RunRecordV1"),
-        ("aeb_result_v1", "results.AEBScenarioResultV1"),
-        ("aeb_result_v2", "results.AEBScenarioResultV2"),
-    ],
-)
-def test_every_schema_regenerates_byte_identically(name: str, model_path: str) -> None:
+@pytest.mark.parametrize(("name", "model"), SCHEMA_MODELS, ids=SCHEMA_NAMES)
+def test_every_schema_regenerates_byte_identically(name: str, model: type[BaseModel]) -> None:
     """A committed schema that has drifted from its model describes nothing."""
 
-    import importlib
-
-    from aebrisk.artifacts import schemas
-
-    module_name, class_name = model_path.split(".")
-    module = importlib.import_module(f"aebrisk.artifacts.{module_name}")
-    model = getattr(module, class_name)
-
-    regenerated = schemas.schema_bytes(model)
-
-    assert (SCHEMA_DIR / f"{name}.json").read_bytes() == regenerated
+    assert (SCHEMA_DIR / f"{name}.json").read_bytes() == schema_bytes(model)
 
 
 def test_the_claims_registry_carries_the_shared_vocabulary() -> None:
