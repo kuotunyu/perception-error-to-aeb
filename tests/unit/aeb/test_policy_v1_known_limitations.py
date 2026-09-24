@@ -8,8 +8,8 @@ asks whether the body is in the ego's path or ahead of it, and the full and
 warning stages fire on required deceleration alone, with or without a predicted
 overlap.
 
-The evaluation harness surfaced three consequences while the released braking
-numbers were being explained. Each is pinned here with the real threat and
+A review after the release found three consequences while the released
+braking numbers were being explained. Each is pinned here with the real threat and
 state-machine modules so that the public description in
 ``docs/simulation-contract.md`` ("Known controller and modelling choices")
 cannot drift from the code:

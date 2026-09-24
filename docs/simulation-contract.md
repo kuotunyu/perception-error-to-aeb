@@ -137,8 +137,8 @@ body it has hit is not a simulation of anything.
 
 ## Known controller and modelling choices
 
-The evaluation harness surfaced the behaviour below while the released braking
-numbers were being explained. It is part of the frozen AEB policy v1 and of the
+A review after the release found the behaviour below while the released
+braking numbers were being explained. It is part of the frozen AEB policy v1 and of the
 simulation that every released configuration ran through, oracle AEB included,
 and it is recorded here so that the braking numbers can be read correctly.
 Changing any of it is a new policy or protocol version with new evidence; no

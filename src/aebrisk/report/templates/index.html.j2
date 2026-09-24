@@ -63,7 +63,7 @@
 {% if finding_figure %}<section id="finding">
   <h2>Finding</h2>
   <figure class="figure-card"><img src="figures/{{ finding_figure.name }}" alt="{{ finding_figure.alt }}"><figcaption>{{ finding_figure.caption }}</figcaption></figure>
-  <p>The fixed AEB brakes for the tracked object with the highest required deceleration whether or not it is in the ego's path, the nominal controller does not slow for other road users, and outside the oracle, tracked velocity is a finite difference of observed positions. The evaluation harness surfaced these properties of the controller and tracker; the <a href="{{ site.repository }}/blob/main/docs/simulation-contract.md#known-controller-and-modelling-choices">simulation contract</a> describes them.</p>
+  <p>The fixed AEB brakes for the tracked object with the highest required deceleration whether or not it is in the ego's path, the nominal controller does not slow for other road users, and outside the oracle, tracked velocity is a finite difference of observed positions. A review after the release found these properties of the controller and tracker; the <a href="{{ site.repository }}/blob/main/docs/simulation-contract.md#known-controller-and-modelling-choices">simulation contract</a> describes them.</p>
 </section>{% endif %}
 
 <section id="question">
