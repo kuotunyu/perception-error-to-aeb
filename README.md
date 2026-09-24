@@ -79,7 +79,7 @@ Shapley 的 intervention-duration game 中，同一 channel 的觀察平均貢�
 - [各 family 介入事件率](docs/figures/intervention-rates-by-family.svg)以 scenario-replicates 為分母，沒有借用全體 cohort 的 bootstrap error bar。
 - 預先固定的 median-nearest 展示各有 oracle、empty coalition 與 full coalition 的 replicate-zero 版本：
 
-每個重播都是放在線上報告網站上的獨立 HTML 頁面，大小 7.5 至 11.7 MB，建議使用桌機瀏覽器。
+每個重播都是放在線上報告網站上的獨立 HTML 頁面，大小為 7.5 至 11.7 MB；因檔案較大，建議使用桌機瀏覽器開啟。
 
 | Family | Oracle | Empty coalition | Full medium coalition |
 | --- | --- | --- | --- |
@@ -94,7 +94,7 @@ Shapley 的 intervention-duration game 中，同一 channel 的觀察平均貢�
 
 碰撞分類會排除 ego 已停止，或位於 ego 後方且物件速度大小較大的接觸。這是研究內的 operational rule，不是 longitudinal closing-velocity 判定、完整 nuPlan 等價證明或法律責任認定。零個計入碰撞不等於零接觸、較佳感知或實車安全。
 
-評估框架在解讀煞車結果時，找出固定控制器中影響這些數字的幾項特性：AEB 會對必要減速度最高的追蹤物件煞車，不論該物件是否在 ego 的路徑上；名義控制器不會為其他用路人減速；追蹤速度來自含雜訊位置的差分。在已發布的結果中，計入碰撞最少的設定，正是煞車時間占實測曝光比例最高的設定。詳見[已知的控制器與建模選擇](docs/simulation-contract.md#known-controller-and-modelling-choices)與[如何解讀煞車數字](docs/experiment-card.md#reading-the-braking-numbers)。
+評估框架在解讀煞車結果時，找出固定控制器與 tracker 中影響這些數字的幾項特性：AEB 會對必要減速度最高的追蹤物件煞車，不論該物件是否在 ego 的路徑上；名義控制器不會為其他用路人減速；oracle 以外的設定中，追蹤速度來自觀測位置的差分，因此定位雜訊會影響接近速度。在已發布的結果中，計入碰撞最少的設定，正是煞車時間占實測曝光比例最高的設定。詳見[已知的控制器與建模選擇](docs/simulation-contract.md#known-controller-and-modelling-choices)與[如何解讀煞車數字](docs/experiment-card.md#reading-the-braking-numbers)。
 
 這些量測與 SOTIF、AEB 測試規程、安全績效指標及既有研究的對應關係，見[與標準及既有研究的關係](docs/experiment-card.md#relation-to-standards-and-prior-work)；該段僅供對照，不主張符合任何標準。
 

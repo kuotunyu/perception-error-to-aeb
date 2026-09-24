@@ -82,7 +82,7 @@ counted collisions together with contact classification and braking costs.
 - [Intervention event rates by family](docs/figures/intervention-rates-by-family.svg) use scenario-replicates as the denominator and do not borrow whole-cohort bootstrap error bars.
 - The predeclared median-nearest examples each have oracle, empty-coalition, and full-coalition replicate-zero views:
 
-Each replay is a self-contained HTML page of 7.5 to 11.7 MB served from the live report site, so a desktop browser is recommended. The replay controls are labelled in Traditional Chinese: 播放 = Play, 暫停 = Pause.
+Each replay is a self-contained HTML page of 7.5 to 11.7 MB, served from the live report site; because of its size, a desktop browser is recommended. The replay pages are in Traditional Chinese: 播放 = Play, 暫停 = Pause, 軌跡 = Tracks (shows or hides individual tracks).
 
 | Family | Oracle | Empty coalition | Full medium coalition |
 | --- | --- | --- | --- |
@@ -97,7 +97,7 @@ The replays are derived timelines rebuilt from the selected replicate. They use 
 
 The collision classifier excludes a contact when the ego is stopped, or when an actor is behind the ego and has the greater speed magnitude. This is an operational study rule. It is not a longitudinal closing-velocity test, proof of full nuPlan equivalence, or a legal assignment of responsibility. Zero counted collisions does not mean zero contacts, better perception, or safety in a real vehicle.
 
-The evaluation harness surfaced properties of the fixed controller that shape these braking numbers: the AEB brakes for the tracked object with the highest required deceleration whether or not that object is in the ego's path, the nominal controller does not slow for other road users, and tracked velocity is a finite difference of noisy positions. In the released evaluation, the configurations with the fewest counted collisions are the ones that spend the largest share of their measured exposure braking. See [Known controller and modelling choices](docs/simulation-contract.md#known-controller-and-modelling-choices) and [Reading the braking numbers](docs/experiment-card.md#reading-the-braking-numbers).
+The evaluation harness surfaced properties of the fixed controller and tracker that shape these braking numbers: the AEB brakes for the tracked object with the highest required deceleration whether or not that object is in the ego's path, the nominal controller does not slow for other road users, and outside the oracle, tracked velocity is a finite difference of observed positions, so localization noise reaches the closing speed. In the released evaluation, the configurations with the fewest counted collisions are the ones that spend the largest share of their measured exposure braking. See [Known controller and modelling choices](docs/simulation-contract.md#known-controller-and-modelling-choices) and [Reading the braking numbers](docs/experiment-card.md#reading-the-braking-numbers).
 
 How these measurements relate to SOTIF, AEB test protocols, safety performance indicators and prior research is set out in [Relation to standards and prior work](docs/experiment-card.md#relation-to-standards-and-prior-work); it is context, not a compliance claim.
 

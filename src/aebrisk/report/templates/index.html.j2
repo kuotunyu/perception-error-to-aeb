@@ -63,7 +63,7 @@
 {% if finding_figure %}<section id="finding">
   <h2>Finding</h2>
   <figure class="figure-card"><img src="figures/{{ finding_figure.name }}" alt="{{ finding_figure.alt }}"><figcaption>{{ finding_figure.caption }}</figcaption></figure>
-  <p>The fixed AEB brakes for the tracked object with the highest required deceleration whether or not it is in the ego's path, the nominal controller does not slow for other road users, and tracked velocity is a finite difference of noisy positions. The evaluation harness surfaced these properties; the <a href="{{ site.repository }}/blob/main/docs/simulation-contract.md#known-controller-and-modelling-choices">simulation contract</a> describes them.</p>
+  <p>The fixed AEB brakes for the tracked object with the highest required deceleration whether or not it is in the ego's path, the nominal controller does not slow for other road users, and outside the oracle, tracked velocity is a finite difference of observed positions. The evaluation harness surfaced these properties of the controller and tracker; the <a href="{{ site.repository }}/blob/main/docs/simulation-contract.md#known-controller-and-modelling-choices">simulation contract</a> describes them.</p>
 </section>{% endif %}
 
 <section id="question">
@@ -90,12 +90,12 @@
   <h2>Figures</h2>
   {% if figures %}<div class="grid">{% for figure in figures %}<figure class="figure-card"><img src="figures/{{ figure.name }}" alt="{{ figure.alt }}"><figcaption>{{ figure.caption }}</figcaption></figure>{% endfor %}</div>
   {% else %}<p class="empty">No generated figures were supplied to this build.</p>{% endif %}
-  <p>The Shapley panels use separate scales and units. They show observed mean contributions for the full-minus-empty <code>coalition-none</code> game; the arithmetic residual is not an uncertainty interval. The empty coalition still estimates velocity from position differences and is not the oracle. There is no uncertainty interval for Shapley values or configuration differences and no evidence for a channel ranking. Family event rates use scenario-replicates as their denominator and carry no borrowed whole-cohort error bars.</p>
+  <p>The Shapley panels use separate scales and units. They show observed mean contributions for the full-minus-empty <code>coalition-none</code> game; the arithmetic residual is not an uncertainty interval. The empty coalition (tracker, no injected error) still estimates velocity from position differences and is not the oracle. There is no uncertainty interval for Shapley values or configuration differences and no evidence for a channel ranking. Family event rates use scenario-replicates as their denominator and carry no borrowed whole-cohort error bars.</p>
 </section>
 
 <section id="replays">
   <h2>Replays</h2>
-  <p>Each derived timeline uses a predeclared family selection and three replicate-0 configurations. Geometry has a scenario-local display origin and anonymous actor IDs. Each replay is a self-contained page of several megabytes, best opened in a desktop browser; its controls are labelled in Traditional Chinese (播放 = Play, 暫停 = Pause).</p>
+  <p>Each derived timeline uses a predeclared family selection and three replicate-0 configurations. Geometry has a scenario-local display origin and anonymous actor IDs. Each replay is a self-contained page of several megabytes, so a desktop browser is recommended. The replay pages are in Traditional Chinese: 播放 = Play, 暫停 = Pause, 軌跡 = Tracks (shows or hides individual tracks).</p>
   {% if replay_rows %}<div class="scroll"><table>
     <thead><tr><th>Family</th>{% for label in replay_columns %}<th>{{ label }}</th>{% endfor %}</tr></thead>
     <tbody>{% for row in replay_rows %}<tr><td>{{ row.label }}</td>{% for name in row.cells %}{% if name %}<td><a href="replays/{{ name }}">Open replay</a></td>{% else %}<td>—</td>{% endif %}{% endfor %}</tr>{% endfor %}</tbody>

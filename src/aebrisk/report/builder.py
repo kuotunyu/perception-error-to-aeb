@@ -97,7 +97,7 @@ FINDING_FIGURE = FIGURES[0][0]
 FEATURED_LABELS: dict[str, str] = {
     "no_aeb": "No AEB",
     "oracle_aeb": "Oracle AEB",
-    "coalition-none": "Zero-error tracker",
+    "coalition-none": "Tracker, no injected error",
     FULL_COALITION_ID: "All four errors, medium",
 }
 
@@ -110,7 +110,7 @@ REPLAY_FAMILIES: tuple[tuple[str, str], ...] = (
 )
 REPLAY_COLUMNS: tuple[tuple[str, str], ...] = (
     ("oracle_aeb", "Oracle"),
-    ("coalition-none", "Zero-error tracker"),
+    ("coalition-none", "Tracker, no injected error"),
     (FULL_COALITION_ID, "All four errors"),
 )
 

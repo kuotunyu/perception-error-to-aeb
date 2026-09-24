@@ -861,8 +861,12 @@ def test_report_opens_with_a_lede_and_the_braking_figure(workspace: Path) -> Non
     assert 'src="figures/collisions-vs-braking.svg"' in finding
     assert "<figcaption>" in finding
     assert "not independent" in finding
+    # Oracle AEB reads exact velocity, and at zero severity nothing is noisy.
+    assert "outside the oracle, tracked velocity is a finite difference of observed" in finding
+    assert "noisy positions" not in finding
     rest = page[page.index('<section id="figures">') : page.index('<section id="replays">')]
     assert "collisions-vs-braking.svg" not in rest
+    assert "The empty coalition (tracker, no injected error)" in rest
     positions = [
         rest.index(f'src="figures/{name}"')
         for name in (
@@ -898,8 +902,11 @@ def test_report_table_shows_braking_cost_beside_collisions(workspace: Path) -> N
     ]
     for heading in ("Mean intervention duration (s)", "False events", "Missed events"):
         assert heading in observed
-    for label in ("No AEB", "Oracle AEB", "Zero-error tracker", "All four errors, medium"):
+    for label in ("No AEB", "Oracle AEB", "Tracker, no injected error", "All four errors, medium"):
         assert label in observed
+    # coalition-none still differences positions and records false and missed
+    # events, so no label may call its tracker error-free.
+    assert "Zero-error" not in page
     assert '<td class="number">40.0</td>' in observed
     assert '<td class="number">0.0</td>' in observed
 
@@ -921,7 +928,7 @@ def test_report_lays_replays_out_by_family_and_configuration(workspace: Path) ->
     section = page[
         page.index('<section id="replays">') : page.index('<details id="complete-trace">')
     ]
-    for heading in ("Oracle", "Zero-error tracker", "All four errors"):
+    for heading in ("Oracle", "Tracker, no injected error", "All four errors"):
         assert f"<th>{heading}</th>" in section
     assert "Lead or stopping" in section
     assert "Cut-in or crossing" not in section
@@ -930,6 +937,7 @@ def test_report_lays_replays_out_by_family_and_configuration(workspace: Path) ->
     assert "<td>—</td>" in section
     assert 'href="replays/notes.html"' in section
     assert "播放" in section
+    assert "軌跡 = Tracks" in section
 
 
 def test_report_footer_credits_the_repository_release_author_and_licences(
