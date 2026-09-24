@@ -138,3 +138,29 @@ database extraction, subject to attribution, ShareAlike, notices, and warranty
 terms. The five cohort files contain derived identifiers and selection
 measurements, with no embedded separate notice and no sensor or trajectory
 payload. They are therefore included with the evidence-specific notice.
+
+## Protocol line endings (note added 2026-09-24)
+
+The protocol SHA-256 recorded above, in the evidence documents and cohort
+manifests, and in the claims registry,
+`bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9`, is the hash
+of `configs/protocols/nuplan_aeb_v2.yaml` with CRLF line endings: the bytes the
+formal run read from its Windows checkout. Git stores the file with LF line
+endings, and those bytes hash to
+`9d3957387d7d8a4546da4ea011ef5d1688844b03b68b28e3bdc66b94e7df92f6`. Before this
+change, `.gitattributes` wrote every text file with LF, so a fresh clone produced
+the LF bytes and `simulate` and `summarize-families` refused to run because the
+protocol hash did not match the cohort manifest.
+
+`.gitattributes` now writes this one file with CRLF on every system. The
+committed blob, the evidence, the claims and the hashes above are unchanged.
+`tests/contract/test_protocol_hash.py` compares the checked-out file with every
+published `protocol_sha256`. To check a clone by hand:
+
+```bash
+sha256sum configs/protocols/nuplan_aeb_v2.yaml
+```
+
+It should print the `bbf0b6d3...` value above. A future protocol version should
+be hashed over text with normalised line endings, so that the hash does not
+depend on how a checkout writes them.
