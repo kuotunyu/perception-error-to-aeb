@@ -48,8 +48,8 @@ nuPlan's scenario types are not a published enumeration. They live in each log
 database's `scenario_tag` table, so a family mapping written from expectation
 cannot be checked against the library — it compiles, passes every unit test, and
 is discovered to be wrong only when a cohort comes out empty. Protocol v1 was
-written that way, and P3-04 recorded at the time that the mapping had to be
-checked against real data when the portfolio order gate opened.
+written that way, and the project recorded at the time that the mapping had to
+be checked against real data before the first real-data run.
 
 It was, on 2026-09-06, read-only over all 64 databases of the mini split. Five of
 v1's fifteen pinned types are names nuPlan tags nothing with:

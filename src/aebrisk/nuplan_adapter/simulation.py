@@ -18,9 +18,9 @@ these collisions; a controller with access to that braking would inherit an
 avoidance the perception pipeline never earned, and every configuration would
 look competent.
 
-Nothing here imports the devkit. This module must answer before a database
-exists and before the portfolio order gate opens, and importing the devkit at
-module scope would pull in dependencies this project deliberately does not have.
+Nothing here imports the devkit. This module must answer before any database
+exists, and importing the devkit at module scope would pull in dependencies
+this project deliberately does not have.
 """
 
 from __future__ import annotations

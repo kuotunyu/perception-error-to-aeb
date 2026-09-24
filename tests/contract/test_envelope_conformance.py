@@ -1,8 +1,8 @@
 """The envelope contract as this repository must honour it, from both sides.
 
 P3 is the only project in the portfolio that consumes another's artifacts, and
-it does so optionally: at P3-16 a calibration envelope from `bev-calibration-lab`
-may be read, and everything else must be refused. The asymmetry is the point.
+it does so optionally: a calibration envelope from `bev-calibration-lab` may be
+read, and everything else must be refused. The asymmetry is the point.
 A consumer that accepts any envelope it can parse would read a cohort manifest
 as a calibration result and produce a number that looks fine.
 
@@ -48,7 +48,7 @@ def write_envelope(path: Path, **overrides: Any) -> Path:
 
 
 def test_the_optional_calibration_consumer_accepts_a_p2_envelope(tmp_path: Path) -> None:
-    """P3-16 reads one artifact type from P2, and this is it."""
+    """P3 reads one artifact type from P2, and this is it."""
 
     envelope = load_envelope_module()
     path = write_envelope(

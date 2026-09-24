@@ -144,7 +144,7 @@ def test_the_wiring_has_a_stable_identity() -> None:
 
 
 def test_nothing_here_imports_the_devkit() -> None:
-    """This module must answer before a database exists, and before the order gate opens.
+    """This module must answer before any database exists.
 
     Importing the devkit at module scope would also pull in its own heavy
     dependencies, which this project deliberately does not install.

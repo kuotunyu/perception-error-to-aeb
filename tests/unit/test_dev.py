@@ -130,7 +130,7 @@ def test_schema_contracts_reports_a_corrupted_published_document(
 
 
 def test_schema_contracts_ignores_evidence_without_a_registered_version(tmp_path: Path) -> None:
-    """Copied cohort metadata keeps its own contract and is outside D3's registry."""
+    """Copied cohort metadata keeps its own contract and is outside the evidence registry."""
 
     evidence = tmp_path / "docs" / "evidence"
     evidence.mkdir(parents=True)

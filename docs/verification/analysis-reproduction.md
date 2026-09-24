@@ -1,9 +1,9 @@
 # Reproducing the locked AEB analysis
 
 The formal simulation ran at source commit
-`a65ae17ad11be9aee59e8ea341e62c606a588451`. D3 preserves that simulation
-identity rather than substituting the later analysis commit. The corresponding
-run context records protocol SHA-256
+`a65ae17ad11be9aee59e8ea341e62c606a588451`. The analysis record preserves that
+simulation identity rather than substituting the later analysis commit. The
+corresponding run context records protocol SHA-256
 `bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9`,
 cohort membership SHA-256
 `65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9`,
@@ -11,9 +11,10 @@ container image configuration ID
 `sha256:f6e353acb49e6796541e4204fd34d660596b05f229b193843b34780f8c95d814`,
 and configuration `all`.
 
-The preserved D2 validation established 26 configurations, 344 common-valid
-tokens, 8,944 token documents, 26,832 measured v2 scenario-replicate records,
-and zero invalid tokens. Its immutable launch provenance SHA-256 is
+The preserved validation of the formal run established 26 configurations, 344
+common-valid tokens, 8,944 token documents, 26,832 measured v2
+scenario-replicate records, and zero invalid tokens. Its immutable launch
+provenance SHA-256 is
 `9c17c5e975ba1c24fb71c90548d5b58cd216760d9946507575117111901137d4`;
 the formal validation document SHA-256 is
 `3465bfb2644835b06a66eee178bf597a56e43d9c14f874704e8ad29dab766089`.
@@ -45,8 +46,8 @@ tokens. A recursive relative-path, byte-length, and SHA-256 comparison found
 | `cohort/development-eligibility.json` | 473,232 | `fbd7fe980b3c28191645197f301eae96277cf3dedeb029927a756a73fe881f88` |
 | `cohort/evaluation-eligibility.json` | 1,426,273 | `b9a78c518582c6f60581b56396140a390b29e1611605262ff8bb76fe68174d84` |
 
-Task E2 read the same immutable formal directory to add the family event
-summary; it did not run the formal cohort again:
+The later family-summary step read the same immutable formal directory to add
+the family event summary; it did not run the formal cohort again:
 
 ```powershell
 docker compose run --rm dev uv run --frozen aeb-risk summarize-families --results-dir artifacts/formal/nuplan_aeb_v2 --manifest artifacts/manifests/nuplan_aeb_v2/evaluation.json --protocol configs/protocols/nuplan_aeb_v2.yaml --output-dir docs/evidence/nuplan_aeb_v2
@@ -56,9 +57,9 @@ docker compose run --rm dev uv run --frozen aeb-risk summarize-families --result
 Both commands exited 0. The two `family-interventions.json` files were
 byte-identical with SHA-256
 `417eba86942dc086780e153a07ddf678be9933329bd229930c22437b69902074`.
-All nine earlier D3 JSON files retained their recorded hashes, and all 1,087
-earlier claim objects remained item-for-item identical; 86 observed family
-claims were appended.
+All nine earlier analysis JSON files retained their recorded hashes, and all
+1,087 earlier claim objects remained item-for-item identical; 86 observed
+family claims were appended.
 
 The common cohort contains 344 unique tokens. Each configuration row contains
 1,032 scenario-replicate records and its separately measured exposure. The
@@ -98,8 +99,9 @@ The figures are generated directly from `shapley.json` and
 Shapley values use separate SVG panels, scales, and units. The family plot uses
 event counts per scenario-replicate and applies no whole-cohort uncertainty
 interval to a family row. Two independent figure builds and two report builds
-were compared recursively by relative path and SHA-256; the final Task E2
-verification record reports the exact result.
+were compared recursively by relative path and SHA-256 when they were
+produced. The later [clean-clone record](clean-clone.md) repeats both
+comparisons from a fresh Linux clone and reports the result.
 
 Replay selection is fixed before rendering: within each family, choose the
 oracle token whose replicate-mean intervention duration is nearest the family

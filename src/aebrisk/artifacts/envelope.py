@@ -30,7 +30,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 #: which is that project's PER-SAMPLE record. Reading per-sample results would
 #: mean re-deriving here the distribution the producer already computed, and the
 #: two projects could then disagree about the same measurements. This corrects
-#: the value used before P3-16; no artifact of either type exists yet.
+#: the value an earlier version used; no artifact of either type exists yet.
 CALIBRATION_ARTIFACT_TYPE = "calibration-error-distribution/v1"
 CALIBRATION_PRODUCER = "bev-calibration-lab"
 
