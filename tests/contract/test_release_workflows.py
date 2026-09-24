@@ -85,6 +85,22 @@ def test_ci_builds_the_locked_container_and_runs_the_shared_gate() -> None:
     assert commands[4:] == (str(step(document, "verify", REPLAY_STATUS_STEP)["run"]),)
 
 
+def test_ci_cancels_superseded_pull_request_runs_but_verifies_every_push() -> None:
+    """A newer push to a pull request makes its running check moot.
+
+    Each push to main gets a group of its own, so no main commit's gate or
+    identity check is cancelled or left pending behind a later push.
+    """
+
+    assert workflow("ci.yml")["concurrency"] == {
+        "group": (
+            "${{ github.workflow }}-${{ github.event_name }}-"
+            "${{ github.event.pull_request.number || github.sha }}"
+        ),
+        "cancel-in-progress": True,
+    }
+
+
 def run_replay_status_step(
     tmp_path: Path,
     *,

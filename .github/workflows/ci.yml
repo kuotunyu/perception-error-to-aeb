@@ -9,6 +9,12 @@ on:
 permissions:
   contents: read
 
+# A newer push to a pull request cancels its running check. Each push to main
+# gets a group of its own, so every main commit is verified in full.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
 jobs:
   verify:
     runs-on: ubuntu-latest
