@@ -108,10 +108,14 @@ def test_a_wheel_built_from_the_sdist_installs_and_reads_its_configs(tmp_path: P
         capture_output=True,
     )
 
+    # The mutation audit runs this suite with MUTANT_UNDER_TEST set, and the
+    # wheel built from its mutated sources forwards every call through a hook
+    # that only its own test process has configured. An empty value makes the
+    # installed copy run the original functions; outside the audit it does nothing.
     result = subprocess.run(
         [sys.executable, "-c", SMOKE, str(target)],
         cwd=tmp_path,
-        env={**os.environ, "PYTHONPATH": str(target)},
+        env={**os.environ, "PYTHONPATH": str(target), "MUTANT_UNDER_TEST": ""},
         check=False,
         capture_output=True,
         text=True,

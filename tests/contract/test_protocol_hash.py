@@ -42,6 +42,12 @@ def checked_out_protocol_sha256() -> str:
 def test_git_writes_the_protocol_with_crlf_line_endings_on_every_system() -> None:
     """The attribute, not the machine's settings, decides the bytes on disk."""
 
+    if not (ROOT / ".git").exists():
+        # The mutation audit runs this suite from a copy of the tree inside the
+        # checkout, where the anchored attribute path no longer matches. The
+        # hash tests below still check the bytes that copy holds.
+        pytest.skip("a copy of the tree, such as mutmut's mutants/, has no checkout attributes")
+
     result = subprocess.run(
         ["git", "check-attr", "text", "eol", "--", PROTOCOL],
         cwd=ROOT,
