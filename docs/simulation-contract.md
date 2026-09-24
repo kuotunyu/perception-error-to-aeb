@@ -161,7 +161,9 @@ predicts an overlap; only the time-to-collision conditions need one
   is predicted.
 - Masking. An off-path body with a higher required deceleration can be selected
   in place of an in-path body whose time to collision qualifies for partial
-  braking. The command then drops to a warning, which makes no braking demand.
+  braking. The command then drops to a warning, or to no stage at all when the
+  off-path body's required deceleration is at or below the warning threshold;
+  neither makes a braking demand.
 
 **The nominal controller does not slow for other road users.** This is the
 study's control by design: it reads only the route and the map, and its target

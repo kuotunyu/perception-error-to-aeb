@@ -17,7 +17,9 @@ cannot drift from the code:
 - a stationary vehicle beside the path demands full braking;
 - a slower vehicle behind the ego demands full braking;
 - an off-path body can be selected in place of an in-path threat, turning a
-  partial brake into a warning that makes no braking demand (masking).
+  partial brake into a warning, or into no stage at all when the off-path
+  body's required deceleration does not exceed the warning threshold; neither
+  makes a braking demand (masking).
 
 Changing any of this is a new policy version, not a fix to this one: every
 released number was produced by the behaviour below.
@@ -27,7 +29,7 @@ from __future__ import annotations
 
 import pytest
 
-from aebrisk.aeb.state_machine import AEBCommand, AEBMemory, AEBState, update_aeb
+from aebrisk.aeb.state_machine import AEBCommand, AEBMemory, AEBState, load_policy, update_aeb
 from aebrisk.aeb.threat import (
     EgoKinematicState,
     assess_threat,
@@ -151,3 +153,31 @@ def test_an_off_path_body_masks_an_in_path_threat() -> None:
     assert [command.state for command in masked] == [AEBState.MONITOR, AEBState.WARNING]
     assert [command.target_acceleration_mps2 for command in masked] == [0.0, 0.0]
     assert masked[-1].selected_track_id == "parked-beside"
+
+
+def test_a_masking_body_below_the_warning_threshold_leaves_no_stage() -> None:
+    """Masking need not end in a warning: the AEB can stay in monitor throughout."""
+
+    lead = car("in-path-lead", (13.0, 0.0))
+    parked = car("parked-beside", (11.5, 4.0))
+
+    alone = commands(ego(5.0), (lead,), steps=4)
+    assert [command.state for command in alone] == [AEBState.PARTIAL] * 4
+    assert [command.target_acceleration_mps2 for command in alone] == [-3.0] * 4
+
+    lead_threat = assess_threat(ego(5.0), lead)
+    parked_threat = assess_threat(ego(5.0), parked)
+    assert lead_threat.predicted_overlap is True
+    assert parked_threat.predicted_overlap is False
+    assert parked_threat.ttc_s is None
+    # 5^2 / (2 * (11.5 - 4.8/2 - 4.5/2)), above the lead's but not above the
+    # warning stage's required-deceleration threshold.
+    assert parked_threat.required_deceleration_mps2 == pytest.approx(25.0 / 13.7)
+    assert parked_threat.required_deceleration_mps2 > lead_threat.required_deceleration_mps2
+    warning_threshold = load_policy()["warning"]["required_decel_gt_mps2"]
+    assert parked_threat.required_deceleration_mps2 <= warning_threshold
+    assert select_highest_required_deceleration((lead_threat, parked_threat)) == parked_threat
+
+    masked = commands(ego(5.0), (lead, parked), steps=4)
+    assert [command.state for command in masked] == [AEBState.MONITOR] * 4
+    assert [command.target_acceleration_mps2 for command in masked] == [0.0] * 4
