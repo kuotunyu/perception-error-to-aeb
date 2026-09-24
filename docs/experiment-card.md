@@ -106,9 +106,14 @@ not the quantities those documents specify.
   insufficiencies of an intended function, including performance limitations of
   perception, and from the triggering conditions that expose them. The four
   error channels act as controlled perception insufficiencies. A false
-  intervention corresponds to unintended braking and a missed intervention to
-  braking that did not occur where the oracle AEB braked, which is why both are
-  reported beside counted collisions.
+  intervention is a braking event with no oracle-AEB counterpart within the
+  matching tolerance, and a missed intervention is an oracle-AEB braking event
+  that the error configuration either does not reproduce or starts more than
+  0.3 s later. Because oracle AEB runs the same policy, including target
+  selection that is not path-gated, both counts measure disagreement with
+  oracle AEB rather than with an ideal braking need. They are the study's
+  closest analogue to unintended and insufficient braking, which is why both
+  are reported beside counted collisions.
 - **ANSI/UL 4600.** UL 4600 asks for safety performance indicators that are
   monitored over operation. Event counts, intervention duration and excluded
   contacts are the kind of measurement such an indicator could be built on; the
