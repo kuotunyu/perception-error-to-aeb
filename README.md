@@ -112,6 +112,6 @@ docker compose run --rm dev uv run --frozen aeb-risk report --claims docs/claims
 docker compose run --rm dev uv run --frozen python -m aebrisk.dev verify
 ```
 
-完整 provenance、hash 與解釋限制見[分析重現紀錄](docs/verification/analysis-reproduction.md)。資料受 nuPlan/Motional 條款與 [CC BY-NC-SA 4.0](docs/evidence/nuplan_aeb_v2-NOTICE.md) 規範；原始碼使用 MIT license。
+完整 provenance、hash 與解釋限制見[分析重現紀錄](docs/verification/analysis-reproduction.md)。資料受 nuPlan/Motional 條款與 [CC BY-NC-SA 4.0](docs/evidence/nuplan_aeb_v2-NOTICE.md) 規範；原始碼使用 MIT license。各路徑適用哪一種條款見 [NOTICE](NOTICE)。
 
 同一 portfolio 的 [P1 driving-risk-metrics](https://github.com/kuotunyu/driving-risk-metrics)提供評估與不確定性工具；[P2 bev-calibration-lab](https://github.com/kuotunyu/bev-calibration-lab)研究相機/LiDAR calibration fault，已發布 v1.0.0。三案使用不同資料集與研究設定；這個研究脈絡與描述性資料互通，不代表已驗證同一套模型從感知驅動 AEB。

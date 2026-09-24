@@ -6,7 +6,8 @@ which paths fall under which; it does not change either licence.
 
 1. Independently authored software and documentation: MIT License (LICENSE)
 
-   - src/, tests/, schemas/, configs/, .agents/, .github/
+   - src/, tests/, schemas/, configs/, .agents/, .github/, apart from the
+     nuPlan-derived file and the restated values listed in section 2
    - pyproject.toml, uv.lock, Dockerfile, compose.yaml and the other build and
      configuration files at the repository root
    - the prose of README.md, README.en.md and docs/, apart from the derived
@@ -21,8 +22,12 @@ which paths fall under which; it does not change either licence.
      timelines; see docs/evidence/nuplan_aeb_v2-NOTICE.md
    - docs/figures/: SVG figures generated from that evidence
    - docs/claims.yaml: the registry of values copied from that evidence
-   - the result tables and values in README.md, README.en.md and
-     docs/release-notes/ that restate those values
+   - configs/nuplan_scenario_vocabulary.yaml: the scenario-type names read
+     from the nuPlan mini-split log databases
+   - any value restated from that evidence elsewhere in the repository,
+     including the result tables and values in README.md, README.en.md,
+     docs/release-notes/ and docs/verification/, and the fixture and example
+     values in tests/ and .agents/
    - the published report site, which is built from the same evidence
 
    Copyright and creator notices supplied with nuPlan remain with Motional and

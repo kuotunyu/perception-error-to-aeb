@@ -117,6 +117,6 @@ docker compose run --rm dev uv run --frozen aeb-risk report --claims docs/claims
 docker compose run --rm dev uv run --frozen python -m aebrisk.dev verify
 ```
 
-See the [analysis reproduction record](docs/verification/analysis-reproduction.md) for full provenance, hashes, and interpretation limits. Data-derived material is governed by the nuPlan/Motional terms and [CC BY-NC-SA 4.0](docs/evidence/nuplan_aeb_v2-NOTICE.md); independently authored source code is MIT licensed.
+See the [analysis reproduction record](docs/verification/analysis-reproduction.md) for full provenance, hashes, and interpretation limits. Data-derived material is governed by the nuPlan/Motional terms and [CC BY-NC-SA 4.0](docs/evidence/nuplan_aeb_v2-NOTICE.md); independently authored source code is MIT licensed. See [NOTICE](NOTICE) for which paths fall under which terms.
 
 Within the same portfolio, [P1 driving-risk-metrics](https://github.com/kuotunyu/driving-risk-metrics) provides evaluation and uncertainty tooling. [P2 bev-calibration-lab](https://github.com/kuotunyu/bev-calibration-lab) studies camera/LiDAR calibration faults and has published v1.0.0. The projects use different datasets and study settings; their research narrative and descriptive artifact interchange do not establish a validated perception-to-AEB model pipeline.
