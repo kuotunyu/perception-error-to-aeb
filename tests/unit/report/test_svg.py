@@ -169,6 +169,7 @@ def test_write_figures_reads_strict_evidence_and_writes_fixed_names(tmp_path: Pa
     written = write_figures(evidence, tmp_path / "figures")
 
     assert [path.name for path in written] == [
+        "collisions-vs-braking.svg",
         "shapley-contributions.svg",
         "intervention-rates-by-family.svg",
         "error-severity-sensitivity.svg",

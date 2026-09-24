@@ -10,6 +10,7 @@ and in the evidence JSON the figure was drawn from.
 from __future__ import annotations
 
 import html
+import math
 from pathlib import Path
 from typing import Any, Optional
 
@@ -262,8 +263,197 @@ def severity_svg(evaluation: dict[str, Any]) -> str:
     return "\n".join(parts)
 
 
+#: The four configurations the braking figure names, with each label's offset
+#: from its point and its text anchor. Every other point is unlabelled on
+#: purpose: the figure makes one comparison, and a label per point would hide it.
+BRAKING_FIGURE_LABELS: dict[str, tuple[str, float, float, str]] = {
+    "no_aeb": ("no AEB", 14.0, 5.0, "start"),
+    "oracle_aeb": ("oracle AEB", -16.0, -30.0, "end"),
+    "coalition-none": ("coalition-none", 36.0, -52.0, "start"),
+    "coalition-dropout+localization_shape+latency+track_instability": (
+        "all four channels, medium",
+        0.0,
+        -46.0,
+        "middle",
+    ),
+}
+#: The two references every error configuration is read against.
+BRAKING_FIGURE_REFERENCES: tuple[str, ...] = ("no_aeb", "oracle_aeb")
+#: Plot area in viewBox units: left, right, top, bottom.
+BRAKING_FIGURE_PLOT: tuple[float, float, float, float] = (110.0, 910.0, 150.0, 480.0)
+#: The collision axis ends at the next multiple of this above the largest rate.
+BRAKING_FIGURE_RATE_STEP = 50.0
+
+
+def _braking_marker(x: float, y: float, kind: str) -> str:
+    if kind == "reference":
+        return (
+            f'<path d="M{x:.2f} {y - 8:.2f} L{x + 8:.2f} {y:.2f} L{x:.2f} {y + 8:.2f} '
+            f'L{x - 8:.2f} {y:.2f} Z" fill="{INK}" />'
+        )
+    if kind == "localization_shape":
+        return (
+            f'<rect x="{x - 6:.2f}" y="{y - 6:.2f}" width="12" height="12" '
+            f'fill="{POSITIVE}" fill-opacity="0.85" stroke="#ffffff" />'
+        )
+    return (
+        f'<circle cx="{x:.2f}" cy="{y:.2f}" r="6" fill="{NEGATIVE}" '
+        'fill-opacity="0.85" stroke="#ffffff" />'
+    )
+
+
+def collisions_vs_braking_svg(evaluation: dict[str, Any]) -> str:
+    """Plot counted collisions against the share of exposure spent braking.
+
+    Braking share is ``mean_intervention_duration_s * scenarios /
+    simulated_seconds``: the partial- or full-braking time a configuration
+    accumulated, over its own measured exposure. Collisions are counted per
+    1,000 scenario-replicates. Both are derived here from evaluation.json and
+    neither is printed; each point carries its exact derived values in data
+    attributes. Configurations whose error set includes localization_shape get
+    their own marker, because that split is what the figure exists to show.
+    """
+
+    document = AEBEvaluationV1.model_validate(evaluation)
+    points: list[tuple[str, float, float, str]] = []
+    for row in sorted(document.configurations, key=lambda item: item.configuration_id):
+        duration = row.mean_intervention_duration_s
+        if row.scenarios == 0 or row.simulated_seconds == 0.0 or duration is None:
+            raise ValueError(
+                f"{row.configuration_id} lacks scenario-replicates, measured exposure or a "
+                "mean intervention duration, so its braking share cannot be derived"
+            )
+        if row.configuration_id in BRAKING_FIGURE_REFERENCES:
+            kind = "reference"
+        elif "localization_shape" in row.configuration_id:
+            kind = "localization_shape"
+        else:
+            kind = "other"
+        points.append(
+            (
+                row.configuration_id,
+                duration * row.scenarios / row.simulated_seconds,
+                row.collisions * 1000.0 / row.scenarios,
+                kind,
+            )
+        )
+
+    left, right, top, bottom = BRAKING_FIGURE_PLOT
+    largest = max(rate for _, _, rate, _ in points)
+    steps = max(1, math.ceil(largest / BRAKING_FIGURE_RATE_STEP))
+    ceiling = steps * BRAKING_FIGURE_RATE_STEP
+
+    def x_at(share: float) -> float:
+        return left + share * (right - left)
+
+    def y_at(rate: float) -> float:
+        return bottom - rate / ceiling * (bottom - top)
+
+    middle = (top + bottom) / 2
+    parts = [
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 640" role="img" '
+        'aria-labelledby="title desc">',
+        '<title id="title">Counted collisions against braking share</title>',
+        '<desc id="desc">One point per configuration, derived from evaluation.json: counted '
+        "collisions per 1,000 scenario-replicates against the share of measured exposure spent "
+        "in partial or full braking. Descriptive only; scenario-replicates are not independent, "
+        "there are no intervals and no channel ranking.</desc>",
+        f'<rect width="960" height="640" fill="{PAPER}" />',
+        _text(44, 42, "Counted collisions against braking share", size=24, weight=700),
+        _text(44, 66, "One point per configuration, derived from evaluation.json", size=13),
+    ]
+    legend = (
+        ("reference", "reference: no AEB, oracle AEB"),
+        ("localization_shape", "error set includes localization_shape"),
+        ("other", "other error configuration"),
+    )
+    for index, (kind, label) in enumerate(legend):
+        x = 52.0 + index * 290.0
+        parts.extend([_braking_marker(x, 100.0, kind), _text(x + 16, 105, label, size=13)])
+    parts.append(
+        f'<rect x="{left}" y="{top}" width="{right - left}" height="{bottom - top}" '
+        f'fill="#ffffff" stroke="{GRID}" />'
+    )
+    for step in range(6):
+        x = x_at(step / 5)
+        parts.extend(
+            [
+                f'<line x1="{x:.2f}" y1="{top}" x2="{x:.2f}" y2="{bottom}" stroke="{GRID}" />',
+                _text(round(x - 14, 2), bottom + 22, f"{step * 20}%", size=12),
+            ]
+        )
+    for step in range(steps + 1):
+        rate = step * BRAKING_FIGURE_RATE_STEP
+        y = y_at(rate)
+        parts.extend(
+            [
+                f'<line x1="{left}" y1="{y:.2f}" x2="{right}" y2="{y:.2f}" stroke="{GRID}" />',
+                _text(left - 40, round(y + 4, 2), f"{rate:.0f}", size=12),
+            ]
+        )
+    parts.extend(
+        [
+            _text(
+                left,
+                bottom + 50,
+                "Share of measured exposure spent in partial or full braking",
+                size=14,
+                weight=600,
+            ),
+            f'<text x="30" y="{middle}" transform="rotate(-90 30 {middle})" '
+            'text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" '
+            f'font-weight="600" fill="{INK}">Counted collisions per 1,000 '
+            "scenario-replicates</text>",
+        ]
+    )
+    # References last, so the two points every other point is read against sit on top.
+    for configuration_id, share, rate, kind in sorted(
+        points, key=lambda point: point[3] == "reference"
+    ):
+        parts.extend(
+            [
+                f'<g data-configuration="{_attribute(configuration_id)}" data-kind="{kind}" '
+                f'data-braking-share="{share!r}" data-collisions-per-1000="{rate!r}">',
+                _braking_marker(x_at(share), y_at(rate), kind),
+                "</g>",
+            ]
+        )
+    for configuration_id, share, rate, _ in points:
+        if configuration_id in BRAKING_FIGURE_LABELS:
+            label, dx, dy, anchor = BRAKING_FIGURE_LABELS[configuration_id]
+            x, y = x_at(share), y_at(rate)
+            parts.extend(
+                [
+                    f'<line x1="{x:.2f}" y1="{y:.2f}" x2="{x + dx:.2f}" y2="{y + dy:.2f}" '
+                    f'stroke="{MUTED}" />',
+                    f'<text x="{x + dx:.2f}" y="{y + dy - 4:.2f}" text-anchor="{anchor}" '
+                    'font-family="system-ui, sans-serif" font-size="13" font-weight="600" '
+                    f'fill="{INK}">{_attribute(label)}</text>',
+                ]
+            )
+    parts.extend(
+        [
+            _text(
+                44,
+                600,
+                "Descriptive and derived: braking share is mean intervention duration times "
+                "scenario-replicates, divided by measured exposure.",
+                size=12,
+            ),
+            _text(
+                44,
+                620,
+                "Scenario-replicates are not independent; no intervals; no channel ranking.",
+                size=12,
+            ),
+            "</svg>\n",
+        ]
+    )
+    return "\n".join(parts)
+
+
 def write_figures(evidence_dir: Path, output_dir: Path) -> tuple[Path, ...]:
-    """Validate common source identity and write the three figures in fixed order."""
+    """Validate common source identity and write the four figures in fixed order."""
 
     shapley = AEBShapleyV1.model_validate_json((evidence_dir / "shapley.json").read_bytes())
     families = FamilyInterventionsV1.model_validate_json(
@@ -279,6 +469,10 @@ def write_figures(evidence_dir: Path, output_dir: Path) -> tuple[Path, ...]:
     if len(identities) != 1:
         raise ValueError("figure evidence identity differs across documents")
     documents = (
+        (
+            output_dir / "collisions-vs-braking.svg",
+            collisions_vs_braking_svg(evaluation.model_dump(mode="json")),
+        ),
         (output_dir / "shapley-contributions.svg", shapley_svg(shapley.model_dump(mode="json"))),
         (
             output_dir / "intervention-rates-by-family.svg",

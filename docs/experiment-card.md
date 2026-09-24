@@ -64,7 +64,12 @@ localization/shape error spends a larger share of its measured exposure braking
 than oracle AEB and records fewer counted collisions. Read those low counts as a
 braking result: set them beside false and missed events, intervention duration
 and `contacts_not_at_fault`, and do not read them as better perception or as
-real-world safety. The evaluation harness surfaced these mechanisms; the
+real-world safety. The
+[collisions-vs-braking figure](figures/collisions-vs-braking.svg) plots counted
+collisions per 1,000 scenario-replicates against the share of measured exposure
+spent braking for every configuration; it is descriptive, derived from
+`evaluation.json`, and carries no intervals. The evaluation harness surfaced
+these mechanisms; the
 [simulation contract](simulation-contract.md#known-controller-and-modelling-choices)
 lists them, and characterization tests pin them.
 

@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 640" role="img" aria-labelledby="title desc">
+<title id="title">Counted collisions against braking share</title>
+<desc id="desc">One point per configuration, derived from evaluation.json: counted collisions per 1,000 scenario-replicates against the share of measured exposure spent in partial or full braking. Descriptive only; scenario-replicates are not independent, there are no intervals and no channel ranking.</desc>
+<rect width="960" height="640" fill="#f7f9fc" />
+<text x="44" y="42" font-family="system-ui, sans-serif" font-size="24" font-weight="700" fill="#14213d">Counted collisions against braking share</text>
+<text x="44" y="66" font-family="system-ui, sans-serif" font-size="13" font-weight="400" fill="#14213d">One point per configuration, derived from evaluation.json</text>
+<path d="M52.00 92.00 L60.00 100.00 L52.00 108.00 L44.00 100.00 Z" fill="#14213d" />
+<text x="68.0" y="105" font-family="system-ui, sans-serif" font-size="13" font-weight="400" fill="#14213d">reference: no AEB, oracle AEB</text>
+<rect x="336.00" y="94.00" width="12" height="12" fill="#d97706" fill-opacity="0.85" stroke="#ffffff" />
+<text x="358.0" y="105" font-family="system-ui, sans-serif" font-size="13" font-weight="400" fill="#14213d">error set includes localization_shape</text>
+<circle cx="632.00" cy="100.00" r="6" fill="#197278" fill-opacity="0.85" stroke="#ffffff" />
+<text x="648.0" y="105" font-family="system-ui, sans-serif" font-size="13" font-weight="400" fill="#14213d">other error configuration</text>
+<rect x="110.0" y="150.0" width="800.0" height="330.0" fill="#ffffff" stroke="#d7deea" />
+<line x1="110.00" y1="150.0" x2="110.00" y2="480.0" stroke="#d7deea" />
+<text x="96.0" y="502.0" font-family="system-ui, sans-serif" font-size="12" font-weight="400" fill="#14213d">0%</text>
+<line x1="270.00" y1="150.0" x2="270.00" y2="480.0" stroke="#d7deea" />
+<text x="256.0" y="502.0" font-family="system-ui, sans-serif" font-size="12" font-weight="400" fill="#14213d">20%</text>
+<line x1="430.00" y1="150.0" x2="430.00" y2="480.0" stroke="#d7deea" />
+<text x="416.0" y="502.0" font-family="system-ui, sans-serif" font-size="12" font-weight="400" fill="#14213d">40%</text>
+<line x1="590.00" y1="150.0" x2="590.00" y2="480.0" stroke="#d7deea" />
+<text x="576.0" y="502.0" font-family="system-ui, sans-serif" font-size="12" font-weight="400" fill="#14213d">60%</text>
+<line x1="750.00" y1="150.0" x2="750.00" y2="480.0" stroke="#d7deea" />
+<text x="736.0" y="502.0" font-family="system-ui, sans-serif" font-size="12" font-weight="400" fill="#14213d">80%</text>
+<line x1="910.00" y1="150.0" x2="910.00" y2="480.0" stroke="#d7deea" />
+<text x="896.0" y="502.0" font-family="system-ui, sans-serif" font-size="12" font-weight="400" fill="#14213d">100%</text>
+<line x1="110.0" y1="480.00" x2="910.0" y2="480.00" stroke="#d7deea" />
+<text x="70.0" y="484.0" font-family="system-ui, sans-serif" font-size="12" font-weight="400" fill="#14213d">0</text>
+<line x1="110.0" y1="397.50" x2="910.0" y2="397.50" stroke="#d7deea" />
+<text x="70.0" y="401.5" font-family="system-ui, sans-serif" font-size="12" font-weight="400" fill="#14213d">50</text>
+<line x1="110.0" y1="315.00" x2="910.0" y2="315.00" stroke="#d7deea" />
+<text x="70.0" y="319.0" font-family="system-ui, sans-serif" font-size="12" font-weight="400" fill="#14213d">100</text>
+<line x1="110.0" y1="232.50" x2="910.0" y2="232.50" stroke="#d7deea" />
+<text x="70.0" y="236.5" font-family="system-ui, sans-serif" font-size="12" font-weight="400" fill="#14213d">150</text>
+<line x1="110.0" y1="150.00" x2="910.0" y2="150.00" stroke="#d7deea" />
+<text x="70.0" y="154.0" font-family="system-ui, sans-serif" font-size="12" font-weight="400" fill="#14213d">200</text>
+<text x="110.0" y="530.0" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="#14213d">Share of measured exposure spent in partial or full braking</text>
+<text x="30" y="315.0" transform="rotate(-90 30 315.0)" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="#14213d">Counted collisions per 1,000 scenario-replicates</text>
+<g data-configuration="coalition-dropout+latency" data-kind="other" data-braking-share="0.6428955215861161" data-collisions-per-1000="28.100775193798448">
+<circle cx="624.32" cy="433.63" r="6" fill="#197278" fill-opacity="0.85" stroke="#ffffff" />
+</g>
+<g data-configuration="coalition-dropout+latency+track_instability" data-kind="other" data-braking-share="0.6396008714128184" data-collisions-per-1000="31.976744186046513">
+<circle cx="621.68" cy="427.24" r="6" fill="#197278" fill-opacity="0.85" stroke="#ffffff" />
+</g>
+<g data-configuration="coalition-dropout+localization_shape" data-kind="localization_shape" data-braking-share="0.9056426717749916" data-collisions-per-1000="0.0">
+<rect x="828.51" y="474.00" width="12" height="12" fill="#d97706" fill-opacity="0.85" stroke="#ffffff" />
+</g>
+<g data-configuration="coalition-dropout+localization_shape+latency" data-kind="localization_shape" data-braking-share="0.8908013873913682" data-collisions-per-1000="0.0">
+<rect x="816.64" y="474.00" width="12" height="12" fill="#d97706" fill-opacity="0.85" stroke="#ffffff" />
+</g>
+<g data-configuration="coalition-dropout+localization_shape+latency+track_instability" data-kind="localization_shape" data-braking-share="0.8892035490198634" data-collisions-per-1000="0.0">
+<rect x="815.36" y="474.00" width="12" height="12" fill="#d97706" fill-opacity="0.85" stroke="#ffffff" />
+</g>
+<g data-configuration="coalition-dropout+localization_shape+track_instability" data-kind="localization_shape" data-braking-share="0.9039276723250852" data-collisions-per-1000="0.0">
+<rect x="827.14" y="474.00" width="12" height="12" fill="#d97706" fill-opacity="0.85" stroke="#ffffff" />
+</g>
+<g data-configuration="coalition-dropout+track_instability" data-kind="other" data-braking-share="0.6494940507808354" data-collisions-per-1000="22.286821705426355">
+<circle cx="629.60" cy="443.23" r="6" fill="#197278" fill-opacity="0.85" stroke="#ffffff" />
+</g>
+<g data-configuration="coalition-latency+track_instability" data-kind="other" data-braking-share="0.6450668081876139" data-collisions-per-1000="30.03875968992248">
+<circle cx="626.05" cy="430.44" r="6" fill="#197278" fill-opacity="0.85" stroke="#ffffff" />
+</g>
+<g data-configuration="coalition-localization_shape+latency" data-kind="localization_shape" data-braking-share="0.8989282930631354" data-collisions-per-1000="0.0">
+<rect x="823.14" y="474.00" width="12" height="12" fill="#d97706" fill-opacity="0.85" stroke="#ffffff" />
+</g>
+<g data-configuration="coalition-localization_shape+latency+track_instability" data-kind="localization_shape" data-braking-share="0.8968952974798668" data-collisions-per-1000="0.0">
+<rect x="821.52" y="474.00" width="12" height="12" fill="#d97706" fill-opacity="0.85" stroke="#ffffff" />
+</g>
+<g data-configuration="coalition-localization_shape+track_instability" data-kind="localization_shape" data-braking-share="0.9118410852713171" data-collisions-per-1000="0.0">
+<rect x="833.47" y="474.00" width="12" height="12" fill="#d97706" fill-opacity="0.85" stroke="#ffffff" />
+</g>
+<g data-configuration="coalition-none" data-kind="other" data-braking-share="0.6587895104197844" data-collisions-per-1000="26.162790697674417">
+<circle cx="637.03" cy="436.83" r="6" fill="#197278" fill-opacity="0.85" stroke="#ffffff" />
+</g>
+<g data-configuration="dropout-high" data-kind="other" data-braking-share="0.6457326678054188" data-collisions-per-1000="18.410852713178294">
+<circle cx="626.59" cy="449.62" r="6" fill="#197278" fill-opacity="0.85" stroke="#ffffff" />
+</g>
+<g data-configuration="dropout-low" data-kind="other" data-braking-share="0.655198259508365" data-collisions-per-1000="25.1937984496124">
+<circle cx="634.16" cy="438.43" r="6" fill="#197278" fill-opacity="0.85" stroke="#ffffff" />
+</g>
+<g data-configuration="dropout-medium" data-kind="other" data-braking-share="0.6520539586953362" data-collisions-per-1000="18.410852713178294">
+<circle cx="631.64" cy="449.62" r="6" fill="#197278" fill-opacity="0.85" stroke="#ffffff" />
+</g>
+<g data-configuration="latency-high" data-kind="other" data-braking-share="0.6415853309919562" data-collisions-per-1000="29.069767441860463">
+<circle cx="623.27" cy="432.03" r="6" fill="#197278" fill-opacity="0.85" stroke="#ffffff" />
+</g>
+<g data-configuration="latency-low" data-kind="other" data-braking-share="0.6528940552912116" data-collisions-per-1000="29.069767441860463">
+<circle cx="632.32" cy="432.03" r="6" fill="#197278" fill-opacity="0.85" stroke="#ffffff" />
+</g>
+<g data-configuration="latency-medium" data-kind="other" data-braking-share="0.64820000402909" data-collisions-per-1000="29.069767441860463">
+<circle cx="628.56" cy="432.03" r="6" fill="#197278" fill-opacity="0.85" stroke="#ffffff" />
+</g>
+<g data-configuration="localization_shape-high" data-kind="localization_shape" data-braking-share="0.9818540051679564" data-collisions-per-1000="0.0">
+<rect x="889.48" y="474.00" width="12" height="12" fill="#d97706" fill-opacity="0.85" stroke="#ffffff" />
+</g>
+<g data-configuration="localization_shape-low" data-kind="localization_shape" data-braking-share="0.8644730443803278" data-collisions-per-1000="3.875968992248062">
+<rect x="795.58" y="467.60" width="12" height="12" fill="#d97706" fill-opacity="0.85" stroke="#ffffff" />
+</g>
+<g data-configuration="localization_shape-medium" data-kind="localization_shape" data-braking-share="0.9139405684754506" data-collisions-per-1000="0.0">
+<rect x="835.15" y="474.00" width="12" height="12" fill="#d97706" fill-opacity="0.85" stroke="#ffffff" />
+</g>
+<g data-configuration="track_instability-high" data-kind="other" data-braking-share="0.6459646303318489" data-collisions-per-1000="22.286821705426355">
+<circle cx="626.77" cy="443.23" r="6" fill="#197278" fill-opacity="0.85" stroke="#ffffff" />
+</g>
+<g data-configuration="track_instability-low" data-kind="other" data-braking-share="0.6584084782002436" data-collisions-per-1000="22.286821705426355">
+<circle cx="636.73" cy="443.23" r="6" fill="#197278" fill-opacity="0.85" stroke="#ffffff" />
+</g>
+<g data-configuration="track_instability-medium" data-kind="other" data-braking-share="0.656552026694675" data-collisions-per-1000="26.162790697674417">
+<circle cx="635.24" cy="436.83" r="6" fill="#197278" fill-opacity="0.85" stroke="#ffffff" />
+</g>
+<g data-configuration="no_aeb" data-kind="reference" data-braking-share="0.0" data-collisions-per-1000="197.67441860465115">
+<path d="M110.00 145.84 L118.00 153.84 L110.00 161.84 L102.00 153.84 Z" fill="#14213d" />
+</g>
+<g data-configuration="oracle_aeb" data-kind="reference" data-braking-share="0.6337245586133317" data-collisions-per-1000="37.7906976744186">
+<path d="M616.98 409.65 L624.98 417.65 L616.98 425.65 L608.98 417.65 Z" fill="#14213d" />
+</g>
+<line x1="821.36" y1="480.00" x2="821.36" y2="434.00" stroke="#526078" />
+<text x="821.36" y="430.00" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" font-weight="600" fill="#14213d">all four channels, medium</text>
+<line x1="637.03" y1="436.83" x2="673.03" y2="384.83" stroke="#526078" />
+<text x="673.03" y="380.83" text-anchor="start" font-family="system-ui, sans-serif" font-size="13" font-weight="600" fill="#14213d">coalition-none</text>
+<line x1="110.00" y1="153.84" x2="124.00" y2="158.84" stroke="#526078" />
+<text x="124.00" y="154.84" text-anchor="start" font-family="system-ui, sans-serif" font-size="13" font-weight="600" fill="#14213d">no AEB</text>
+<line x1="616.98" y1="417.65" x2="600.98" y2="387.65" stroke="#526078" />
+<text x="600.98" y="383.65" text-anchor="end" font-family="system-ui, sans-serif" font-size="13" font-weight="600" fill="#14213d">oracle AEB</text>
+<text x="44" y="600" font-family="system-ui, sans-serif" font-size="12" font-weight="400" fill="#14213d">Descriptive and derived: braking share is mean intervention duration times scenario-replicates, divided by measured exposure.</text>
+<text x="44" y="620" font-family="system-ui, sans-serif" font-size="12" font-weight="400" fill="#14213d">Scenario-replicates are not independent; no intervals; no channel ranking.</text>
+</svg>
