@@ -710,6 +710,173 @@ def test_each_publication_violation_is_rejected(
     assert any(message in violation for violation in violations), violations
 
 
+def test_a_declared_rounded_binding_is_recomputed_from_its_claim(
+    workspace: dict[str, Path],
+) -> None:
+    """A shorter display stays traceable when the marker declares its precision."""
+
+    document = _write(
+        workspace["root"],
+        "README.md",
+        "Dropout's Shapley `collision_indicator` = -0.00218. "
+        "<!-- claim: p3.shapley.collision_indicator-values-dropout; rounded: 5 -->\n"
+        "Oracle AEB recorded `collisions` = 39 "
+        "<!-- claim: p3.baseline.collisions.oracle_aeb; rounded: 0 --> and "
+        "`contacts_not_at_fault` = 1095 "
+        "<!-- claim: p3.baseline.contacts_not_at_fault.oracle_aeb -->\n",
+    )
+
+    violations, status = _validate(workspace, documents=(document,))
+
+    assert violations == ()
+    rounding = {
+        trace["claim_id"]: trace.get("rounded_decimal_places") for trace in status["statements"]
+    }
+    assert rounding == {
+        "p3.shapley.collision_indicator-values-dropout": 5,
+        "p3.baseline.collisions.oracle_aeb": 0,
+        "p3.baseline.contacts_not_at_fault.oracle_aeb": None,
+    }
+
+
+@pytest.mark.parametrize(
+    ("display", "places"),
+    [
+        ("-0.00219", "5"),
+        ("-0.002180", "5"),
+        ("-2.18e-3", "5"),
+        ("-0.0022", "5"),
+        ("-0.00218", "4"),
+    ],
+)
+def test_a_declared_rounded_binding_must_be_the_canonical_rounding(
+    workspace: dict[str, Path], display: str, places: str
+) -> None:
+    """A wrong digit, a padded or E-notation spelling, or a mismatched precision fails."""
+
+    document = _write(
+        workspace["root"],
+        "README.md",
+        f"Dropout's Shapley `collision_indicator` = {display}. "
+        f"<!-- claim: p3.shapley.collision_indicator-values-dropout; rounded: {places} -->\n",
+    )
+
+    violations, _ = _validate(workspace, documents=(document,))
+
+    assert any("rounds half to even to" in violation for violation in violations), violations
+
+
+@pytest.mark.parametrize(
+    "marker",
+    [
+        "<!-- claim: p3.shapley.collision_indicator-values-dropout; rounded: 10 -->",
+        "<!-- claim: p3.shapley.collision_indicator-values-dropout; rounded: x -->",
+        "<!-- claim: p3.shapley.collision_indicator-values-dropout rounded 5 -->",
+    ],
+)
+def test_a_malformed_claim_marker_is_rejected(workspace: dict[str, Path], marker: str) -> None:
+    """A marker that does not parse cannot silently authorize or hide a value."""
+
+    document = _write(
+        workspace["root"],
+        "README.md",
+        f"Dropout's Shapley `collision_indicator` = -0.00218. {marker}\n",
+    )
+
+    violations, _ = _validate(workspace, documents=(document,))
+
+    assert any("invalid claim marker" in violation for violation in violations), violations
+
+
+def test_a_malformed_marker_is_found_on_a_line_with_no_result(
+    workspace: dict[str, Path],
+) -> None:
+    """Prose without a metric word or number still cannot carry a broken marker."""
+
+    document = _write(
+        workspace["root"],
+        "README.md",
+        "See the figure below. <!-- claim: p3.shapley.common_valid_tokens; rounded: -1 -->\n",
+    )
+
+    violations, _ = _validate(workspace, documents=(document,))
+
+    assert any("README.md:1: invalid claim marker" in item for item in violations), violations
+
+
+def test_a_malformed_marker_cannot_hide_beside_a_valid_marker(
+    workspace: dict[str, Path],
+) -> None:
+    """Every claim-like comment on a marked line must parse, including a later one."""
+
+    document = _write(
+        workspace["root"],
+        "README.md",
+        "Dropout's Shapley `collision_indicator` = -0.0021802325581395357. "
+        "<!-- claim: p3.shapley.collision_indicator-values-dropout --> "
+        "<!-- claim: p3.shapley.intervention_duration_s-values-dropout; rounded: 99 -->\n",
+    )
+
+    violations, _ = _validate(workspace, documents=(document,))
+
+    assert any("invalid claim marker" in violation for violation in violations), violations
+
+
+def test_a_proposal_may_carry_its_well_formed_markers(workspace: dict[str, Path]) -> None:
+    """A drafted README line pasted with its markers is audited, not refused as malformed."""
+
+    proposal = _write(
+        workspace["root"],
+        "proposal.yaml",
+        yaml.safe_dump(
+            {
+                "proposals": [
+                    {
+                        "claim_ids": [
+                            "p3.baseline.collisions.oracle_aeb",
+                            "p3.baseline.contacts_not_at_fault.oracle_aeb",
+                        ],
+                        "text": "Oracle AEB recorded `collisions` = 39 "
+                        "<!-- claim: p3.baseline.collisions.oracle_aeb --> and "
+                        "`contacts_not_at_fault` = 1095. "
+                        "<!-- claim: p3.baseline.contacts_not_at_fault.oracle_aeb -->",
+                    }
+                ]
+            }
+        ),
+    )
+
+    violations, status = _validate(workspace, proposal=proposal)
+
+    assert violations == ()
+    assert len(status["statements"]) == 2
+
+
+def test_a_malformed_marker_in_a_proposal_is_still_rejected(workspace: dict[str, Path]) -> None:
+    """Only the well-formed markers are exempt; a broken one in a proposal still fails."""
+
+    proposal = _write(
+        workspace["root"],
+        "proposal.yaml",
+        yaml.safe_dump(
+            {
+                "proposals": [
+                    {
+                        "claim_ids": ["p3.shapley.collision_indicator-values-dropout"],
+                        "text": "Dropout's Shapley `collision_indicator` = -0.00218. "
+                        "<!-- claim: p3.shapley.collision_indicator-values-dropout; "
+                        "rounded: 10 -->",
+                    }
+                ]
+            }
+        ),
+    )
+
+    violations, _ = _validate(workspace, proposal=proposal)
+
+    assert any("proposal[0]: invalid claim marker" in item for item in violations), violations
+
+
 def test_exit_one_lists_every_violation_in_one_run(
     workspace: dict[str, Path], capsys: pytest.CaptureFixture[str]
 ) -> None:

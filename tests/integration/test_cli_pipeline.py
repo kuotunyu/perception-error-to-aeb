@@ -824,6 +824,152 @@ def test_report_copies_derived_figures_and_replays_with_relative_links(workspace
     assert "grid-template-columns: 1fr" in page
 
 
+def build_page(workspace: Path) -> str:
+    result = run(
+        "report",
+        "--claims",
+        str(workspace / "claims.yaml"),
+        "--artifacts-dir",
+        str(workspace / "artifacts"),
+        "--output-dir",
+        str(workspace / "site"),
+    )
+    assert result.exit_code == 0, result.output
+    return (workspace / "site" / "index.html").read_text(encoding="utf-8")
+
+
+def test_report_opens_with_a_lede_and_the_braking_figure(workspace: Path) -> None:
+    """The first screen states the finding and shows the one figure that carries it."""
+
+    figures = workspace / "figures"
+    figures.mkdir()
+    for name in (
+        "collisions-vs-braking.svg",
+        "shapley-contributions.svg",
+        "intervention-rates-by-family.svg",
+        "error-severity-sensitivity.svg",
+    ):
+        (figures / name).write_text(f"<svg>{name}</svg>\n", encoding="utf-8")
+
+    page = build_page(workspace)
+
+    header = page[: page.index("</header>")]
+    assert "fewest counted collisions" in header
+    assert "largest share of their measured exposure braking" in header
+    assert "most of their measured exposure" not in header
+    finding = page[page.index('<section id="finding">') : page.index('<section id="question">')]
+    assert 'src="figures/collisions-vs-braking.svg"' in finding
+    assert "<figcaption>" in finding
+    assert "not independent" in finding
+    # Oracle AEB reads exact velocity, and at zero severity nothing is noisy.
+    assert "outside the oracle, tracked velocity is a finite difference of observed" in finding
+    assert "noisy positions" not in finding
+    rest = page[page.index('<section id="figures">') : page.index('<section id="replays">')]
+    assert "collisions-vs-braking.svg" not in rest
+    assert "The empty coalition (tracker, no injected error)" in rest
+    positions = [
+        rest.index(f'src="figures/{name}"')
+        for name in (
+            "error-severity-sensitivity.svg",
+            "intervention-rates-by-family.svg",
+            "shapley-contributions.svg",
+        )
+    ]
+    assert positions == sorted(positions)
+    assert "min-width: 46rem" not in page
+    assert "max-width: 100%" in page
+    assert "overflow-wrap: anywhere" in page
+
+
+def test_report_without_the_braking_figure_has_no_finding_figure(workspace: Path) -> None:
+    figures = workspace / "figures"
+    figures.mkdir()
+    (figures / "shapley-contributions.svg").write_text("<svg/>\n", encoding="utf-8")
+
+    page = build_page(workspace)
+
+    assert '<section id="finding">' not in page
+    assert 'src="figures/shapley-contributions.svg"' in page
+
+
+def test_report_table_shows_braking_cost_beside_collisions(workspace: Path) -> None:
+    """A zero-collision row must not be read without its braking cost."""
+
+    page = build_page(workspace)
+
+    observed = page[
+        page.index('<section id="observations">') : page.index('<section id="figures">')
+    ]
+    for heading in ("Mean intervention duration (s)", "False events", "Missed events"):
+        assert heading in observed
+    for label in ("No AEB", "Oracle AEB", "Tracker, no injected error", "All four errors, medium"):
+        assert label in observed
+    # coalition-none still differences positions and records false and missed
+    # events, so no label may call its tracker error-free.
+    assert "Zero-error" not in page
+    assert '<td class="number">40.0</td>' in observed
+    assert '<td class="number">0.0</td>' in observed
+
+
+def test_report_lays_replays_out_by_family_and_configuration(workspace: Path) -> None:
+    """Replays are a family-by-configuration table with human labels, not file names."""
+
+    replays = workspace / "artifacts" / "replays"
+    replays.mkdir()
+    for name in (
+        "lead_or_stopping--oracle_aeb.html",
+        "lead_or_stopping--coalition-none.html",
+        "notes.html",
+    ):
+        (replays / name).write_text("<!doctype html><title>replay</title>\n", encoding="utf-8")
+
+    page = build_page(workspace)
+
+    section = page[
+        page.index('<section id="replays">') : page.index('<details id="complete-trace">')
+    ]
+    for heading in ("Oracle", "Tracker, no injected error", "All four errors"):
+        assert f"<th>{heading}</th>" in section
+    assert "Lead or stopping" in section
+    assert "Cut-in or crossing" not in section
+    assert 'href="replays/lead_or_stopping--oracle_aeb.html"' in section
+    assert 'href="replays/lead_or_stopping--coalition-none.html"' in section
+    assert "<td>—</td>" in section
+    assert 'href="replays/notes.html"' in section
+    assert "播放" in section
+    assert "軌跡 = Tracks" in section
+
+
+def test_report_footer_credits_the_repository_release_author_and_licences(
+    workspace: Path,
+) -> None:
+    page = build_page(workspace)
+
+    head = page[: page.index("</head>")]
+    for tag in (
+        '<meta name="description"',
+        '<meta property="og:title"',
+        '<meta property="og:description"',
+        '<meta property="og:url" content="https://kuotunyu.github.io/perception-error-to-aeb/">',
+    ):
+        assert tag in head
+    footer = page[page.index("<footer>") :]
+    for text in (
+        'href="https://github.com/kuotunyu/perception-error-to-aeb"',
+        'href="https://github.com/kuotunyu/perception-error-to-aeb/releases/tag/v1.0.0"',
+        'href="https://github.com/kuotunyu"',
+        "Kuo Tun-Yu",
+        "MIT License",
+        "CC BY-NC-SA 4.0",
+        "Motional does not sponsor or endorse this project",
+        'href="https://github.com/kuotunyu/perception-error-to-aeb/blob/main/NOTICE"',
+    ):
+        assert text in footer
+    notice = (Path(__file__).resolve().parents[2] / "NOTICE").read_text(encoding="utf-8")
+    for path in ("src/", "docs/evidence/nuplan_aeb_v2/", "docs/figures/", "docs/claims.yaml"):
+        assert path in notice
+
+
 def test_report_exposes_the_family_sample_shortfall_without_an_efficacy_claim(
     workspace: Path,
 ) -> None:

@@ -9,7 +9,7 @@ import sys
 from collections import Counter
 from decimal import Decimal
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 import yaml
 
@@ -20,8 +20,17 @@ from aebrisk.analysis.claims import (
     audit_claims,
     load_registry,
 )
+from aebrisk.analysis.rounding import fixed
 
-MARKER = re.compile(r"<!--\s*claim:\s*([a-z0-9][a-z0-9._-]*)\s*-->")
+#: ``<!-- claim: <id> -->`` binds the exact artifact value. The optional
+#: ``; rounded: N`` declares a display rounded half to even to N decimal places
+#: (0 to 9), which the audit recomputes from the artifact rather than trusting.
+MARKER = re.compile(
+    r"<!--\s*claim:\s*([a-z0-9][a-z0-9._-]*)"
+    r"(?:\s*;\s*rounded:\s*([0-9]))?\s*-->"
+)
+#: Anything still shaped like a claim marker after the valid ones are removed.
+CLAIM_COMMENT = re.compile(r"<!--\s*claim:")
 NUMBER = re.compile(r"(?<![\w.])[-+]?(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][-+]?\d+)?%?")
 BINDING = re.compile(
     r"`(?P<metric>[a-z][a-z0-9_]*)`\s*=\s*"
@@ -52,6 +61,10 @@ COHORT_SIZE = re.compile(
     re.IGNORECASE,
 )
 FENCE_PREFIXES = ("```", "~~~")
+
+#: Where a statement came from, its text without markers, and each marker's
+#: claim ID with its declared rounding (``None`` for an exact binding).
+_Statement = tuple[str, str, tuple[tuple[str, Optional[int]], ...]]
 
 
 def _text_numbers(text: str) -> tuple[Decimal, ...]:
@@ -168,6 +181,7 @@ def _check_statement(
     source: str,
     text: str,
     claim_ids: tuple[str, ...],
+    roundings: tuple[Optional[int], ...],
     registry: dict[str, ClaimV1],
     repository_root: Path,
     common_valid_tokens: int,
@@ -176,7 +190,7 @@ def _check_statement(
     claims: list[ClaimV1] = []
     traces: list[dict[str, Any]] = []
     claim_numbers: dict[str, set[Decimal]] = {}
-    for claim_id in claim_ids:
+    for claim_id, places in zip(claim_ids, roundings):
         claim = registry.get(claim_id)
         if claim is None:
             violations.append(f"{source} {claim_id}: no registry claim backs this result")
@@ -184,16 +198,17 @@ def _check_statement(
         claims.append(claim)
         numbers = _claim_numbers(claim, repository_root)
         claim_numbers[claim_id] = numbers
-        traces.append(
-            {
-                "source": source,
-                "claim_id": claim_id,
-                "artifact_path": claim.artifact_path,
-                "metric_path": claim.metric_path,
-                "numbers": [str(number) for number in sorted(numbers)],
-                "verdict": "pass",
-            }
-        )
+        trace: dict[str, Any] = {
+            "source": source,
+            "claim_id": claim_id,
+            "artifact_path": claim.artifact_path,
+            "metric_path": claim.metric_path,
+            "numbers": [str(number) for number in sorted(numbers)],
+            "verdict": "pass",
+        }
+        if places is not None:
+            trace["rounded_decimal_places"] = places
+        traces.append(trace)
 
     violations.extend(
         _structural_violations(source, text, tuple(claims), common_valid_tokens, repository_root)
@@ -211,7 +226,7 @@ def _check_statement(
             f"{source}: every numeric result needs a metric binding; use `metric_key` = exact_value"
         )
 
-    for binding, claim_id in zip(bindings, claim_ids):
+    for binding, claim_id, places in zip(bindings, claim_ids, roundings):
         claim = registry.get(claim_id)
         if claim is None:
             continue
@@ -230,9 +245,20 @@ def _check_statement(
                 "percent conversion is not registered"
             )
             continue
+        held = ", ".join(str(number) for number in sorted(numbers)) or "no number"
         value = Decimal(raw_value)
-        if value not in numbers:
-            held = ", ".join(str(number) for number in sorted(numbers)) or "no number"
+        if places is not None:
+            # The declared display is recomputed from the artifact and must be
+            # spelled exactly as the shared rule spells it: a wrong digit, a
+            # padded zero or E notation would each be a retyped number.
+            rounded = sorted({fixed(number, places) for number in numbers})
+            if raw_value not in rounded:
+                violations.append(
+                    f"{source}: `{metric}` says {raw_value}, but the {expected_metric} claim "
+                    f"holds {held}, which rounds half to even to "
+                    f"{', '.join(rounded) or 'no number'} at {places} decimal places"
+                )
+        elif value not in numbers:
             if metric == "common_valid_tokens":
                 violations.append(
                     f"{source}: stated cohort {value}, but the common-valid cohort is "
@@ -249,12 +275,12 @@ def _check_statement(
     return violations, traces
 
 
-def _proposal_statements(path: Path) -> tuple[tuple[str, str, tuple[str, ...]], ...]:
+def _proposal_statements(path: Path) -> tuple[_Statement, ...]:
     document = yaml.safe_load(path.read_text(encoding="utf-8"))
     entries = document.get("proposals") if isinstance(document, dict) else document
     if not isinstance(entries, list):
         raise ValueError(f"{path}: expected a list under 'proposals'")
-    statements: list[tuple[str, str, tuple[str, ...]]] = []
+    statements: list[_Statement] = []
     for position, entry in enumerate(entries):
         source = f"proposal[{position}]"
         if not isinstance(entry, dict) or not isinstance(entry.get("text"), str):
@@ -268,12 +294,12 @@ def _proposal_statements(path: Path) -> tuple[tuple[str, str, tuple[str, ...]], 
         ):
             statements.append((source, entry["text"], ()))
             continue
-        statements.append((source, entry["text"], tuple(raw_ids)))
+        statements.append((source, entry["text"], tuple((value, None) for value in raw_ids)))
     return tuple(statements)
 
 
-def _document_statements(path: Path) -> tuple[tuple[str, str, tuple[str, ...]], ...]:
-    statements: list[tuple[str, str, tuple[str, ...]]] = []
+def _document_statements(path: Path) -> tuple[_Statement, ...]:
+    statements: list[_Statement] = []
     in_fence = False
     in_result_table = False
     for line_number, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
@@ -287,11 +313,17 @@ def _document_statements(path: Path) -> tuple[tuple[str, str, tuple[str, ...]], 
             in_result_table = True
         elif not is_table_row:
             in_result_table = False
-        claim_ids = tuple(MARKER.findall(raw))
+        markers = tuple(
+            (claim_id, int(places) if places else None) for claim_id, places in MARKER.findall(raw)
+        )
         text = MARKER.sub("", raw).strip()
         result_numbers = _result_numbers(text)
-        if claim_ids or ((RESULT_TERM.search(text) or in_result_table) and result_numbers):
-            statements.append((f"{path.name}:{line_number}", text, claim_ids))
+        if (
+            markers
+            or CLAIM_COMMENT.search(text)
+            or ((RESULT_TERM.search(text) or in_result_table) and result_numbers)
+        ):
+            statements.append((f"{path.name}:{line_number}", text, markers))
     return tuple(statements)
 
 
@@ -309,14 +341,24 @@ def validate_attribution(
         f"registry: {violation}" for violation in audit_claims(claims_path, repository_root)
     ]
     common_valid_tokens = _common_valid_tokens(registry, repository_root)
-    statements: list[tuple[str, str, tuple[str, ...]]] = []
+    statements: list[_Statement] = []
     if proposal_path is not None:
         statements.extend(_proposal_statements(proposal_path))
     for document_path in document_paths:
         statements.extend(_document_statements(document_path))
 
     traces: list[dict[str, Any]] = []
-    for source, text, claim_ids in statements:
+    for source, text, markers in statements:
+        # Document text arrives with its valid markers removed; proposal text
+        # may still quote them, so only a leftover claim-like comment is malformed.
+        if CLAIM_COMMENT.search(MARKER.sub("", text)):
+            violations.append(
+                f"{source}: invalid claim marker; write <!-- claim: <id> --> or "
+                "<!-- claim: <id>; rounded: N --> with N from 0 to 9"
+            )
+            continue
+        claim_ids = tuple(claim_id for claim_id, _ in markers)
+        roundings = tuple(places for _, places in markers)
         if not text or not claim_ids:
             violations.append(
                 f"{source}: result needs text and claim_ids; no <!-- claim: ... --> marker"
@@ -326,7 +368,7 @@ def validate_attribution(
             )
             continue
         found, traced = _check_statement(
-            source, text, claim_ids, registry, repository_root, common_valid_tokens
+            source, text, claim_ids, roundings, registry, repository_root, common_valid_tokens
         )
         violations.extend(found)
         traces.extend(traced)

@@ -84,6 +84,50 @@ def test_shapley_svg_separates_incompatible_units_and_preserves_values() -> None
     assert "not a confidence interval" in svg
 
 
+def test_shapley_svg_prints_three_significant_figures_and_keeps_exact_values() -> None:
+    """The label is short; the exact contribution stays in a data attribute."""
+
+    import xml.etree.ElementTree as ET
+
+    from aebrisk.report.svg import shapley_svg
+
+    shapley = _shapley()
+    duration = shapley["metrics"]["intervention_duration_s"]
+    duration["values"]["localization_shape"] = 4.0670219638242875
+    duration["efficiency_max_abs_residual"] = 2.6645352591003757e-15
+
+    svg = shapley_svg(shapley)
+    printed = [node.text for node in ET.fromstring(svg).iter() if node.text]
+    exact = {
+        node.attrib["data-channel"]: node.attrib["data-value"]
+        for node in ET.fromstring(svg).iter()
+        if "data-channel" in node.attrib
+    }
+
+    assert "4.07" in printed
+    assert "4.0670219638242875" not in printed
+    assert "0.0625" in printed
+    assert "0.00" in printed
+    assert exact["localization_shape"] == "4.0670219638242875"
+    assert "efficiency residual = 2.7e-15 (arithmetic check, not a confidence interval)" in svg
+
+
+def test_family_svg_prints_rates_to_one_decimal_and_keeps_exact_values() -> None:
+    import xml.etree.ElementTree as ET
+
+    from aebrisk.report.svg import intervention_rates_svg
+
+    svg = intervention_rates_svg(_families())
+    printed = [node.text for node in ET.fromstring(svg).iter() if node.text]
+    rows = [node.attrib for node in ET.fromstring(svg).iter() if "data-family" in node.attrib]
+
+    assert "missed 333.3" in printed
+    assert "false 666.7" in printed
+    assert all("333.3333333333333" not in text for text in printed)
+    assert rows[0]["data-missed-per-1000"] == "333.3333333333333"
+    assert rows[0]["data-false-per-1000"] == "666.6666666666666"
+
+
 def test_family_svg_states_event_rate_denominator_without_error_bars() -> None:
     from aebrisk.report.svg import intervention_rates_svg
 
@@ -125,6 +169,7 @@ def test_write_figures_reads_strict_evidence_and_writes_fixed_names(tmp_path: Pa
     written = write_figures(evidence, tmp_path / "figures")
 
     assert [path.name for path in written] == [
+        "collisions-vs-braking.svg",
         "shapley-contributions.svg",
         "intervention-rates-by-family.svg",
         "error-severity-sensitivity.svg",

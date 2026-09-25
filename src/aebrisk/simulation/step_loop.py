@@ -81,9 +81,14 @@ COLLIDING_MASS_KG = 1500.0
 #: distance. A hard zero would almost never be reached by an integrator.
 STOPPED_SPEED_MPS = 0.01
 
-#: The channel the error key names. Every channel derives its own draws from this
-#: key, so which one is named here does not change any channel's behaviour; it is
-#: recorded rather than chosen.
+#: The channel the error key names. Every random channel (dropout,
+#: localization_shape, track_instability) derives its draws from this one key,
+#: and the key carries this channel's severity, so those draws change when the
+#: dropout severity changes; latency is deterministic. Two configurations that
+#: differ only in dropout therefore do not share the other channels' noise
+#: realisation. The released study ran this way and the simulation contract
+#: states it as a known modelling choice; naming another channel here would
+#: change every draw.
 KEY_CHANNEL = "dropout"
 
 

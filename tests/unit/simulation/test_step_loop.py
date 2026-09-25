@@ -355,6 +355,63 @@ def test_a_different_replicate_of_a_stochastic_configuration_differs() -> None:
     )
 
 
+def test_every_random_channel_draws_from_one_key_that_carries_the_dropout_severity(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Changing only dropout's severity moves the localization noise the loop observes.
+
+    This pins released behaviour rather than endorsing it. The loop builds one
+    error key that names the dropout channel and carries its severity, and the
+    localization stage draws from that key as the loop passed it. Two
+    configurations that differ only in dropout therefore do not share the other
+    channels' noise realisation, which the simulation contract states as a
+    known modelling choice. The lead stays visible in every run below and no
+    other channel moves a track, so its observed centre is the localization
+    draw alone, read from what the loop's own pipeline returned.
+    """
+
+    module = load_step_loop_module()
+    keys: list[Any] = []
+    observed: list[tuple[TrackState, ...]] = []
+    original = module.APPLY_ERRORS
+
+    def capturing(history: Any, index: int, config: Any, key: Any, **keywords: Any) -> Any:
+        tracks = original(history, index, config, key, **keywords)
+        keys.append(key)
+        observed.append(tracks)
+        return tracks
+
+    monkeypatch.setattr(module, "APPLY_ERRORS", capturing)
+    for name, dropout in (("first", "zero"), ("changed", "low"), ("second", "zero")):
+        severities = dict.fromkeys(CHANNELS, "zero")
+        severities.update(dropout=dropout, localization_shape="medium")
+        run(
+            module,
+            lead_at(60.0),
+            config=ExperimentConfiguration(
+                configuration_id=f"{name}-dropout-{dropout}-with-localization",
+                aeb_enabled=True,
+                observation_mode="corrupted",
+                severity_by_channel=severities,
+                replicate_count=1,
+            ),
+            steps=1,
+        )
+
+    assert module.KEY_CHANNEL == "dropout"
+    assert [key.channel for key in keys] == ["dropout"] * 3
+    assert [key.severity for key in keys] == ["zero", "low", "zero"]
+    leads = [next(track for track in tracks if track.track_id == "lead-1") for tracks in observed]
+    assert all(lead.visible for lead in leads)
+    [truth] = lead_at(60.0)(0, FIRST_TIMESTAMP_US)
+    first, changed, second = (lead.center_xy_m for lead in leads)
+    assert first != truth.center_xy_m
+    # The same dropout severity reproduces the draw, whatever the configuration is called.
+    assert first == second
+    # Only dropout's severity changed, and the localization draw moved with it.
+    assert first != changed
+
+
 def test_the_ego_follows_the_route_rather_than_a_straight_line() -> None:
     """A corner driven straight would put the ego through the scenery."""
 
