@@ -132,7 +132,7 @@ docker compose run --rm dev uv run --frozen aeb-risk report --claims docs/claims
 docker compose run --rm dev uv run --frozen python -m aebrisk.dev verify
 ```
 
-With the image already built, these commands took about 9 minutes in one timed run on a Windows 11 machine with Docker Desktop; most of that is the verification gate, which runs the test suite twice. The report is written to `site/index.html`.
+With the image already built, these commands took about 5 minutes in one timed run on a Windows 11 machine with Docker Desktop; most of that is the verification gate. The report is written to `site/index.html`.
 
 ### Full reproduction from nuPlan
 

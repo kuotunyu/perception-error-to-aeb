@@ -127,7 +127,7 @@ docker compose run --rm dev uv run --frozen aeb-risk report --claims docs/claims
 docker compose run --rm dev uv run --frozen python -m aebrisk.dev verify
 ```
 
-image 建好之後，這些指令在一台使用 Docker Desktop 的 Windows 11 電腦上實測一次約 9 分鐘，大部分時間花在會把測試跑兩次的驗證關卡。報告輸出在 `site/index.html`。
+image 建好之後，這些指令在一台使用 Docker Desktop 的 Windows 11 電腦上實測一次約 5 分鐘，大部分時間花在驗證關卡。報告輸出在 `site/index.html`。
 
 ### 從 nuPlan 完整重現
 
