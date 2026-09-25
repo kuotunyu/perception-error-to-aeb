@@ -1,14 +1,18 @@
 name: Pages
 
+# A push to main runs CI; when that run succeeds, this workflow builds and
+# deploys the same commit. A manual dispatch skips that check and deploys the
+# head of the branch it runs on, so use it only to redeploy a commit CI passed.
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
   workflow_dispatch:
 
+# Only the deploy job, which runs no repository code, may write to Pages.
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: pages
@@ -16,10 +20,13 @@ concurrency:
 
 jobs:
   build:
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - name: Match the container user to the runner
         run: |
           echo "HOST_UID=$(id -u)" >> "$GITHUB_ENV"
@@ -38,8 +45,6 @@ jobs:
         run: docker compose run --rm dev uv run --frozen aeb-risk figures --evidence-dir docs/evidence/nuplan_aeb_v2 --output-dir docs/figures
       - name: Build the report with the committed replay assets
         run: docker compose run --rm dev uv run --frozen aeb-risk report --claims docs/claims.yaml --artifacts-dir docs/evidence/nuplan_aeb_v2 --output-dir site
-      - name: Configure Pages
-        uses: actions/configure-pages@v5
       - name: Upload the site
         uses: actions/upload-pages-artifact@v3
         with:

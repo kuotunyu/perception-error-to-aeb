@@ -79,6 +79,36 @@ def test_package_code_under_src_is_not_ignored() -> None:
     assert result.returncode == 1, result.stderr
 
 
+def check_ignore(path: str) -> int:
+    return subprocess.run(
+        ["git", "check-ignore", "-q", path],
+        cwd=REPO_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    ).returncode
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        ".env",
+        ".env.local",
+        "mutants/src/aebrisk/aeb/threat.py",
+    ],
+)
+def test_local_secrets_and_mutation_output_are_ignored(path: str) -> None:
+    """A broad `git add -A` must not be able to publish local secrets or mutants."""
+
+    assert check_ignore(path) == 0
+
+
+def test_an_environment_template_stays_committable() -> None:
+    """The private guard accepts `.env.example`, so the ignore rules must too."""
+
+    assert check_ignore(".env.example") == 1
+
+
 def test_verifier_declares_the_eight_fixed_stages() -> None:
     """The release gate is only comparable across repositories if the stages match."""
 

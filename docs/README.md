@@ -5,13 +5,30 @@
 | 目的 | 文件 |
 | --- | --- |
 | 看目前的分析證據 | [證據索引](evidence/README.md) |
-| 快速了解研究設計、比較方式與限制 | [研究卡](experiment-card.md) |
+| 快速了解研究設計、比較方式、限制、煞車數字的解讀與相關標準 | [研究卡](experiment-card.md) |
 | 看研究首頁與雙語結果 | [繁體中文首頁](../README.md)、[English](../README.en.md) |
-| 看圖表與預先固定選樣的回放 | [圖表](figures/)、[衍生回放](evidence/nuplan_aeb_v2/replays/) |
+| 看圖表與預先固定選樣的回放 | [圖表](figures/)、[線上報告與回放](https://kuotunyu.github.io/perception-error-to-aeb/)、[衍生回放檔案](evidence/nuplan_aeb_v2/replays/) |
 | 重現聚合結果、查原始雜湊 | [分析重現](verification/analysis-reproduction.md) |
-| 理解模擬上限、終止條件與碰撞分類 | [模擬契約](simulation-contract.md) |
+| 理解模擬上限、終止條件、碰撞分類與已知的控制器及建模選擇 | [模擬契約](simulation-contract.md) |
 | 理解資料選擇、限制與授權 | [資料卡](dataset-card.md)、[證據授權](evidence/nuplan_aeb_v2-NOTICE.md) |
 | 追查每一個數值的來源 | [claims registry](claims.yaml) |
+
+## English guide
+
+Start with the [English README](../README.en.md) or the
+[live report](https://kuotunyu.github.io/perception-error-to-aeb/), then open the
+document that answers your question. The dated verification records listed
+further down are evidence from specific runs, not instructions.
+
+| Purpose | Document |
+| --- | --- |
+| Design, comparisons, how to read the braking numbers, related standards and research | [Experiment card](experiment-card.md) |
+| Controller, termination, contact classification, known modelling choices | [Simulation contract](simulation-contract.md) |
+| Frozen evidence files and what each contains | [Evidence index](evidence/README.md) |
+| Data selection, limits and licensing | [Dataset card](dataset-card.md), [evidence notice](evidence/nuplan_aeb_v2-NOTICE.md) |
+| Reproduce the aggregates and check their hashes | [Analysis reproduction](verification/analysis-reproduction.md) |
+| Trace a published number to its artifact | [Claims registry](claims.yaml) |
+| Figures and interactive replays | [Figures](figures/), [live report](https://kuotunyu.github.io/perception-error-to-aeb/) |
 
 ## 驗證紀錄何時需要讀
 

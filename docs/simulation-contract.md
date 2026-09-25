@@ -135,6 +135,79 @@ overlap lasts.
 An at-fault collision does end the run, because integrating a vehicle through a
 body it has hit is not a simulation of anything.
 
+## Known controller and modelling choices
+
+A review after the release found the behaviour below while the released
+braking numbers were being explained. It is part of the frozen AEB policy v1 and of the
+simulation that every released configuration ran through, oracle AEB included,
+and it is recorded here so that the braking numbers can be read correctly.
+Changing any of it is a new policy or protocol version with new evidence; no
+released number is revised by this section.
+`tests/unit/aeb/test_policy_v1_known_limitations.py` pins the target-selection
+cases and `tests/unit/simulation/test_step_loop.py` pins the error-key pairing.
+
+**Target selection is not path-gated.** Each step, `assess_threat` scores every
+visible track and `select_highest_required_deceleration` keeps the one with the
+highest required deceleration (`aeb/threat.py`). Required deceleration is
+`v^2 / (2 d)` on the closing speed along the ego's heading and the absolute
+longitudinal gap between the two bodies. It has no lateral term and does not
+check that the body is ahead of the ego. The full and warning stages fire on
+required deceleration alone, whether or not the constant-velocity rollout
+predicts an overlap; only the time-to-collision conditions need one
+(`aeb/state_machine.py`). Two consequences follow:
+
+- Phantom braking. A stationary vehicle beside the path, or a slower vehicle
+  behind the ego, can be selected and demand full braking although no overlap
+  is predicted.
+- Masking. An off-path body with a higher required deceleration can be selected
+  in place of an in-path body whose time to collision qualifies for partial
+  braking. The command then drops to a warning, or to no stage at all when the
+  off-path body's required deceleration is at or below the warning threshold;
+  neither makes a braking demand.
+
+**The nominal controller does not slow for other road users.** This is the
+study's control by design: it reads only the route and the map, and its target
+speed is the smallest of the logged initial speed, the map limit and 13.9 m/s
+(`simulation/route_follower.py`). The AEB is therefore the only part of the ego
+that slows for anything. Once an intervention releases after its clear steps,
+the nominal controller accelerates back toward its target speed, so the same
+situation can start another intervention later in the run.
+
+**Tracked velocity is a finite difference of observed positions.** Outside the
+oracle, a track's velocity is estimated from its successive observed positions
+divided by the elapsed time (`errors/fragmentation.py`,
+`observation/tracking.py`), at zero severity as well; a frame with no earlier
+position to difference against, such as a track's first observation or its
+first after reacquisition, carries the oracle value instead. Position noise
+is amplified by the step rate, and the estimate feeds the closing speed, the
+rollout and therefore both braking conditions. Together with target selection
+that is not path-gated, noise on any nearby track can raise the required
+deceleration the controller acts on.
+
+**One error key seeds every random channel.** The step loop builds a single
+`ErrorKey` that names the dropout channel and carries the configuration's
+dropout severity (`simulation/step_loop.py`), and the dropout, localization/shape
+and track-instability (fragmentation) draws are all derived from it; latency
+draws nothing. Two configurations that differ only in dropout severity therefore
+draw different localization/shape and track-instability noise for the same
+token and replicate. Common random numbers
+hold across configurations that share a dropout severity, not across a change in
+it, so a difference between such configurations, including the dropout
+contributions in the Shapley decomposition, combines the dropout effect with a
+new noise realisation of the other channels.
+
+**The ego counts as stopped at or below 0.01 m/s.** `STOPPED_SPEED_MPS` in
+`simulation/step_loop.py` decides both the recorded stop distance (the first
+step at or below it) and the contact rule above: a contact while the ego is
+stopped is excluded from counted collisions and recorded in
+`contacts_not_at_fault`. Because logged actors do not react, a configuration
+that brings the ego to rest more often can move contacts from counted
+collisions into `contacts_not_at_fault`.
+
+The experiment card's
+[Reading the braking numbers](experiment-card.md#reading-the-braking-numbers)
+explains how these choices show up in the released results.
+
 ## Measured simulation exposure
 
 New runs emit `aeb-scenario-result/v2`. Its required `simulated_duration_s` is

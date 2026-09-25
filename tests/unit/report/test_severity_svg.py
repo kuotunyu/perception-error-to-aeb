@@ -71,6 +71,32 @@ def test_severity_plot_uses_own_exposure_and_is_order_independent() -> None:
     assert "not a confidence interval" in first
 
 
+def test_severity_plot_prints_rounded_values_beside_exact_data() -> None:
+    """Seconds and event rates print one decimal, hourly rates two; data stays exact."""
+
+    from aebrisk.report.svg import severity_svg
+
+    data = evaluation()
+    data["configurations"][0]["mean_intervention_duration_s"] = 9.571608527131794
+    data["configurations"][0]["simulated_seconds"] = 3600.0 * 3
+    data["simulated_seconds"] += 3600.0 * 2
+    svg = ET.fromstring(severity_svg(data))
+    printed = [node.text for node in svg.iter() if node.text]
+    exact = {
+        (node.attrib["data-metric"], node.attrib["data-configuration"]): node.attrib["data-value"]
+        for node in svg.iter()
+        if "data-value" in node.attrib
+    }
+
+    assert "low: 9.6" in printed
+    assert "low: 0.33" in printed
+    assert "medium: 2000.0" in printed
+    assert "Shared scale: 0 to 9.6" in printed
+    assert exact[("mean_intervention_duration_s", "dropout-low")] == "9.571608527131794"
+    assert exact[("collisions_per_hour", "dropout-low")] == str(1 / 10800.0 * 3600.0)
+    assert all("9.571608527131794" not in text for text in printed)
+
+
 @pytest.mark.parametrize("problem", ["missing", "duplicate", "wrong_group"])
 def test_incomplete_or_ambiguous_sweep_is_refused(problem: str) -> None:
     from aebrisk.report.svg import severity_svg

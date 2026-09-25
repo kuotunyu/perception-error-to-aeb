@@ -15,7 +15,7 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
-from typing import Literal
+from typing import Annotated, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -63,6 +63,33 @@ class CohortManifestV1(BaseModel):
         if not tokens:
             raise ValueError("the cohort is empty; a freeze that captured nothing is not a cohort")
         return self
+
+
+class CohortEligibilityRowV1(BaseModel):
+    """One scenario examined while freezing a split, and the rule it met or failed."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    accepted: bool
+    family: str
+    initial_ego_speed_mps: Optional[Annotated[float, Field(allow_inf_nan=False)]]
+    log_name: str
+    official_split: str
+    oracle_enters_corridor_within_4s: Optional[bool]
+    oracle_min_ttc_within_4s: Optional[Annotated[float, Field(allow_inf_nan=False)]]
+    reason: str
+    scenario_token: str
+    scenario_type: str
+
+
+class CohortEligibilityV1(BaseModel):
+    """Every scenario examined for one frozen split, accepted or not."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    schema_version: Literal["aeb-cohort-eligibility/v1"]
+    examined: tuple[CohortEligibilityRowV1, ...]
+    scenarios_in_split_by_family: dict[str, Annotated[int, Field(ge=0, strict=True)]]
 
 
 def membership_sha256(manifest: CohortManifestV1) -> str:

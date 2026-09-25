@@ -4,10 +4,10 @@
 
 from dataclasses import asdict
 from pathlib import Path
-from typing import Annotated, Literal, Optional, cast
+from typing import Annotated, cast
 
 import typer
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import ValidationError
 
 from aebrisk.analysis.aggregate import (
     common_cohort,
@@ -26,7 +26,7 @@ from aebrisk.artifacts.documents import (
     write_document,
 )
 from aebrisk.attribution.factorial import formal_configurations
-from aebrisk.cohort.manifest import CohortManifestV1, load_manifest
+from aebrisk.cohort.manifest import CohortEligibilityV1, CohortManifestV1, load_manifest
 
 app = typer.Typer(add_completion=False, help="Aggregate simulation results.")
 
@@ -44,32 +44,9 @@ _MANIFEST_SPLITS = {
 }
 
 
-class _EligibilityRow(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
-    accepted: bool
-    family: str
-    initial_ego_speed_mps: Optional[Annotated[float, Field(allow_inf_nan=False)]]
-    log_name: str
-    official_split: str
-    oracle_enters_corridor_within_4s: Optional[bool]
-    oracle_min_ttc_within_4s: Optional[Annotated[float, Field(allow_inf_nan=False)]]
-    reason: str
-    scenario_token: str
-    scenario_type: str
-
-
-class _EligibilityDocument(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
-    schema_version: Literal["aeb-cohort-eligibility/v1"]
-    examined: tuple[_EligibilityRow, ...]
-    scenarios_in_split_by_family: dict[str, Annotated[int, Field(ge=0, strict=True)]]
-
-
 def _validate_eligibility(path: Path) -> bytes:
     try:
-        _EligibilityDocument.model_validate_json(path.read_text(encoding="utf-8"))
+        CohortEligibilityV1.model_validate_json(path.read_text(encoding="utf-8"))
     except ValidationError as error:
         raise ValueError(f"invalid cohort eligibility document {str(path)!r}") from error
     return path.read_bytes()

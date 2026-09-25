@@ -50,6 +50,33 @@ def test_every_stage_has_a_command() -> None:
         assert len(command) > 1
 
 
+def test_the_suite_runs_once_and_the_coverage_stage_reports_its_data() -> None:
+    """Running every test twice doubles the gate for no extra evidence.
+
+    The test stage records branch coverage without judging it, so a coverage
+    shortfall is reported by the stage named for it rather than as a test
+    failure; the coverage stage then reads that data instead of rerunning pytest.
+    """
+
+    commands = dev._stage_commands()
+
+    assert commands["unit_and_integration_tests"][1:] == (
+        "-m",
+        "pytest",
+        "--cov=aebrisk",
+        "--cov-branch",
+        "--cov-report=",
+        "--cov-fail-under=0",
+    )
+    assert commands["branch_coverage_100"][1:] == (
+        "-m",
+        "coverage",
+        "report",
+        "--show-missing",
+        "--fail-under=100",
+    )
+
+
 def test_verify_runs_every_stage_in_order_and_returns_zero(tmp_path: Path) -> None:
     """The success path must run the whole gate, not stop at the first pass."""
 
@@ -129,16 +156,84 @@ def test_schema_contracts_reports_a_corrupted_published_document(
     assert "invalid evidence document: docs/evidence/bad.json" in capsys.readouterr().err
 
 
-def test_schema_contracts_ignores_evidence_without_a_registered_version(tmp_path: Path) -> None:
-    """Copied cohort metadata keeps its own contract and is outside the evidence registry."""
+def write_evidence(repo_root: Path, name: str, payload: object) -> None:
+    path = repo_root / "docs" / "evidence" / name
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload), encoding="utf-8")
 
-    evidence = tmp_path / "docs" / "evidence"
-    evidence.mkdir(parents=True)
-    (evidence / "cohort.json").write_text(
-        json.dumps({"schema_version": "aeb-cohort-manifest/v1"}), encoding="utf-8"
-    )
+
+def cohort_manifest() -> dict[str, object]:
+    from aebrisk.cohort.filters import SCENARIO_FAMILIES
+
+    return {
+        "schema_version": "aeb-cohort-manifest/v1",
+        "split": "smoke",
+        "protocol_sha256": "a" * 64,
+        "families": {family: [f"token-{index}"] for index, family in enumerate(SCENARIO_FAMILIES)},
+        "log_names": ["log-a"],
+    }
+
+
+def cohort_eligibility() -> dict[str, object]:
+    return {
+        "schema_version": "aeb-cohort-eligibility/v1",
+        "examined": [
+            {
+                "accepted": True,
+                "family": "lead_or_stopping",
+                "initial_ego_speed_mps": 8.5,
+                "log_name": "log-a",
+                "official_split": "val",
+                "oracle_enters_corridor_within_4s": True,
+                "oracle_min_ttc_within_4s": 2.5,
+                "reason": "accepted",
+                "scenario_token": "token-0",
+                "scenario_type": "stationary_in_traffic",
+            }
+        ],
+        "scenarios_in_split_by_family": {"lead_or_stopping": 1},
+    }
+
+
+def test_schema_contracts_accepts_valid_cohort_documents(tmp_path: Path) -> None:
+    """The copied cohort manifests and eligibility records pass when they are sound."""
+
+    write_evidence(tmp_path, "cohort/smoke.json", cohort_manifest())
+    write_evidence(tmp_path, "cohort/evaluation-eligibility.json", cohort_eligibility())
 
     assert dev.verify_schema_contracts(tmp_path) == 0
+
+
+@pytest.mark.parametrize("document", ["manifest", "eligibility"])
+def test_schema_contracts_reports_a_corrupted_cohort_document(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], document: str
+) -> None:
+    """Cohort files are published evidence and must fail like any other document."""
+
+    payload = cohort_manifest() if document == "manifest" else cohort_eligibility()
+    payload["unexpected"] = True
+    write_evidence(tmp_path, "cohort/evaluation.json", payload)
+
+    assert dev.verify_schema_contracts(tmp_path) == 1
+    assert (
+        "invalid evidence document: docs/evidence/cohort/evaluation.json" in capsys.readouterr().err
+    )
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [{"schema_version": "aeb-unknown/v1"}, {"schema_version": 1}, {"rows": []}, [1, 2]],
+    ids=["unknown-version", "non-string-version", "no-version", "not-an-object"],
+)
+def test_schema_contracts_refuses_evidence_without_a_registered_version(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], payload: object
+) -> None:
+    """A document that no model checks would otherwise pass the gate unread."""
+
+    write_evidence(tmp_path, "unknown.json", payload)
+
+    assert dev.verify_schema_contracts(tmp_path) == 1
+    assert "unregistered evidence document: docs/evidence/unknown.json" in capsys.readouterr().err
 
 
 def markdown(repo_root: Path, name: str, text: str) -> Path:
