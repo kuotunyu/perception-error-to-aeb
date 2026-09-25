@@ -100,6 +100,8 @@ also_copy = [
     "docs/release-notes",
     "docs/claims.yaml",
     "src/aebrisk/__init__.py",
+    "src/aebrisk/committed_config.py",
+    "src/aebrisk/configs",
     "src/aebrisk/dev.py",
     "src/aebrisk/private_guard.py",
     "src/aebrisk/release.py",
@@ -132,6 +134,13 @@ Issues = "https://github.com/kuotunyu/perception-error-to-aeb/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+# Read at run time through importlib.resources, so an installed wheel carries
+# them. tests/contract/test_package_data.py holds each config copy byte-identical
+# to its original under configs/ and installs a built wheel to prove both load.
+[tool.setuptools.package-data]
+aebrisk = ["configs/*/*.yaml"]
+"aebrisk.report" = ["templates/*.j2"]
 
 [tool.uv]
 required-version = ">=0.11.18,<0.12"

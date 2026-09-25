@@ -29,10 +29,9 @@ from typing import Any, Optional
 import yaml
 
 from aebrisk.attribution.shapley import CHANNELS
+from aebrisk.committed_config import read_committed_config
 from aebrisk.errors.pipeline import configuration_id
 from aebrisk.simulation.common_cohort import ExperimentConfiguration
-
-MATRIX_PATH = Path(__file__).resolve().parents[3] / "configs" / "experiments" / "formal_v1.yaml"
 
 #: The dose-response part of the study. Severity zero is not swept: it is the
 #: baseline, and it appears once as the empty coalition.
@@ -64,11 +63,16 @@ def load_experiment_matrix(path: Optional[Path] = None) -> dict[str, Any]:
 
     This is not how the matrix is built; it is what was written down before any
     run, so that "the matrix was fixed in advance" is a statement a reader can
-    check rather than one they have to take on trust.
+    check rather than one they have to take on trust. The committed record is
+    the package's copy of `configs/experiments/formal_v1.yaml`.
     """
 
-    source = MATRIX_PATH if path is None else path
-    document: dict[str, Any] = yaml.safe_load(source.read_text(encoding="utf-8"))
+    text = (
+        read_committed_config("experiments", "formal_v1.yaml")
+        if path is None
+        else path.read_text(encoding="utf-8")
+    )
+    document: dict[str, Any] = yaml.safe_load(text)
     return document
 
 

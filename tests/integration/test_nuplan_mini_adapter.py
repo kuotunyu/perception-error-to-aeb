@@ -6,9 +6,8 @@ author's belief about the devkit. This test is the one place that belief is
 checked, and it is the reason the fakes elsewhere are trustworthy.
 
 It skips, loudly and with a reason, whenever the dataset is absent, which is
-what happens in CI and on any machine without a licensed copy. The portfolio's
-order gate opened when `driving-risk-metrics` released, so where the data is
-mounted this test runs.
+what happens in CI and on any machine without a licensed copy. Where the data
+is mounted, this test runs.
 """
 
 from __future__ import annotations

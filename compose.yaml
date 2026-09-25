@@ -18,6 +18,6 @@ services:
     volumes:
       # The repository is the working tree; /work/artifacts is the only writable output root.
       - .:/work
-      # Dataset mounts are read-only. The default is an empty ignored directory until
-      # P3-19 is unlocked and a human provides the real root.
+      # Dataset mounts are read-only. Without NUPLAN_DATA_ROOT the mount is an empty,
+      # ignored directory, which is all the data-free checks need.
       - ${NUPLAN_DATA_ROOT:-./datasets/nuplan}:/data/nuplan:ro

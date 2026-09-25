@@ -9,3 +9,9 @@
 
 # Notebooks diff badly by default; mark them so tooling can special-case them.
 *.ipynb text
+
+# The published protocol_sha256 in docs/evidence and docs/claims.yaml is the hash
+# of this file's CRLF bytes, which is what the formal run read. The blob stays LF
+# like everything else; every checkout, on every system, writes it with CRLF so
+# the file on disk matches the hash the evidence cites.
+configs/protocols/nuplan_aeb_v2.yaml text eol=crlf

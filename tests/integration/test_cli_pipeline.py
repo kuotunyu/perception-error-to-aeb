@@ -308,8 +308,7 @@ def test_the_nuplan_source_refuses_when_no_split_is_mounted(
 ) -> None:
     """Naming the missing root beats a stack trace from deep inside a query.
 
-    The portfolio order gate that once closed this source opened when
-    `driving-risk-metrics` released. What remains is an operational check: the
+    This source reads real nuPlan data, so the check here is operational: the
     command needs a mounted split, and an operator who forgot to mount one
     should be told which path was looked for, in a second, rather than after a
     driver error three layers down.
@@ -1314,8 +1313,8 @@ def test_preflight_reports_a_valid_installation(tmp_path: Path) -> None:
     """The success path, built from a directory shaped like a nuPlan mini split.
 
     No database is opened: preflight exists to answer in a second, and that is
-    exactly what makes it checkable without the real data the order gate still
-    forbids.
+    exactly what makes it checkable without the real data, which CI does not
+    have.
     """
 
     root = tmp_path / "nuplan"

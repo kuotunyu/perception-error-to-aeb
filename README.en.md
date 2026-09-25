@@ -107,15 +107,46 @@ A collision, route end, data end, or that ceiling can stop a run, so measured ex
 
 ## Reproduce
 
-All Python commands run in the pinned Linux container:
+Every Python command runs in the pinned Linux container defined by [`Dockerfile`](Dockerfile) and [`compose.yaml`](compose.yaml). Apart from how environment variables are set, the commands are the same in bash and in PowerShell. On Linux, run `export HOST_UID="$(id -u)" HOST_GID="$(id -g)"` before building so that files the container writes belong to you.
 
-```powershell
-$env:NUPLAN_DATA_ROOT='D:/datasets/nuplan'
-docker compose run --rm dev uv run --frozen aeb-risk summarize-families --results-dir artifacts/formal/nuplan_aeb_v2 --manifest artifacts/manifests/nuplan_aeb_v2/evaluation.json --protocol configs/protocols/nuplan_aeb_v2.yaml --output-dir docs/evidence/nuplan_aeb_v2
-docker compose run --rm dev uv run --frozen aeb-risk figures --evidence-dir docs/evidence/nuplan_aeb_v2 --output-dir docs/figures
+### Where the code is
+
+- `src/aebrisk/observation/`: the oracle (ground-truth) observation that `oracle_aeb` uses, and the tracker that estimates velocity from successive positions. Every configuration that passes through the error channels uses that tracker, including the zero-severity `coalition-none`.
+- `src/aebrisk/errors/`: the four error channels, applied in a fixed order. Their random draws are seeded from a hash of the scenario, the channel and its severity, the replicate and the protocol hash, so a rerun reproduces them exactly.
+- `src/aebrisk/aeb/threat.py`: time to collision and required deceleration for each observed track.
+- `src/aebrisk/aeb/state_machine.py` and `controller.py`: warning, partial and full braking from the committed policy, then the acceleration bounds and jerk limit.
+- `src/aebrisk/simulation/step_loop.py`: the closed loop, which runs these stages at every step. While the AEB commands partial or full braking, that command replaces the acceleration from the nominal route-following controller (`simulation/route_follower.py`), which never sees other road users.
+- `src/aebrisk/metrics/`, `attribution/` and `analysis/`: collision and braking-event metrics, intervals, the experiment matrix and Shapley values.
+
+### Quick check without the dataset
+
+This needs Docker and a clone of this repository, not nuPlan. It checks every claim in [`docs/claims.yaml`](docs/claims.yaml) against the committed evidence files, and every result number in both READMEs and the v1.0.0 release note against those claims. It then rebuilds the figures and the report from the committed evidence, checks that the rebuilt figures match the committed ones byte for byte, and runs the full verification gate.
+
+```bash
+docker compose build
+docker compose run --rm dev uv run --frozen aeb-risk audit-claims --claims docs/claims.yaml
+docker compose run --rm dev uv run --frozen python .agents/skills/auditing-aeb-error-attribution/scripts/validate_attribution.py --claims docs/claims.yaml --repo-root . --document README.md --document README.en.md --document docs/release-notes/v1.0.0.md
+docker compose run --rm dev uv run --frozen aeb-risk figures --evidence-dir docs/evidence/nuplan_aeb_v2 --output-dir artifacts/figures
+git diff --no-index --exit-code docs/figures artifacts/figures
 docker compose run --rm dev uv run --frozen aeb-risk report --claims docs/claims.yaml --artifacts-dir docs/evidence/nuplan_aeb_v2 --output-dir site
 docker compose run --rm dev uv run --frozen python -m aebrisk.dev verify
 ```
+
+With the image already built, these commands took about 5 minutes in one timed run on a Windows 11 machine with Docker Desktop; most of that is the verification gate. The report is written to `site/index.html`.
+
+### Full reproduction from nuPlan
+
+This needs a local copy of nuPlan v1.1 with the `val` split and the maps, used under the dataset's own terms. `NUPLAN_DATA_ROOT` is the directory that holds `maps/` and `nuplan-v1.1/splits/val/`, and the container mounts it read-only. The simulation writes the formal per-scenario records, which are derived from nuPlan and are not redistributed; it runs for several hours. Every command writes under `artifacts/`, and none writes into `docs/evidence`.
+
+```bash
+export NUPLAN_DATA_ROOT=/path/to/nuplan
+docker compose run --rm dev uv run --frozen aeb-risk simulate --protocol configs/protocols/nuplan_aeb_v2.yaml --manifest docs/evidence/nuplan_aeb_v2/cohort/evaluation.json --config-id all --split val --workers 8 --output-dir artifacts/formal/nuplan_aeb_v2
+docker compose run --rm dev uv run --frozen aeb-risk evaluate --results-dir artifacts/formal/nuplan_aeb_v2 --manifest docs/evidence/nuplan_aeb_v2/cohort/evaluation.json --output-dir artifacts/reproduction/nuplan_aeb_v2
+docker compose run --rm dev uv run --frozen aeb-risk summarize-families --results-dir artifacts/formal/nuplan_aeb_v2 --manifest docs/evidence/nuplan_aeb_v2/cohort/evaluation.json --protocol configs/protocols/nuplan_aeb_v2.yaml --output-dir artifacts/reproduction/nuplan_aeb_v2
+docker compose run --rm dev bash -c "cd docs/evidence/nuplan_aeb_v2 && sha256sum *.json | (cd /work/artifacts/reproduction/nuplan_aeb_v2 && sha256sum -c -)"
+```
+
+In PowerShell, set the dataset root with `$env:NUPLAN_DATA_ROOT = '<drive>:/path/to/nuplan'` instead of `export`; the other commands are the same. The last command compares the five regenerated analysis files (`evaluation.json`, `intervals.json`, `shapley.json`, `exclusions.json` and `family-interventions.json`) with the committed ones and prints `OK` for each match. `evaluate` also writes a `cohort/` directory, but it copies those files from the committed manifest's directory rather than computing them: this sequence reuses the committed cohort and does not rerun cohort selection.
 
 See the [analysis reproduction record](docs/verification/analysis-reproduction.md) for full provenance, hashes, and interpretation limits. Data-derived material is governed by the nuPlan/Motional terms and [CC BY-NC-SA 4.0](docs/evidence/nuplan_aeb_v2-NOTICE.md); independently authored source code is MIT licensed. See [NOTICE](NOTICE) for which paths fall under which terms.
 

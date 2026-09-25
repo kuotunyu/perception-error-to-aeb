@@ -1,9 +1,32 @@
 # Release checklist for `v1.0.0`
 
+> **Post-release status (2026-09-15).** `v1.0.0` was published on 2026-09-15.
+> The annotated tag
+> [`v1.0.0`](https://github.com/kuotunyu/perception-error-to-aeb/releases/tag/v1.0.0)
+> points at commit `0ac2fa063b64d21fd3e01b2ee51e446c00380b82`. For that commit,
+> [CI run 34949967699](https://github.com/kuotunyu/perception-error-to-aeb/actions/runs/34949967699),
+> the push-triggered
+> [Pages run 34949967680](https://github.com/kuotunyu/perception-error-to-aeb/actions/runs/34949967680)
+> and
+> [Release run 34950888651](https://github.com/kuotunyu/perception-error-to-aeb/actions/runs/34950888651)
+> succeeded. No separate `workflow_dispatch` Pages run was made; the
+> push-triggered run deployed the site for the tagged commit. The Release run
+> repeated the eight-stage gate on the tagged source before it built and
+> attached the wheel, the sdist and `SHA256SUMS`. The report is published at
+> <https://kuotunyu.github.io/perception-error-to-aeb/>. On 2026-09-15 the
+> repository owner opened the final candidate replay,
+> `docs/evidence/nuplan_aeb_v2/replays/lead_or_stopping--coalition-dropout+localization_shape+latency+track_instability.html`
+> (SHA-256 `3439fe13e37b03e60ea6574aca21eebcfd6be0351988f6f6ecd9cba0f1cd25b2`),
+> checked play, pause, scrubbing and the track controls, and accepted it.
+> The boxes below were never ticked in this file. They keep their
+> pre-publication content, except that on 2026-09-24, when this block was
+> added, private step labels, private file references and a private approval
+> keyword in this checklist were replaced with plain wording.
+
 This checklist turns one verified `main` commit into the first public release.
 Every unchecked box is a stop condition. Local preparation may complete before
 publication, but creating a repository, adding a remote, pushing, configuring
-Pages, tagging, or creating a release requires the explicit E4 authorization
+Pages, tagging, or creating a release requires the explicit owner authorization
 described below.
 
 ## 0. Release identity and open human gate
@@ -12,8 +35,9 @@ described below.
       acceptance result and confirm it matches the release site's replay.
       Acceptance of an earlier UI revision does not cover later changes.
       This remains pending; a local render or automated test cannot check it off.
-- [ ] `main` is clean at the release commit and the private handoff records that
-      exact full commit. Before E4 authorization, the repository has zero remotes.
+- [ ] `main` is clean at the release commit, and the owner has recorded that
+      exact full commit. Until the owner approves publication in section 6, the
+      repository has zero remotes.
 - [ ] Package metadata, installed metadata, wheel, sdist, release note
       [`v1.0.0.md`](../release-notes/v1.0.0.md), and the proposed tag all identify
       `perception-error-to-aeb` version `1.0.0`.
@@ -138,7 +162,7 @@ git diff --check
       nothing outside this checklist. The bracketed final letter lets the grep
       detect the private marker without placing that marker verbatim here.
 - [ ] No notebook, licensed dataset, database, map cache, checkpoint, raw
-      prediction, private handoff, mutation tree, or build cache is tracked.
+      prediction, private working note, mutation tree, or build cache is tracked.
 - [ ] Schema regeneration changes no tracked byte; document links pass.
 - [ ] Dependency licences are reviewed from the locked environment and are
       compatible with distributing this MIT project. The evidence states
@@ -181,13 +205,13 @@ the interpreter, backend, source commit, and epoch identical.
       and sdist. The release asset allowlist is exactly `*.whl`, `*.tar.gz`, and
       `SHA256SUMS`; no blanket `dist/*` is used.
 
-## 6. Public repository, CI, and Pages `[E4: explicit user authorization]`
+## 6. Public repository, CI, and Pages `[explicit owner authorization]`
 
-- [ ] The user receives a concrete briefing naming the public repository,
+- [ ] The owner receives a concrete briefing naming the public repository,
       description, contributor identity, exact main commit/count, tag,
-      settings, expected duration, and success criteria, then replies with the
-      single word `推`.
-- [ ] Only after that reply, create `kuotunyu/perception-error-to-aeb`, add the
+      settings, expected duration, and success criteria, then gives explicit
+      approval.
+- [ ] Only after that approval, create `kuotunyu/perception-error-to-aeb`, add the
       remote, and push `main`. Confirm remote CI for the exact main SHA.
 - [ ] Enable GitHub Pages, explicitly dispatch `pages.yml`, identify the new run
       by `workflow_dispatch` event and current main SHA, and wait for success.

@@ -152,7 +152,7 @@ phases of the two jobs together established:
 - two fresh figure builds: mutually and byte-identical to the two committed
   SVG files;
 - two fresh report builds: mutually identical and all 15 paths, sizes, and
-  SHA-256 values identical to the preserved E2 reference;
+  SHA-256 values identical to the preserved reference build;
 - all 12 report replay files: byte-identical to the committed replay assets;
 - nine regenerated schemas: byte-identical to `schemas/`;
 - report index SHA-256:
@@ -204,6 +204,26 @@ publishing these MIT project archives. The full metadata inventory SHA-256 is
 the focused nuPlan licence log SHA-256 is
 `b585e2ba2156edc4eb2e6fa55f380fde2e8a2e11f5d10f0c31bd7a676c6e4ec6`.
 
-Nothing in this document is evidence that GitHub Pages or a public release has
-run. Those are E4 operations and remain blocked on the explicit release
-authorization and the pending human replay gate.
+Nothing in the records above is evidence that GitHub Pages or a public release
+had run. When they were written, those publication steps were still blocked
+on explicit release authorization and the pending human replay acceptance.
+
+## Post-release status (2026-09-15)
+
+`v1.0.0` was published on 2026-09-15. The annotated tag
+[`v1.0.0`](https://github.com/kuotunyu/perception-error-to-aeb/releases/tag/v1.0.0)
+points at commit `0ac2fa063b64d21fd3e01b2ee51e446c00380b82`, whose
+[CI run](https://github.com/kuotunyu/perception-error-to-aeb/actions/runs/34949967699),
+push-triggered
+[Pages run](https://github.com/kuotunyu/perception-error-to-aeb/actions/runs/34949967680)
+and [Release run](https://github.com/kuotunyu/perception-error-to-aeb/actions/runs/34950888651)
+succeeded. No separate `workflow_dispatch` Pages run was made; the
+push-triggered run deployed the site for the tagged commit. The Release run
+repeated the eight-stage gate on the tagged source before it built and attached
+the wheel, the sdist and `SHA256SUMS`. On 2026-09-15 the repository owner opened
+the final candidate replay,
+`docs/evidence/nuplan_aeb_v2/replays/lead_or_stopping--coalition-dropout+localization_shape+latency+track_instability.html`
+(SHA-256 `3439fe13e37b03e60ea6574aca21eebcfd6be0351988f6f6ecd9cba0f1cd25b2`),
+checked play, pause, scrubbing and the track controls, and accepted it. This
+section was added on 2026-09-24; the records above keep their original dates and
+results.

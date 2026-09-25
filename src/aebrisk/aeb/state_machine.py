@@ -27,20 +27,24 @@ through untouched for the closed loop to write.
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import Enum
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Optional
 
 import yaml
 
+from aebrisk.aeb.controller import ACCELERATION_BOUNDS_MPS2, JERK_LIMIT_MPS3
 from aebrisk.aeb.threat import ThreatAssessment, select_highest_required_deceleration
-
-POLICY_PATH = Path(__file__).resolve().parents[3] / "configs" / "aeb" / "policy_v1.yaml"
+from aebrisk.committed_config import frozen, read_committed_config
 
 #: The rate the policy's `consecutive_steps` are expressed at. They are
 #: durations, not raw counts: reading them as counts would silently halve the
 #: warning delay at 20 Hz without changing any number in the committed file.
+#: The policy records the same value as `nominal_step_s`, and the validator
+#: refuses a policy file that records a different one.
 POLICY_NOMINAL_DT_S = 0.1
 
 STAGES = ("warning", "partial", "full")
@@ -75,14 +79,22 @@ class AEBCommand:
 
 
 def load_policy(path: Optional[Path] = None) -> dict[str, Any]:
-    """Read the committed AEB policy."""
+    """Read the committed AEB policy, or the policy file at `path`.
 
-    source = POLICY_PATH if path is None else path
-    document: dict[str, Any] = yaml.safe_load(source.read_text(encoding="utf-8"))
+    The committed policy is the package's copy of `configs/aeb/policy_v1.yaml`,
+    so an installed wheel reads the same thresholds as a checkout.
+    """
+
+    text = (
+        read_committed_config("aeb", "policy_v1.yaml")
+        if path is None
+        else path.read_text(encoding="utf-8")
+    )
+    document: dict[str, Any] = yaml.safe_load(text)
     return document
 
 
-def validate_policy(policy: dict[str, Any]) -> None:
+def validate_policy(policy: Mapping[str, Any]) -> None:
     """Refuse a policy that would silently change what the study measures."""
 
     for stage in STAGES:
@@ -111,6 +123,37 @@ def validate_policy(policy: dict[str, Any]) -> None:
         if not isinstance(steps, int) or isinstance(steps, bool) or steps < 1:
             raise ValueError(f"{stage} consecutive_steps must be a positive integer, got {steps!r}")
 
+    # The limiter and the step rate are applied by code, not read from the file.
+    # The file records them so a reader can see the whole controller in one
+    # place, which is only true while the two agree.
+    recorded = (
+        ("nominal_step_s", POLICY_NOMINAL_DT_S, "the step consecutive_steps are counted in"),
+        ("acceleration_bounds_mps2", ACCELERATION_BOUNDS_MPS2, "the bounds the limiter applies"),
+        ("jerk_limit_mps3", JERK_LIMIT_MPS3, "the jerk limit the limiter applies"),
+    )
+    for name, applied, meaning in recorded:
+        if frozen(policy.get(name)) != applied:
+            raise ValueError(
+                f"{name} must be {applied!r}, {meaning}, got {policy.get(name)!r}; "
+                "the policy file would describe a controller the simulation does not run"
+            )
+
+
+@lru_cache(maxsize=1)
+def committed_policy() -> Mapping[str, Any]:
+    """The committed policy, read and validated once per process, then read-only.
+
+    Every step of every run asks for the same thresholds, so the file is parsed
+    once rather than once per step. Validating here makes the rules above hold
+    for the policy the simulation actually uses, and the read-only copy means
+    no caller can change a threshold for the steps that follow.
+    """
+
+    policy = load_policy()
+    validate_policy(policy)
+    result: Mapping[str, Any] = frozen(policy)
+    return result
+
 
 def _required_steps(configured: int, dt_s: float) -> int:
     """Convert a duration expressed in nominal steps into steps at this rate."""
@@ -124,7 +167,7 @@ def _below(value: Optional[float], threshold: float) -> bool:
     return value is not None and value < threshold
 
 
-def _demanded_stage(threat: Optional[ThreatAssessment], policy: dict[str, Any]) -> Optional[str]:
+def _demanded_stage(threat: Optional[ThreatAssessment], policy: Mapping[str, Any]) -> Optional[str]:
     """The most urgent stage this threat qualifies for, or ``None``."""
 
     if threat is None:
@@ -154,7 +197,7 @@ def update_aeb(
     if not math.isfinite(dt_s) or dt_s <= 0.0:
         raise ValueError(f"dt_s must be finite and positive, got {dt_s!r}")
 
-    policy = load_policy()
+    policy = committed_policy()
     selected = select_highest_required_deceleration(threats)
     demanded = _demanded_stage(selected, policy)
 

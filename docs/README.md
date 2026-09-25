@@ -44,5 +44,5 @@ further down are evidence from specific runs, not instructions.
 | 共同 cohort 技能如何測試？ | [RED](verification/skills/running-common-cohort-aeb-studies/red.md)、[GREEN](verification/skills/running-common-cohort-aeb-studies/green.md) |
 | 歸因文字審核技能如何測試？ | [RED](verification/skills/auditing-aeb-error-attribution/red.md)、[GREEN](verification/skills/auditing-aeb-error-attribution/green.md) |
 
-施工順序由此 repo 外的工作區主計畫管理，私有 handoff 不放入公開 repository。
+v1.0.0 發布後的狀態見[發布檢查表](verification/release-checklist.md)開頭加註日期的段落。
 repository root 的 `README.md` 是繁體中文首頁，`README.en.md` 是英文版。

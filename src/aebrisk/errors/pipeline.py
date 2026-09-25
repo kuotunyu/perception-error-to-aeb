@@ -36,6 +36,7 @@ from typing import Any, Callable, Optional
 import numpy as np
 import yaml
 
+from aebrisk.committed_config import frozen, read_committed_config
 from aebrisk.observation.models import TrackState, WorldFrame
 
 ERROR_CHANNELS: tuple[str, ...] = (
@@ -59,8 +60,6 @@ CHANNEL_PARAMETERS: dict[str, tuple[str, ...]] = {
 #: Without the separation, an imported artifact could redefine what `medium`
 #: means and every comparison against it would move silently.
 IMPORTED_PREFIX = "calibration_imported_"
-
-CONFIG_PATH = Path(__file__).resolve().parents[3] / "configs" / "errors" / "formal_v1.yaml"
 
 Stage = Callable[..., tuple[TrackState, ...]]
 
@@ -195,11 +194,36 @@ def track_field_generator(
 
 
 def load_error_config(path: Optional[Path] = None) -> dict[str, Any]:
-    """Read the committed error configuration."""
+    """Read the committed error configuration, or the file at `path`.
 
-    source = CONFIG_PATH if path is None else path
-    document: dict[str, Any] = yaml.safe_load(source.read_text(encoding="utf-8"))
+    The committed configuration is the package's copy of
+    `configs/errors/formal_v1.yaml`, so an installed wheel reads the same
+    severity grid as a checkout.
+    """
+
+    text = (
+        read_committed_config("errors", "formal_v1.yaml")
+        if path is None
+        else path.read_text(encoding="utf-8")
+    )
+    document: dict[str, Any] = yaml.safe_load(text)
     return document
+
+
+@lru_cache(maxsize=1)
+def committed_error_config() -> Mapping[str, Any]:
+    """The committed error configuration, read and validated once per process, then read-only.
+
+    Every scenario run binds the same severity grid, so the file is parsed once
+    rather than once per run. Validating here makes the rules in
+    `validate_error_config` hold for the grid the simulation actually uses, and
+    the read-only copy means no run can change a severity for the runs after it.
+    """
+
+    config = load_error_config()
+    validate_error_config(config)
+    result: Mapping[str, Any] = frozen(config)
+    return result
 
 
 def validate_error_config(config: Mapping[str, Any]) -> None:
@@ -249,7 +273,7 @@ def parameter(
 ) -> float:
     """Return one channel parameter at one severity."""
 
-    document = load_error_config() if config is None else config
+    document = committed_error_config() if config is None else config
     return float(document["channels"][channel][name][SEVERITIES.index(severity)])
 
 

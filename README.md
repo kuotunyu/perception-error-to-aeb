@@ -102,15 +102,46 @@ protocol 要求的 maximum horizon 是 15 秒上限；到碰撞、路徑結束�
 
 ## 重現
 
-所有 Python 指令都在固定的 Linux container 中執行：
+所有 Python 指令都在 [`Dockerfile`](Dockerfile) 與 [`compose.yaml`](compose.yaml) 定義的固定 Linux container 中執行；除了設定環境變數的寫法，下列指令在 bash 與 PowerShell 中相同。在 Linux 上，建置前先執行 `export HOST_UID="$(id -u)" HOST_GID="$(id -g)"`，讓 container 寫出的檔案屬於你的帳號。
 
-```powershell
-$env:NUPLAN_DATA_ROOT='D:/datasets/nuplan'
-docker compose run --rm dev uv run --frozen aeb-risk summarize-families --results-dir artifacts/formal/nuplan_aeb_v2 --manifest artifacts/manifests/nuplan_aeb_v2/evaluation.json --protocol configs/protocols/nuplan_aeb_v2.yaml --output-dir docs/evidence/nuplan_aeb_v2
-docker compose run --rm dev uv run --frozen aeb-risk figures --evidence-dir docs/evidence/nuplan_aeb_v2 --output-dir docs/figures
+### 程式碼位置
+
+- `src/aebrisk/observation/`：`oracle_aeb` 使用的 oracle（真值）觀測，以及由連續位置差分估計速度的 tracker；經過誤差通道的設定（包括零嚴重度的 `coalition-none`）都使用這個 tracker。
+- `src/aebrisk/errors/`：四種誤差通道，依固定順序套用；隨機抽樣的種子取自場景、通道與其嚴重度、replicate 與 protocol hash 的雜湊，重跑可完全重現。
+- `src/aebrisk/aeb/threat.py`：每個觀測 track 的 time to collision 與所需減速度。
+- `src/aebrisk/aeb/state_machine.py` 與 `controller.py`：依已提交的 policy 決定警示、部分煞車與全力煞車，再套用加速度上下限與 jerk 限制。
+- `src/aebrisk/simulation/step_loop.py`：閉環模擬，每一步依序執行上述階段；AEB 下達部分或全力煞車時，以該指令取代名義路線跟隨控制器（`simulation/route_follower.py`）的加速度，而名義控制器本身看不到其他道路使用者。
+- `src/aebrisk/metrics/`、`attribution/` 與 `analysis/`：碰撞與煞車事件指標、區間、實驗矩陣與 Shapley 值。
+
+### 快速檢查（不需資料集）
+
+只需要 Docker 與這個 repository 的 clone，不需要 nuPlan。這組指令把 [`docs/claims.yaml`](docs/claims.yaml) 的 claim 逐筆對照已提交的證據檔，並確認兩份 README 與 v1.0.0 release note 的每個結果數值都對應到這些 claim；接著從已提交的證據重建圖表與報告，確認重建的圖表與已提交版本逐位元組相同，最後執行完整驗證關卡。
+
+```bash
+docker compose build
+docker compose run --rm dev uv run --frozen aeb-risk audit-claims --claims docs/claims.yaml
+docker compose run --rm dev uv run --frozen python .agents/skills/auditing-aeb-error-attribution/scripts/validate_attribution.py --claims docs/claims.yaml --repo-root . --document README.md --document README.en.md --document docs/release-notes/v1.0.0.md
+docker compose run --rm dev uv run --frozen aeb-risk figures --evidence-dir docs/evidence/nuplan_aeb_v2 --output-dir artifacts/figures
+git diff --no-index --exit-code docs/figures artifacts/figures
 docker compose run --rm dev uv run --frozen aeb-risk report --claims docs/claims.yaml --artifacts-dir docs/evidence/nuplan_aeb_v2 --output-dir site
 docker compose run --rm dev uv run --frozen python -m aebrisk.dev verify
 ```
+
+image 建好之後，這些指令在一台使用 Docker Desktop 的 Windows 11 電腦上實測一次約 5 分鐘，大部分時間花在驗證關卡。報告輸出在 `site/index.html`。
+
+### 從 nuPlan 完整重現
+
+需要本機的 nuPlan v1.1（`val` split 與 maps），並依資料集本身的條款使用。`NUPLAN_DATA_ROOT` 是包含 `maps/` 與 `nuplan-v1.1/splits/val/` 的目錄，container 以唯讀方式掛載它。模擬會寫出正式的逐場景紀錄；這些紀錄衍生自 nuPlan，不隨本 repository 散布；模擬本身要跑數小時。所有指令都只寫入 `artifacts/`，不會寫進 `docs/evidence`。
+
+```bash
+export NUPLAN_DATA_ROOT=/path/to/nuplan
+docker compose run --rm dev uv run --frozen aeb-risk simulate --protocol configs/protocols/nuplan_aeb_v2.yaml --manifest docs/evidence/nuplan_aeb_v2/cohort/evaluation.json --config-id all --split val --workers 8 --output-dir artifacts/formal/nuplan_aeb_v2
+docker compose run --rm dev uv run --frozen aeb-risk evaluate --results-dir artifacts/formal/nuplan_aeb_v2 --manifest docs/evidence/nuplan_aeb_v2/cohort/evaluation.json --output-dir artifacts/reproduction/nuplan_aeb_v2
+docker compose run --rm dev uv run --frozen aeb-risk summarize-families --results-dir artifacts/formal/nuplan_aeb_v2 --manifest docs/evidence/nuplan_aeb_v2/cohort/evaluation.json --protocol configs/protocols/nuplan_aeb_v2.yaml --output-dir artifacts/reproduction/nuplan_aeb_v2
+docker compose run --rm dev bash -c "cd docs/evidence/nuplan_aeb_v2 && sha256sum *.json | (cd /work/artifacts/reproduction/nuplan_aeb_v2 && sha256sum -c -)"
+```
+
+在 PowerShell 中，把 `export` 那一行換成 `$env:NUPLAN_DATA_ROOT = '<drive>:/path/to/nuplan'`，其餘指令相同。最後一行比對重新產生的五個分析檔（`evaluation.json`、`intervals.json`、`shapley.json`、`exclusions.json`、`family-interventions.json`）與已提交版本的雜湊，相同者印出 `OK`。`evaluate` 也會寫出 `cohort/` 目錄，但其中的檔案是從已提交 manifest 所在目錄直接複製，不是重新計算的結果：這套流程沿用已提交的 cohort，不重跑 cohort 選取。
 
 完整 provenance、hash 與解釋限制見[分析重現紀錄](docs/verification/analysis-reproduction.md)。資料受 nuPlan/Motional 條款與 [CC BY-NC-SA 4.0](docs/evidence/nuplan_aeb_v2-NOTICE.md) 規範；原始碼使用 MIT license。各路徑適用哪一種條款見 [NOTICE](NOTICE)。
 

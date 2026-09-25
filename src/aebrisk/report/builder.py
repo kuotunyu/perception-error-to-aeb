@@ -23,17 +23,16 @@ from __future__ import annotations
 
 import json
 import shutil
+from importlib import resources
 from pathlib import Path
 from typing import Any, Optional
 
-from jinja2 import Environment, FileSystemLoader, select_autoescape
+from jinja2 import Environment, FunctionLoader, select_autoescape
 
 from aebrisk.analysis.claims import load_registry, validate_supplied_evidence_claims
 from aebrisk.analysis.rounding import fixed
 from aebrisk.artifacts.documents import AEBEvaluationV1
 from aebrisk.artifacts.family_interventions import FamilyInterventionsV1
-
-TEMPLATE_DIR = Path(__file__).resolve().parent / "templates"
 
 FULL_COALITION_ID = "coalition-dropout+localization_shape+latency+track_instability"
 
@@ -127,6 +126,17 @@ FEATURED_CONFIGURATION_IDS: tuple[str, ...] = (
     "coalition-none",
     FULL_COALITION_ID,
 )
+
+
+def packaged_template(name: str) -> str:
+    """Read one report template shipped inside the package.
+
+    Read through `importlib.resources` rather than a path next to this file, so
+    an installed wheel renders the same page as a checkout.
+    """
+
+    template = resources.files("aebrisk.report").joinpath("templates").joinpath(name)
+    return template.read_text(encoding="utf-8")
 
 
 def classify_configuration(configuration_id: str) -> str:
@@ -273,7 +283,7 @@ def build_site(claims_path: Path, artifacts_dir: Path, output_dir: Path) -> Path
     replay_rows, other_replays = replay_table(replay_names)
 
     environment = Environment(
-        loader=FileSystemLoader(str(TEMPLATE_DIR)),
+        loader=FunctionLoader(packaged_template),
         autoescape=select_autoescape(["html"]),
         keep_trailing_newline=True,
     )

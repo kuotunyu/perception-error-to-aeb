@@ -270,7 +270,7 @@ def test_the_skill_names_the_validator_it_ships() -> None:
         "common",
         "global",
         "10 Hz",
-        "handoff",
+        "run log",
         "sensor",
     ],
 )

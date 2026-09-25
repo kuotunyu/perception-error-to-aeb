@@ -61,10 +61,10 @@ still a number, and the caveat is not what gets repeated.
    make a result come out differently; the study's claim is that the controller
    was fixed.
 
-5. **The handoff is the resume point.** Read
-   `handoff/perception-error-to-aeb.md` (outside the repository) before
-   resuming anything, and update it after. Never commit it and never copy it
-   into the repository.
+5. **A private run log is the resume point.** Keep a short run log outside the
+   repository that records what ran, what remains and where the outputs are.
+   Read it before resuming anything and update it after. Never commit it and
+   never copy it into the repository.
 
 6. **No sensor blobs, ever.** This study reads world state, logs and maps.
    `NUPLAN_SENSOR_ROOT` being set is a configuration error, not an option. If

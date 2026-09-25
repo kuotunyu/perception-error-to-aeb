@@ -17,8 +17,10 @@ nothing downstream could tell which order produced a published number.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from pathlib import Path
 from types import ModuleType
-from typing import Any
+from typing import Any, Optional
 
 import pytest
 
@@ -664,3 +666,68 @@ def test_an_imported_configuration_must_name_its_source() -> None:
 
     with pytest.raises(ValueError, match=r"^an\ imported\ configuration\ must\ name\ its\ source$"):
         pipeline.imported_configuration_id("")
+
+
+# --------------------------------------------------------------------------
+# The configuration every run actually uses
+# --------------------------------------------------------------------------
+
+
+@pytest.fixture
+def uncached_error_config() -> Iterator[ModuleType]:
+    """Clear the per-process configuration around a test that substitutes the file."""
+
+    pipeline = load_pipeline_module()
+    pipeline.committed_error_config.cache_clear()
+    yield pipeline
+    pipeline.committed_error_config.cache_clear()
+
+
+def test_the_error_config_file_is_read_once_however_many_parameters_are_read(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Every scenario run reads the same grid; parsing the file again reads nothing new."""
+
+    pipeline = load_pipeline_module()
+    reads: list[Optional[Path]] = []
+    read_config = pipeline.load_error_config
+
+    def counting_load_error_config(path: Optional[Path] = None) -> dict[str, Any]:
+        reads.append(path)
+        return read_config(path)
+
+    monkeypatch.setattr(pipeline, "load_error_config", counting_load_error_config)
+    for severity in ("low", "medium", "high"):
+        pipeline.parameter("dropout", "dropout_probability", severity)
+
+    assert len(reads) <= 1
+
+
+def test_an_error_config_that_fails_validation_is_refused_before_any_parameter_is_read(
+    uncached_error_config: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The validator's rules must hold for the grid the runs read, not only in tests."""
+
+    pipeline = uncached_error_config
+    config = pipeline.load_error_config()
+    config["channels"]["dropout"]["dropout_probability"][0] = 0.1
+    monkeypatch.setattr(pipeline, "load_error_config", lambda path=None: config)
+
+    with pytest.raises(
+        ValueError, match=r"^dropout_probability at severity zero must be exactly 0"
+    ):
+        pipeline.parameter("dropout", "dropout_probability", "medium")
+
+
+def test_the_error_config_in_use_cannot_be_changed_by_a_caller() -> None:
+    """One run editing the shared grid would corrupt every run after it."""
+
+    pipeline = load_pipeline_module()
+    config = pipeline.committed_error_config()
+    medium = pipeline.parameter("dropout", "dropout_probability", "medium")
+
+    with pytest.raises(TypeError):
+        config["channels"]["dropout"]["dropout_probability"][2] = 0.9
+    with pytest.raises(TypeError):
+        config["channels"]["dropout"] = {}
+    assert pipeline.parameter("dropout", "dropout_probability", "medium") == medium

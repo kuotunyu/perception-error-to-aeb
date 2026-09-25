@@ -20,6 +20,13 @@ from __future__ import annotations
 
 import math
 
+#: The actuator limits the committed AEB policy records as
+#: `acceleration_bounds_mps2` and `jerk_limit_mps3`. The limiter applies these
+#: values; the policy validator refuses a policy file that records different
+#: ones, so the file cannot describe a limiter the simulation does not run.
+ACCELERATION_BOUNDS_MPS2: tuple[float, float] = (-6.0, 2.0)
+JERK_LIMIT_MPS3 = 5.0
+
 
 def _require_finite(value: float, name: str) -> float:
     if not isinstance(value, (int, float)) or isinstance(value, bool):
@@ -41,9 +48,9 @@ def limit_acceleration(
     previous_mps2: float,
     target_mps2: float,
     dt_s: float = 0.1,
-    min_mps2: float = -6.0,
-    max_mps2: float = 2.0,
-    jerk_limit_mps3: float = 5.0,
+    min_mps2: float = ACCELERATION_BOUNDS_MPS2[0],
+    max_mps2: float = ACCELERATION_BOUNDS_MPS2[1],
+    jerk_limit_mps3: float = JERK_LIMIT_MPS3,
 ) -> float:
     """Return the acceleration the vehicle actually applies this step."""
 

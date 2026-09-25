@@ -8,10 +8,9 @@ back into a result record the cohort can read.
 THIS IS SYNTHETIC VERIFICATION, NOT A RESULT. The scenario is a stationary lead
 vehicle on a straight road, chosen because its outcome can be computed with
 arithmetic rather than trusted from a simulator. Nothing here may be reported as
-a finding about nuPlan, about real perception error, or about any real AEB; the
-portfolio order gate forbids reading real nuPlan data at all until P2 is
-released, and this file exists precisely so that the pipeline can be shown to
-work before then.
+a finding about nuPlan, about real perception error, or about any real AEB.
+This file exists so that the pipeline can be shown to work without reading any
+real nuPlan data.
 
 The arithmetic: the ego starts at the origin at 10 m/s and the lead vehicle
 stands at x = 60. Bodies are 4 m long, so their faces meet when the ego's centre
