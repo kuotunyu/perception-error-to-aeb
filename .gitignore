@@ -38,3 +38,11 @@ runs/
 
 # local agent working agreement (kept on disk, not published)
 /AGENTS.md
+
+# Local secrets and mutation-testing output stay on the machine that made
+# them. A template such as .env.example is committable, as the private guard
+# allows.
+.env
+.env.*
+!.env.example
+mutants/
