@@ -241,9 +241,14 @@ def _arm_run(arm_root: Path) -> StudyArmRunV1:
 def _arm_runs(
     arms_root: Path, arm_ids: Sequence[str], every_arm: bool
 ) -> tuple[StudyArmRunV1, ...]:
-    """The runs of the checked arms present under `arms_root`; a completed study needs every one."""
+    """The run of every arm under `arms_root`, each directory there being an arm's.
 
-    present = [arm for arm in arm_ids if (arms_root / arm).is_dir()]
+    An arm that ran is recorded whether or not the gate file checked it, as when
+    an attempt ends in arm C after only arm A was verified. A completed study
+    needs every arm of `arm_ids`, the arms its gate file checked.
+    """
+
+    present = [path.name for path in sorted(arms_root.glob("*")) if path.is_dir()]
     missing = [arm for arm in arm_ids if arm not in present]
     if every_arm and missing:
         raise ValueError(

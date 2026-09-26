@@ -991,6 +991,8 @@ def test_two_gate_files_of_one_attempt_are_refused(
 def test_a_study_reported_not_completed_publishes_the_gate_report_and_reproduction_only(
     study: Study,
 ) -> None:
+    for arm in ARMS[1:]:
+        remove_arm(study.arms_root / arm)
     other_protocol, other_cohort = "a" * 64, "b" * 64
     gates = study.gate_file(
         "attempt-2.gates-A.json",
@@ -1047,6 +1049,41 @@ def test_a_study_not_completed_covers_only_the_arms_present(study: Study) -> Non
         "A-v1-replication",
         "B-v2-gated",
     ]
+
+
+def arm_a_gate_file(study: Study) -> Path:
+    """The gate file of an attempt whose only verified arm is arm A."""
+
+    return study.gate_file(
+        "attempt-1.gates-A.json",
+        arms_checked=["A-v1-replication"],
+        gates=[gate("G1"), gate("G2"), gate("G5")],
+    )
+
+
+def test_a_study_not_completed_records_every_arm_under_its_arms_root(study: Study) -> None:
+    """An attempt that ended in arm C, with only arm A verified, still records when B and C ran."""
+
+    for arm in ("D-v2-kalman", "E-v2-channel-rng"):
+        remove_arm(study.arms_root / arm)
+
+    study.write(gates=arm_a_gate_file(study), not_completed=True)
+
+    assert [arm["arm_id"] for arm in study.published(REPRODUCTION_FILE)["arms"]] == [
+        "A-v1-replication",
+        "B-v2-gated",
+        "C-v1-kalman",
+    ]
+
+
+def test_a_g0_whose_tooling_commit_differs_from_an_unverified_arms_commit_is_refused(
+    study: Study,
+) -> None:
+    write_arm(study.arms_root, "C-v1-kalman", commit=OTHER_COMMIT)
+
+    with pytest.raises(ValueError, match="C-v1-kalman"):
+        study.write(gates=arm_a_gate_file(study), not_completed=True)
+    assert nothing_written(study.output_dir)
 
 
 def test_without_a_summary_a_failed_g4_is_recorded_as_failed(study: Study) -> None:
