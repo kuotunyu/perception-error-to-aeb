@@ -38,6 +38,7 @@ from aebrisk.attribution.shapley import CHANNELS
 from aebrisk.cli.evaluate import evaluate
 from aebrisk.cohort.manifest import load_manifest, membership_sha256
 from aebrisk.metrics.bootstrap import (
+    BootstrapWeights,
     cluster_bootstrap_weights,
     percentile_interval,
     weighted_mean,
@@ -873,6 +874,49 @@ def test_every_interval_is_drawn_from_one_family_stratified_log_cluster_bootstra
     ]
 
 
+def test_every_estimate_is_the_cohort_value_whatever_the_draws(
+    release: Release, summary: AttributionAddendumV1, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Draws that hold walk-a alone move every interval onto walk-a's value, and no estimate."""
+
+    def walk_a_alone(tokens: tuple[str, ...], *args: object, **kwargs: object) -> BootstrapWeights:
+        ordered = tuple(sorted(tokens))
+        weights = np.zeros((3, len(ordered)), dtype=np.int64)
+        weights[:, ordered.index("walk-a")] = 1
+        return BootstrapWeights(tokens=ordered, weights=weights)
+
+    monkeypatch.setattr("aebrisk.study.addendum.cluster_bootstrap_weights", walk_a_alone)
+
+    collapsed = release.analyse()
+
+    for cohort_game, game in zip(summary.games, collapsed.games):
+        for channel in CHANNELS:
+            value = game.shapley_values[channel]
+            (interval,) = value.intervals
+            assert value.estimate == cohort_game.shapley_values[channel].estimate
+            assert interval.low == interval.high
+            assert interval.low == pytest.approx(
+                planted_value(game.game, "walk-a", channel), abs=1e-12
+            )
+        assert [item.estimate for item in game.localization_shape_differences] == [
+            item.estimate for item in cohort_game.localization_shape_differences
+        ]
+        assert [item.estimate for item in game.other_differences] == [
+            item.estimate for item in cohort_game.other_differences
+        ]
+    assert [item.estimate for item in collapsed.configuration_contrasts] == [
+        item.estimate for item in summary.configuration_contrasts
+    ]
+    # walk-a collides without AEB in every replicate and never with the oracle.
+    oracle_minus_no_aeb = collapsed.configuration_contrasts[0]
+    assert oracle_minus_no_aeb.metric == "collision_indicator"
+    assert oracle_minus_no_aeb.estimate == pytest.approx(2 / 6 - 3 / 6, abs=1e-12)
+    assert (oracle_minus_no_aeb.intervals[0].low, oracle_minus_no_aeb.intervals[0].high) == (
+        -1.0,
+        -1.0,
+    )
+
+
 # --------------------------------------------------------------------------
 # The descriptive set
 # --------------------------------------------------------------------------
@@ -971,6 +1015,19 @@ def test_avoided_and_induced_that_are_not_token_counts_are_refused(tmp_path: Pat
     assert variant.gate().passed
     with pytest.raises(ValueError, match="differ across replicates"):
         variant.analyse()
+
+
+def test_an_induced_collision_is_one_on_a_token_where_no_aeb_has_none(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """With cut-b among the oracle's collisions, lead-b and cut-b are induced. On cut-a
+    both collide, so it is neither avoided nor induced."""
+
+    monkeypatch.setitem(globals(), "ORACLE_COLLISIONS", (*ORACLE_COLLISIONS, "cut-b"))
+
+    collisions = build_release(tmp_path).analyse().oracle_collisions
+
+    assert (collisions.avoided.events, collisions.induced.events) == (2, 2)
 
 
 def test_brake_activations_per_hour_cover_every_aeb_configuration(
