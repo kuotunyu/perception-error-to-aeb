@@ -1008,14 +1008,15 @@ def refuse_token_strings(value: object, cohort_tokens: AbstractSet[str]) -> None
 
     Refused: any string, value or key, that is sixteen lower-case hexadecimal
     digits, and any string that contains a token of `cohort_tokens`. Numbers
-    are not scanned, so a float whose digits run sixteen long passes. Every
-    member of `cohort_tokens` must itself be sixteen lower-case hexadecimal
-    digits, because strings are compared sixteen characters at a time.
+    are not scanned, so a float whose digits run sixteen long passes. A token
+    of the scenario shape is found by comparing sixteen-character windows; a
+    member of any other shape is searched as a substring, and the one that
+    sorts first is named.
     """
 
-    for token in cohort_tokens:
-        if not TOKEN_SHAPE.fullmatch(token):
-            raise ValueError(f"cohort token {token!r} is not sixteen lower-case hexadecimal digits")
+    if "" in cohort_tokens:
+        raise ValueError("a cohort token must not be empty")
+    other_shapes = sorted(token for token in cohort_tokens if not TOKEN_SHAPE.fullmatch(token))
     for text in _strings(value):
         if TOKEN_SHAPE.fullmatch(text):
             raise ValueError(f"{text!r} has the shape of a scenario token")
@@ -1023,3 +1024,6 @@ def refuse_token_strings(value: object, cohort_tokens: AbstractSet[str]) -> None
             window = text[start : start + _TOKEN_LENGTH]
             if window in cohort_tokens:
                 raise ValueError(f"a string holds the scenario token {window!r}")
+        for token in other_shapes:
+            if token in text:
+                raise ValueError(f"a string holds the scenario token {token!r}")

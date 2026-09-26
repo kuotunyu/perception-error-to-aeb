@@ -1606,12 +1606,34 @@ def test_a_string_that_only_contains_a_token_shape_passes(cohort_tokens: frozens
     refuse_token_strings({"note": "run 0123456789abcdef0 of 3"}, cohort_tokens)
 
 
-@pytest.mark.parametrize("token", ["lead-a", "15C3255839035BEE", "15c3255839035bee0"])
-def test_a_cohort_token_of_another_shape_is_refused(token: str) -> None:
-    """Strings are compared sixteen characters at a time, which finds no other shape."""
+@pytest.mark.parametrize(
+    "token", ["lead-a", "15C3255839035BEE", "15c3255839035bee0", "synthetic-lead-0001"]
+)
+def test_a_string_holding_a_cohort_token_of_another_shape_is_refused(token: str) -> None:
+    """A member that sixteen-character windows cannot match is searched as a substring."""
 
-    with pytest.raises(ValueError, match="is not sixteen lower-case hexadecimal digits"):
-        refuse_token_strings({"note": f"x {token}"}, frozenset({token}))
+    message = f"a string holds the scenario token {token!r}"
+
+    with pytest.raises(ValueError, match=f"^{re.escape(message)}$"):
+        refuse_token_strings({"note": f"x {token} y"}, frozenset({token}))
+
+
+def test_a_cohort_token_of_another_shape_that_no_string_holds_passes() -> None:
+    refuse_token_strings({"note": "lead-b and synthetic-lead-0002"}, frozenset({"lead-a"}))
+
+
+def test_the_first_cohort_token_of_another_shape_in_sorted_order_is_reported() -> None:
+    """With two such members in one string, the refusal names the one that sorts first."""
+
+    text = "aaa " + "z" * 20 + " abcdefghijklmno"
+
+    with pytest.raises(ValueError, match=r"^a string holds the scenario token 'aaa'$"):
+        refuse_token_strings({"note": text}, frozenset({"abcdefghijklmno", "aaa"}))
+
+
+def test_an_empty_cohort_token_is_refused() -> None:
+    with pytest.raises(ValueError, match=r"^a cohort token must not be empty$"):
+        refuse_token_strings({"note": "x"}, frozenset({""}))
 
 
 def test_the_published_part_of_a_gate_result_passes(
