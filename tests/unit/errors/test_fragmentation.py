@@ -1159,3 +1159,38 @@ def test_a_track_without_filter_state_or_a_remembered_position_restarts_the_filt
 
     assert emitted[0].velocity_xy_mps == (6.0, 1.0)
     assert states[0] == {"t-0001": initialised((11.0, 2.5), (6.0, 1.0), BASE_US + STEP_US)}
+
+
+def test_one_microsecond_since_the_last_fused_detection_is_fused() -> None:
+    """The timestamp unit is a microsecond, so one is already elapsed time to predict over.
+
+    As in the finite difference, only a repeated or earlier timestamp falls back
+    to the reported velocity.
+    """
+
+    from aebrisk.observation.tracking import (
+        CV_KALMAN_PARAMETERS,
+        CVKalmanVelocity,
+        kalman_initialise,
+        kalman_predict_update,
+    )
+
+    tracks = [
+        make_track(center=(0.0, 0.0), timestamp_us=BASE_US, velocity=(5.0, 0.0)),
+        make_track(center=(0.000001, 0.0), timestamp_us=BASE_US + 1, velocity=(99.0, 0.0)),
+    ]
+
+    emitted, states = run_with_filter(tracks, CVKalmanVelocity())
+
+    x_axis, y_axis = (
+        kalman_predict_update(
+            kalman_initialise(0.0, reported, CV_KALMAN_PARAMETERS),
+            measured,
+            0.000001,
+            CV_KALMAN_PARAMETERS,
+        )
+        for reported, measured in ((5.0, 0.000001), (0.0, 0.0))
+    )
+    assert emitted[1].velocity_xy_mps == (x_axis.velocity_mps, y_axis.velocity_mps)
+    assert emitted[1].velocity_xy_mps != (99.0, 0.0)
+    assert states[1] == {"t-0001": (x_axis, y_axis, BASE_US + 1)}
