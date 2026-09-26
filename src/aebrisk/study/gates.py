@@ -1008,9 +1008,14 @@ def refuse_token_strings(value: object, cohort_tokens: AbstractSet[str]) -> None
 
     Refused: any string, value or key, that is sixteen lower-case hexadecimal
     digits, and any string that contains a token of `cohort_tokens`. Numbers
-    are not scanned, so a float whose digits run sixteen long passes.
+    are not scanned, so a float whose digits run sixteen long passes. Every
+    member of `cohort_tokens` must itself be sixteen lower-case hexadecimal
+    digits, because strings are compared sixteen characters at a time.
     """
 
+    for token in cohort_tokens:
+        if not TOKEN_SHAPE.fullmatch(token):
+            raise ValueError(f"cohort token {token!r} is not sixteen lower-case hexadecimal digits")
     for text in _strings(value):
         if TOKEN_SHAPE.fullmatch(text):
             raise ValueError(f"{text!r} has the shape of a scenario token")

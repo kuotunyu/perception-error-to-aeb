@@ -1603,6 +1603,14 @@ def test_a_string_that_only_contains_a_token_shape_passes(cohort_tokens: frozens
     refuse_token_strings({"note": "run 0123456789abcdef0 of 3"}, cohort_tokens)
 
 
+@pytest.mark.parametrize("token", ["lead-a", "15C3255839035BEE", "15c3255839035bee0"])
+def test_a_cohort_token_of_another_shape_is_refused(token: str) -> None:
+    """Strings are compared sixteen characters at a time, which finds no other shape."""
+
+    with pytest.raises(ValueError, match="is not sixteen lower-case hexadecimal digits"):
+        refuse_token_strings({"note": f"x {token}"}, frozenset({token}))
+
+
 def test_the_published_part_of_a_gate_result_passes(
     run: Run, cohort_tokens: frozenset[str]
 ) -> None:
