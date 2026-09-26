@@ -18,8 +18,11 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import shutil
-from collections.abc import Callable, Mapping, Sequence
+import time
+import tracemalloc
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -1626,3 +1629,423 @@ def test_the_published_part_of_a_gate_result_passes(
 
     with pytest.raises(ValueError, match="15c3255839035bee"):
         refuse_token_strings(named.model_dump(mode="json"), cohort_tokens)
+
+
+# --------------------------------------------------------------------------
+# What each gate names and counts
+# --------------------------------------------------------------------------
+
+
+def membership(manifest: Path) -> str:
+    return membership_sha256(load_manifest(manifest))
+
+
+def identity(run: Run, token: str, cell: str) -> dict[str, str]:
+    """The fields that tie a document to its token, split, cell, protocol and cohort."""
+
+    return {
+        "scenario_token": token,
+        "family": FAMILY_OF[token],
+        "split": "evaluation",
+        "configuration_id": cell,
+        "protocol_sha256": PROTOCOL_SHA,
+        "cohort_manifest_sha256": membership(run.manifest),
+    }
+
+
+def not_found(path: Path) -> str:
+    return f"[Errno 2] No such file or directory: {str(path)!r}"
+
+
+#: The line G1 writes for each damage, after the arm's name.
+INTEGRITY_DETAIL: Mapping[str, Callable[[Run], str]] = {
+    "no run context": lambda run: (
+        f"run_context.json cannot be read: {not_found(run.arm(ARM) / 'run_context.json')}"
+    ),
+    "a run context that is not one": lambda run: "run_context.json is not a study run context",
+    "a commit that is not a SHA": lambda run: "run_context.json records no tooling commit: 'main'",
+    "an empty image": lambda run: "run_context.json records no image identifier: ''",
+    "no completion marker": lambda run: (
+        f"run_complete.json cannot be read: {not_found(run.arm(ARM) / 'run_complete.json')}"
+    ),
+    "a completion marker of another cohort": lambda run: (
+        f"run_complete.json names the cohort {'e' * 64}, not {membership(run.manifest)}"
+    ),
+    "a missing document": lambda run: "latency-medium/lead-b.json is missing",
+    "a document of another cell": lambda run: (
+        f"oracle_aeb/lead-a.json records {identity(run, 'lead-a', 'no_aeb')}, "
+        f"not {identity(run, 'lead-a', 'oracle_aeb')}"
+    ),
+    "a document with two replicates": lambda run: (
+        "no_aeb/cut-a.json does not hold replicates (0, 1, 2) of its own token and cell"
+    ),
+    "an invalid token": lambda run: "walk-a is invalid: the log ends before the scenario does",
+}
+
+
+@pytest.mark.parametrize(
+    "damage",
+    [pytest.param(name, id=name.replace(" ", "-")) for name in sorted(INTEGRITY_DETAIL)],
+)
+def test_g1_names_each_integrity_problem_in_its_detail(run: Run, damage: str) -> None:
+    apply, _ = INTEGRITY_DAMAGE[damage]
+    apply(run)
+
+    result = check_integrity(run.study, ARM, run.arm(ARM), run.manifest)
+
+    assert result.local_detail == (f"{ARM}: {INTEGRITY_DETAIL[damage](run)}",)
+
+
+def test_g1_counts_every_document_that_is_not_its_token_and_cells(run: Run) -> None:
+    for token in ("cut-a", "lead-b"):
+        document = results_document(token, "no_aeb", run.manifest, replicates=(0, 1))
+        write_document(run.document(ARM, "no_aeb", token), document)
+    for token in ("lead-a", "walk-a"):
+        set_document("oracle_aeb", token, configuration_id="no_aeb")(run)
+
+    result = check_integrity(run.study, ARM, run.arm(ARM), run.manifest)
+
+    assert failing(result, G1_FAILURES) == {"documents_invalid": 4}
+
+
+def test_g1_counts_each_invalid_token_once_and_names_it(run: Run) -> None:
+    reason = "the log ends before the scenario does"
+    for token in ("cut-a", "walk-a"):
+        for cell in ARMS[ARM][3]:
+            document = results_document(token, cell, run.manifest).model_copy(
+                update={
+                    "valid": False,
+                    "invalid_reason": reason,
+                    "invalid_phase": "simulate",
+                    "results": (),
+                }
+            )
+            write_document(run.document(ARM, cell, token), document)
+
+    result = check_integrity(run.study, ARM, run.arm(ARM), run.manifest)
+
+    assert failing(result, G1_FAILURES) == {"invalid_tokens": 2}
+    assert result.local_detail == (
+        f"{ARM}: cut-a is invalid: {reason}",
+        f"{ARM}: walk-a is invalid: {reason}",
+    )
+
+
+def test_g1_refuses_a_document_whose_valid_flag_is_a_number(run: Run) -> None:
+    """A document is read strictly: `1` is not a boolean."""
+
+    path = run.document(ARM, "no_aeb", "lead-a")
+    document = json.loads(path.read_bytes())
+    document["valid"] = 1
+    path.write_text(json.dumps(document), encoding="utf-8")
+
+    result = check_integrity(run.study, ARM, run.arm(ARM), run.manifest)
+
+    assert failing(result, G1_FAILURES) == {"documents_invalid": 1}
+
+
+def test_g1_names_the_commits_the_arms_disagree_on(run: Run) -> None:
+    run.rewrite_context("D-v2-kalman", commit="1" * 40)
+
+    gates = run.verify()
+
+    assert gates["G1"].local_detail == (
+        f"the arms record 2 values where one is required: {sorted([COMMIT, '1' * 40])}",
+    )
+
+
+def test_g5_counts_and_names_every_arm_it_cannot_read_and_checks_the_rest(run: Run) -> None:
+    for arm_id in (REPLICATION, "B-v2-gated"):
+        write_json(run.arm(arm_id) / "run_context.json", {"arm_id": arm_id})
+    run.rewrite_context("C-v1-kalman", numpy_version="1.24.0")
+
+    result = check_environment(run.study, run.arms_root)
+
+    assert dict(result.counts) == {
+        "run_contexts_unreadable": 2,
+        "python_mismatches": 0,
+        "numpy_mismatches": 1,
+    }
+    assert result.local_detail == (
+        f"{REPLICATION}: run_context.json is not a study run context",
+        "B-v2-gated: run_context.json is not a study run context",
+        "C-v1-kalman: Python 3.9.19, numpy 1.24.0; "
+        "the study file records Python 3.9.19, numpy 1.23.4",
+    )
+
+
+def test_g3_names_each_differing_document_under_its_comparison(run: Run) -> None:
+    run.rewrite(run.document("D-v2-kalman", "oracle_aeb", "lead-b"), variant=9)
+
+    result = check_invariance(run.study, run.arms_root, run.released_root, TOKENS)
+
+    assert result.local_detail == (
+        "oracle_aeb:D-v2-kalman:B-v2-gated: oracle_aeb/lead-b.json differs",
+    )
+
+
+def test_a_comparison_of_two_runs_is_named_documents(run: Run) -> None:
+    result = compare_documents(run.arm(REPLICATION), run.released_root, STUDY_CELLS, TOKENS)
+
+    assert result.gate == "documents"
+
+
+def test_a_formal_verify_without_the_released_records_says_to_name_them(run: Run) -> None:
+    message = "a formal check compares the arms with the released records; name them"
+
+    with pytest.raises(ValueError, match=f"^{re.escape(message)}$"):
+        verify_study(run.study, run.arms_root, None, run.manifest)
+
+
+def test_a_repository_without_cohort_files_is_refused_with_the_directory_searched(
+    tmp_path: Path,
+) -> None:
+    message = "no committed cohort file under docs/evidence/nuplan_aeb_v2/cohort"
+
+    with pytest.raises(ValueError, match=f"^{re.escape(message)}$"):
+        committed_cohort_tokens(tmp_path)
+
+
+def test_the_released_hash_reader_names_its_result_released_records(
+    released: tuple[Path, Path],
+) -> None:
+    root, hashes = released
+
+    accepted = check_released_records(root, hashes, file_sha256(hashes))
+    refused = check_released_records(root, hashes, "0" * 64)
+
+    assert (accepted.gate, accepted.passed) == ("released_records", True)
+    assert refused.gate == "released_records"
+    assert refused.passed is False
+
+
+def test_the_released_hash_reader_says_why_it_refuses_a_list_of_another_shape(
+    released: tuple[Path, Path],
+) -> None:
+    root, hashes = released
+    write_crlf_json(hashes, hash_list(root, schema_version="aeb-d2-output-hashes/v1"))
+
+    result = check_released_records(root, hashes, file_sha256(hashes))
+
+    assert len(result.local_detail) == 1
+    assert result.local_detail[0].startswith(
+        f"the hash list {hashes} is not an aeb-d2-output-hashes/v2 list: "
+    )
+
+
+def test_the_released_hash_reader_counts_and_names_every_size_mismatch(
+    released: tuple[Path, Path],
+) -> None:
+    root, hashes = released
+    document = hash_list(root)
+    for entry in document["formal_files"][5:7]:
+        entry["bytes"] += 1
+    write_crlf_json(hashes, document)
+    names = sorted(entry["path"] for entry in document["formal_files"][5:7])
+
+    result = check_released_records(root, hashes, file_sha256(hashes))
+
+    assert result.counts["size_mismatches"] == 2
+    assert result.counts["hash_mismatches"] == 0
+    assert result.local_detail == tuple(f"{name} does not have the listed size" for name in names)
+
+
+def test_the_released_hash_reader_counts_every_hash_mismatch(
+    released: tuple[Path, Path],
+) -> None:
+    root, hashes = released
+    flip_byte(root / "run.log")
+    flip_byte(root / "no_aeb" / "cut-a.json")
+
+    result = check_released_records(root, hashes, file_sha256(hashes))
+
+    assert result.counts["size_mismatches"] == 0
+    assert result.counts["hash_mismatches"] == 2
+
+
+def test_a_file_is_hashed_a_chunk_at_a_time(tmp_path: Path) -> None:
+    """Hashing a file of 32 MiB never holds more than a few MiB, so a log of gigabytes fits."""
+
+    root = tmp_path / "released"
+    root.mkdir()
+    (root / "large.bin").write_bytes(bytes(32 * 2**20))
+    hashes = write_crlf_json(tmp_path / "output-hashes.json", hash_list(root))
+    expected = file_sha256(hashes)
+
+    tracemalloc.start()
+    try:
+        result = check_released_records(root, hashes, expected)
+        _, peak = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+
+    assert result.passed
+    assert peak < 8 * 2**20
+
+
+@pytest.mark.parametrize(
+    ("record", "name"),
+    [
+        pytest.param("released_hashes", "released output hash list", id="hash-list"),
+        pytest.param("input_databases", "input databases record", id="input-databases"),
+    ],
+)
+def test_preflight_names_the_record_whose_sha256_is_not_the_pinned_one(
+    tmp_path: Path, record: str, name: str
+) -> None:
+    inputs = build_preflight(tmp_path)
+    path: Path = getattr(inputs, record)
+    pinned = file_sha256(path)
+    path.write_bytes(path.read_bytes().replace(b"\r\n", b"\n"))
+    message = f"the {name} {path} has SHA-256 {file_sha256(path)}, but the study file pins {pinned}"
+
+    with pytest.raises(ValueError, match=f"^{re.escape(message)}$"):
+        inputs.run()
+
+
+def test_preflight_names_each_hash_that_differs_from_the_study_file(tmp_path: Path) -> None:
+    inputs = build_preflight(tmp_path)
+    study = yaml.safe_load(inputs.study.read_text(encoding="utf-8"))
+    inputs.protocol.write_bytes(b"protocol: nuplan_aeb_v2\n")
+    document = json.loads(inputs.manifest.read_bytes())
+    document["families"]["bicycle_or_vru"] = ["bike-a"]
+    inputs.manifest.write_text(json.dumps(document, indent=4), encoding="utf-8")
+
+    result = inputs.run()
+
+    assert result.local_detail[4:7] == (
+        f"the protocol hash is {file_sha256(inputs.protocol)}, "
+        f"and the study file records {study['seed_namespace_protocol_sha256']}",
+        f"the cohort manifest file hash is {file_sha256(inputs.manifest)}, "
+        f"and the study file records {study['cohort_manifest_file_sha256']}",
+        f"the cohort membership hash is {membership(inputs.manifest)}, "
+        f"and the study file records {study['cohort_membership_sha256']}",
+    )
+
+
+def test_preflight_counts_and_names_every_missing_log(tmp_path: Path) -> None:
+    inputs = build_preflight(tmp_path)
+    for log in LOGS:
+        inputs.log(log).unlink()
+
+    result = inputs.run()
+
+    assert failing(result, PREFLIGHT_FAILURES) == {"logs_missing": 2}
+    split_directory = inputs.data_root / "nuplan-v1.1" / "splits" / "val"
+    assert result.local_detail[4:] == tuple(
+        f"{log} is missing from {split_directory}" for log in LOGS
+    )
+
+
+def test_preflight_checks_every_log_after_a_missing_one(tmp_path: Path) -> None:
+    inputs = build_preflight(tmp_path)
+    inputs.log(LOGS[0]).unlink()
+    log = inputs.log(LOGS[1])
+    log.write_bytes(log.read_bytes() + b"x")
+
+    result = inputs.run()
+
+    assert failing(result, PREFLIGHT_FAILURES) == {
+        "logs_missing": 1,
+        "log_size_mismatches": 1,
+        "log_hash_mismatches": 1,
+    }
+    assert result.counts["logs_present"] == 1
+
+
+def test_preflight_counts_every_log_whose_size_and_sha256_differ(tmp_path: Path) -> None:
+    inputs = build_preflight(tmp_path)
+    for log in LOGS:
+        path = inputs.log(log)
+        path.write_bytes(path.read_bytes() + b"x")
+
+    result = inputs.run()
+
+    assert failing(result, PREFLIGHT_FAILURES) == {
+        "log_size_mismatches": 2,
+        "log_hash_mismatches": 2,
+    }
+
+
+@pytest.fixture()
+def clock_eight_hours_east_of_utc(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """A machine whose local time is eight hours ahead of UTC, and UTC again afterwards."""
+
+    monkeypatch.setenv("TZ", "TST-08")
+    time.tzset()
+    yield
+    monkeypatch.undo()
+    time.tzset()
+
+
+@pytest.mark.usefixtures("clock_eight_hours_east_of_utc")
+def test_preflight_writes_each_log_modification_time_in_utc_to_the_microsecond(
+    tmp_path: Path,
+) -> None:
+    inputs = build_preflight(tmp_path)
+    seconds = int(datetime(2001, 2, 3, 4, 5, 6, tzinfo=timezone.utc).timestamp())
+    nanoseconds = seconds * 1_000_000_000 + 123_456_999
+    for log in LOGS:
+        os.utime(inputs.log(log), ns=(nanoseconds, nanoseconds))
+
+    result = inputs.run()
+
+    for log in LOGS:
+        assert f"{log} modified 2001-02-03T04:05:06.123456Z" in result.local_detail
+
+
+STUDY_HASH = "1" * 64
+COHORT_HASH = "2" * 64
+
+
+def test_the_gate_file_is_sorted_two_space_indented_utf8_json(tmp_path: Path) -> None:
+    gates = a_gate_file(
+        arms_checked=["B-v2-gated"],
+        gates=[{"gate": "G2", "passed": False, "counts": {"oracle_aeb": 3, "no_aeb": 0}}],
+        artifacts_only_detail={"G2": ["no_aeb/lead-a.json is missing under released/références"]},
+    )
+    path = tmp_path / "gates.json"
+
+    write_gates(path, gates)
+
+    lines = [
+        "{",
+        '  "arms_checked": [',
+        '    "B-v2-gated"',
+        "  ],",
+        '  "artifacts_only_detail": {',
+        '    "G2": [',
+        '      "no_aeb/lead-a.json is missing under released/références"',
+        "    ]",
+        "  },",
+        f'  "cohort_manifest_sha256": "{COHORT_HASH}",',
+        '  "exploratory": false,',
+        '  "gates": [',
+        "    {",
+        '      "counts": {',
+        '        "no_aeb": 0,',
+        '        "oracle_aeb": 3',
+        "      },",
+        '      "gate": "G2",',
+        '      "passed": false',
+        "    }",
+        "  ],",
+        f'  "protocol_sha256": "{PROTOCOL_SHA}",',
+        '  "reference": "released",',
+        '  "schema_version": "aeb-study-gates/v1",',
+        f'  "study_sha256": "{STUDY_HASH}"',
+        "}",
+    ]
+    assert path.read_bytes() == ("\n".join(lines) + "\n").encode("utf-8")
+
+
+def test_the_published_gate_file_is_the_written_one_without_its_local_detail(
+    tmp_path: Path,
+) -> None:
+    gates = a_gate_file(artifacts_only_detail={"G2": ["oracle_aeb/lead-a.json differs"]})
+    path = tmp_path / "gates.json"
+    write_gates(path, gates)
+    written = json.loads(path.read_bytes())
+    del written["artifacts_only_detail"]
+
+    assert published_gates(gates) == written
