@@ -1937,20 +1937,19 @@ def test_preflight_counts_and_names_every_missing_log(tmp_path: Path) -> None:
     )
 
 
-def test_preflight_checks_every_log_after_a_missing_one(tmp_path: Path) -> None:
-    inputs = build_preflight(tmp_path)
-    inputs.log(LOGS[0]).unlink()
+def test_preflight_checks_every_log_after_one_the_record_does_not_list(tmp_path: Path) -> None:
+    inputs = build_preflight(tmp_path, edit_record=lambda record: record["files"].pop(0))
     log = inputs.log(LOGS[1])
     log.write_bytes(log.read_bytes() + b"x")
 
     result = inputs.run()
 
     assert failing(result, PREFLIGHT_FAILURES) == {
-        "logs_missing": 1,
+        "logs_missing_from_record": 1,
         "log_size_mismatches": 1,
         "log_hash_mismatches": 1,
     }
-    assert result.counts["logs_present"] == 1
+    assert result.counts["logs_present"] == 2
 
 
 def test_preflight_counts_every_log_whose_size_and_sha256_differ(tmp_path: Path) -> None:
