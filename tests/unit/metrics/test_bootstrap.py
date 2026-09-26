@@ -967,3 +967,97 @@ def test_the_bootstrap_p_value_is_at_most_one() -> None:
 
     assert bootstrap.bootstrap_p_value(bootstrap.np.array([-2.0, -1.0, 0.0, 1.0, 2.0])) == 1.0
     assert bootstrap.bootstrap_p_value(bootstrap.np.array([-1.0, 1.0, 1.0])) == 1.0
+
+
+# --------------------------------------------------------------------------
+# Numbers enter every statistic as float64
+#
+# The tokens' metrics, the per-token values of a draw and the draws of a
+# contrast are all converted to float64 on entry. An integer or single-precision
+# input is therefore the same number as its float64 copy, and a sum that is too
+# large for int64 cannot wrap around to the other sign.
+# --------------------------------------------------------------------------
+
+
+def test_a_very_large_integer_metric_gives_the_interval_of_its_float_value() -> None:
+    """Integers past the int64 range would otherwise be averaged exactly, not as floats.
+
+    2**64 + 2049 rounds up to 2**64 + 4096 as a float, so the float mean of the
+    three metrics lies above the rounded exact mean.
+    """
+
+    bootstrap = load_bootstrap_module()
+    exact = {"s-1": 2**64 + 2049, "s-2": 2**64 + 2049, "s-3": 2**64}
+    as_integers = {token: {"cfg": value} for token, value in exact.items()}
+    as_floats = {token: {"cfg": float(value)} for token, value in exact.items()}
+
+    from_integers = bootstrap.paired_scenario_bootstrap(as_integers, resamples=20, seed=1)
+    from_floats = bootstrap.paired_scenario_bootstrap(as_floats, resamples=20, seed=1)
+
+    assert from_integers == from_floats
+    assert from_integers["cfg"].estimate == float(2**64 + 4096)
+
+
+def test_large_integer_values_are_summed_as_floats_and_cannot_wrap_around() -> None:
+    """Twice 2**62 is past the int64 range; an integer sum would turn negative."""
+
+    bootstrap = load_bootstrap_module()
+    weights = bootstrap.BootstrapWeights(
+        tokens=("a", "b"), weights=bootstrap.np.array([[2, 0], [1, 1]])
+    )
+    large = {"a": 2**62, "b": 0}
+
+    assert bootstrap.weighted_mean(weights, large).tolist() == [2.0**62, 2.0**61]
+    assert bootstrap.weighted_ratio(weights, large, {"a": 1, "b": 1}).tolist() == [
+        2.0**62,
+        2.0**61,
+    ]
+
+
+def test_single_precision_draws_give_the_interval_of_their_float64_copy() -> None:
+    """Interpolating between float32 draws in float32 would move the endpoints."""
+
+    bootstrap = load_bootstrap_module()
+    np = bootstrap.np
+    single = np.array([0.1, 0.7, 0.3, 0.9], dtype=np.float32)
+    boxed = np.array([-0.5, 1.5, 2.5, 4.0], dtype=object)
+
+    assert bootstrap.percentile_interval(single, 0.9) == bootstrap.percentile_interval(
+        single.astype(np.float64), 0.9
+    )
+    assert bootstrap.percentile_interval(boxed, 0.9) == bootstrap.percentile_interval(
+        boxed.astype(np.float64), 0.9
+    )
+    assert bootstrap.bootstrap_p_value(boxed) == 0.8
+
+
+def test_a_positive_denominator_below_one_is_accepted() -> None:
+    """Exposure in hours or kilometres can sum to less than one in a draw."""
+
+    bootstrap = load_bootstrap_module()
+    numerator = {"a": 0.5, "b": 0.25, "c": 0.125}
+    denominator = {"a": 0.25, "b": 0.125, "c": 0.25}
+
+    ratios = bootstrap.weighted_ratio(hand_weights(), numerator, denominator)
+
+    # Draw 1: 0.875 / 0.625. Draw 2: 1.5 / 0.75. Draw 3: (0.5 + 0.125) / (0.25 + 0.25).
+    assert ratios.tolist() == pytest.approx([1.4, 2.0, 1.25])
+
+
+def test_the_refusal_of_a_token_with_no_family_or_cluster_gives_the_whole_reason() -> None:
+    """The refusal names the tokens and says why none of them is given a default."""
+
+    import re
+
+    bootstrap = load_bootstrap_module()
+    family = clustered_family()
+    del family["t-04"]
+    message = (
+        "no family or cluster for tokens ['t-04']; leaving them out or giving them a "
+        "default would silently change every draw"
+    )
+
+    with pytest.raises(ValueError, match=f"^{re.escape(message)}$"):
+        bootstrap.cluster_bootstrap_weights(
+            list(CLUSTERED_LAYOUT), family, clustered_log(), resamples=10
+        )
