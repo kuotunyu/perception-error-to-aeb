@@ -26,6 +26,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import warnings
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import asdict, dataclass, replace
 from pathlib import Path
@@ -50,6 +51,7 @@ from aebrisk.artifacts.study_documents import (
     PolicyV2SummaryV1,
     Reference,
     StudyContrastV1,
+    StudyDistributionV1,
     StudyGatesV1,
     StudyIntervalV1,
     StudyOutcome,
@@ -58,6 +60,7 @@ from aebrisk.artifacts.study_documents import (
 from aebrisk.attribution.factorial import formal_configurations
 from aebrisk.cohort.manifest import load_manifest, membership_sha256
 from aebrisk.metrics.bootstrap import (
+    DEFAULT_SEED,
     BootstrapWeights,
     bootstrap_p_value,
     cluster_bootstrap_weights,
@@ -75,6 +78,7 @@ from aebrisk.simulation.orchestrate import (
 from aebrisk.simulation.runner import run_common_scenario
 from aebrisk.simulation.step_loop import COLLIDING_MASS_KG, StepLoopOutcome
 from aebrisk.simulation.synthetic import SyntheticLeadScenario
+from aebrisk.study import analysis as study_analysis
 from aebrisk.study.analysis import (
     FIXED_SENTENCES,
     H3_SENTENCE,
@@ -801,6 +805,103 @@ def test_arm_outcomes_pairs_every_cell_with_the_arms_own_no_aeb(null_tree: Tree)
     )
 
 
+def test_token_outcome_counts_object_collisions_single_contacts_and_short_runs(
+    null_tree: Tree,
+) -> None:
+    """Each count follows its rule, on runs where a looser rule would count differently.
+
+    A collision with an object is a counted collision; one excluded contact is a
+    contact; a short run that ends in a counted collision is not an early end;
+    and missed interventions are a mean over the three replicates.
+    """
+
+    manifest = null_tree.manifest
+    object_collision = AEBScenarioResultV2.model_validate(
+        {
+            **record("walk-03", FULL, 1, Measured(duration=9.0)).model_dump(),
+            "collision_object": 1,
+            "collision_energy": COLLISION_ENERGY_J,
+            "min_clearance_m": 0.0,
+        }
+    )
+    runs = [
+        record("walk-03", FULL, 0, Measured(duration=12.0, contacts=1, missed=1)),
+        object_collision,
+        record("walk-03", FULL, 2, Measured(duration=11.0, missed=2)),
+    ]
+    cell = document_of("walk-03", FULL, runs, manifest)
+    no_aeb = planted_document(A, NO_AEB, "walk-03", null_plant, manifest)
+
+    assert token_outcome(cell, no_aeb) == TokenOutcome(
+        collision_indicator=1 / 3,
+        any_collision=True,
+        braking_s=0.0,
+        exposure_s=32.0,
+        not_at_fault=1,
+        any_contact=2 / 3,
+        avoided=0.0,
+        induced=1 / 3,
+        brake_activations=0,
+        early_ends=2,
+        missed_interventions=1.0,
+        false_interventions=0.0,
+    )
+
+
+@pytest.mark.parametrize(
+    ("damage", "message"),
+    [
+        ("invalid", "oracle_aeb/lead-01 is invalid; the analysis reads only valid documents"),
+        ("two_replicates", "oracle_aeb/lead-01 must hold exactly the replicates (0, 1, 2)"),
+        ("no_duration", "oracle_aeb/lead-01 holds a record without its simulated duration"),
+        (
+            "not_no_aeb",
+            "avoided and induced collisions are defined against 'no_aeb', not 'dropout-medium'",
+        ),
+        ("other_token", "'lead-01' cannot be paired with the no_aeb run of 'lead-02'"),
+    ],
+)
+def test_token_outcome_names_the_document_it_refuses_and_why(
+    null_tree: Tree, damage: str, message: str
+) -> None:
+    manifest = null_tree.manifest
+    cell = planted_document(A, ORACLE, "lead-01", null_plant, manifest)
+    no_aeb = planted_document(A, NO_AEB, "lead-01", null_plant, manifest)
+    if damage == "invalid":
+        cell = document_of("lead-01", ORACLE, [], manifest, valid=False)
+    elif damage == "two_replicates":
+        cell = document_of("lead-01", ORACLE, cell.results[:2], manifest)
+    elif damage == "no_duration":
+        legacy = [
+            AEBScenarioResultV1.model_validate(
+                {
+                    **result.model_dump(exclude={"simulated_duration_s"}),
+                    "schema_version": "aeb-scenario-result/v1",
+                }
+            )
+            for result in cell.results
+        ]
+        cell = document_of("lead-01", ORACLE, legacy, manifest)
+    elif damage == "not_no_aeb":
+        no_aeb = planted_document(A, DROPOUT, "lead-01", null_plant, manifest)
+    else:
+        no_aeb = planted_document(A, NO_AEB, "lead-02", null_plant, manifest)
+
+    with pytest.raises(ValueError) as refused:
+        token_outcome(cell, no_aeb)
+
+    assert str(refused.value) == message
+
+
+def test_an_arm_without_no_aeb_is_refused_with_the_reason() -> None:
+    with pytest.raises(ValueError) as refused:
+        arm_outcomes({})
+
+    assert str(refused.value) == (
+        "the arm has no 'no_aeb' cell, which avoided and induced collisions are measured against"
+    )
+
+
 # --------------------------------------------------------------------------
 # Contrasts
 # --------------------------------------------------------------------------
@@ -1089,6 +1190,107 @@ def test_totals_sum_over_the_drawn_tokens() -> None:
     assert (result.interval.low, result.interval.high) == percentile_interval(draws, 0.95)
 
 
+def test_a_contrast_with_its_family_size_but_no_holm_step_adds_the_simultaneous_interval_only() -> (
+    None
+):
+    minus = cells_of({ORACLE: [outcome(1.0), outcome(2.0), outcome(3.0), outcome(4.0)]})
+    plus = cells_of({ORACLE: [outcome(2.0), outcome(2.0), outcome(5.0), outcome(1.0)]})
+
+    result = contrast(
+        hand_weights(),
+        {A: minus, B: plus},
+        ArmCell(B, ORACLE),
+        ArmCell(A, ORACLE),
+        "braking_share",
+        "bootstrap",
+        HAND_LOG,
+        5,
+        None,
+    )
+
+    assert result.simultaneous_interval is not None
+    assert result.simultaneous_interval.confidence == 0.99
+    assert result.holm_step_interval is None
+
+
+def test_a_holm_step_without_its_family_size_is_refused_with_the_reason() -> None:
+    arm = cells_of({ORACLE: [outcome(1.0)] * 4})
+
+    with pytest.raises(ValueError) as refused:
+        contrast(
+            hand_weights(),
+            {A: arm, B: arm},
+            ArmCell(B, ORACLE),
+            ArmCell(A, ORACLE),
+            "braking_share",
+            "bootstrap",
+            HAND_LOG,
+            None,
+            1,
+        )
+
+    assert str(refused.value) == "a Holm step is a step of a family, so its size k is needed too"
+
+
+def test_a_contrast_without_sign_flip_settings_takes_the_committed_study_files() -> None:
+    """Twenty-one logs is one more than the study file enumerates, so p comes from random flips."""
+
+    tokens = tuple(f"token-{index:02d}" for index in range(1, 22))
+    logs = {token: f"log-{token}" for token in tokens}
+    weights = cluster_bootstrap_weights(tokens, dict.fromkeys(tokens, "a"), logs, resamples=50)
+    outcomes = {
+        A: {ORACLE: {token: outcome(collisions=0) for token in tokens}},
+        B: {ORACLE: {token: outcome(collisions=1) for token in tokens}},
+    }
+    settings = yaml.safe_load(COMMITTED_STUDY.read_text(encoding="utf-8"))["sign_flip"]
+
+    result = contrast(
+        weights,
+        outcomes,
+        ArmCell(B, ORACLE),
+        ArmCell(A, ORACLE),
+        "collision_indicator",
+        "sign_flip",
+        logs,
+        None,
+        None,
+    )
+
+    assert result.p_value == sign_flip_p_value(
+        [1] * 21,
+        enumerate_up_to=settings["enumerate_up_to"],
+        random_flips=settings["random_flips"],
+        seed=settings["seed"],
+    )
+    assert (settings["enumerate_up_to"], settings["random_flips"]) == (20, 100_000)
+    # No random pattern reaches |sum| = 21, and enumerating all 2^21 would give 2 / 2^21.
+    assert result.p_value == 1 / 100_001
+    assert sign_flip_p_value([1] * 21, enumerate_up_to=21) == 2 / 2**21
+
+
+def test_a_contrast_runs_clean_when_warnings_are_errors() -> None:
+    """A caller that turns every warning into an error still gets the contrast."""
+
+    minus = cells_of({ORACLE: [outcome(1.0), outcome(2.0), outcome(3.0), outcome(4.0)]})
+    plus = cells_of({ORACLE: [outcome(2.0), outcome(2.0), outcome(5.0), outcome(3.0)]})
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        result = contrast(
+            hand_weights(),
+            {A: minus, B: plus},
+            ArmCell(B, ORACLE),
+            ArmCell(A, ORACLE),
+            "braking_share",
+            "bootstrap",
+            HAND_LOG,
+            None,
+            None,
+        )
+
+    assert result.estimate == pytest.approx(12.0 / 180.0 - 10.0 / 180.0)
+
+
 # --------------------------------------------------------------------------
 # The Q3 ratio
 # --------------------------------------------------------------------------
@@ -1295,6 +1497,68 @@ def test_a_passed_reproduction_gate_is_written_beside_the_summary(
     assert summary.g4.gate == "G4"
     assert summary.g4.passed
     assert summary.g4.counts == written.gates[0].counts
+
+
+def test_the_reproduction_gate_names_each_evaluation_field_it_cannot_reproduce(
+    tmp_path: Path, null_tree: Tree
+) -> None:
+    evidence = copy_evidence(null_tree, tmp_path)
+
+    def change_braking(document: Any) -> None:
+        (row,) = (row for row in document["configurations"] if row["configuration_id"] == ORACLE)
+        row["mean_intervention_duration_s"] = 7.5
+
+    edit_json(evidence / "evaluation.json", change_braking)
+
+    result = reproduce_study_cells(null_tree.released_root, evidence, null_tree.manifest)
+
+    assert result.local_detail == (
+        f"evaluation.json {ORACLE}/mean_intervention_duration_s: released 7.5, recomputed 6.0",
+    )
+
+
+def test_the_reproduction_gate_holds_the_released_records_to_the_manifest(
+    tmp_path: Path, null_tree: Tree
+) -> None:
+    """A manifest of the same members but another protocol is not the released run's."""
+
+    document = json.loads(null_tree.manifest.read_text(encoding="utf-8"))
+    document["protocol_sha256"] = "0" * 64
+    other = write_json(tmp_path / "evaluation.json", document)
+    assert membership_sha256(load_manifest(other)) == membership_sha256(
+        load_manifest(null_tree.manifest)
+    )
+
+    with pytest.raises(ValueError, match="manifest protocol hash"):
+        reproduce_study_cells(null_tree.released_root, null_tree.evidence_dir, other)
+
+
+def test_the_reproduction_gate_compares_the_cells_the_study_file_names(
+    tmp_path: Path, null_tree: Tree
+) -> None:
+    document = yaml.safe_load(null_tree.study.read_text(encoding="utf-8"))
+    document["cells"] = [cell for cell in STUDY_CELLS if cell != LATENCY]
+    study = tmp_path / "study.yaml"
+    study.write_text(yaml.safe_dump(document, sort_keys=False), encoding="utf-8")
+    evidence = copy_evidence(null_tree, tmp_path)
+    edit_json(
+        evidence / "intervals.json",
+        lambda released: released["intervals"][ORACLE]["collision_indicator"].update(
+            low=float(
+                np.nextafter(released["intervals"][ORACLE]["collision_indicator"]["low"], -math.inf)
+            )
+        ),
+    )
+    tree = replace(null_tree, study=study, evidence_dir=evidence)
+    g4_path = tmp_path / "g4.json"
+
+    with pytest.raises(ValueError, match="G4"):
+        tree.analyse(g4_path=g4_path)
+
+    counts = load_gates(g4_path).gates[0].counts
+    assert counts["cells"] == 7
+    assert counts["fields_compared"] == 7 * (4 * 6 + 4)
+    assert counts["interval_mismatches"] == 1
 
 
 # --------------------------------------------------------------------------
@@ -1675,6 +1939,15 @@ def test_arm_a_levels_carry_the_released_totals_of_its_cells(
         assert replicated.braking_seconds_per_run == row.mean_intervention_duration_s
 
 
+def test_a_level_distribution_is_the_count_quartiles_and_maximum_of_its_values() -> None:
+    """The quartiles are numpy's linearly interpolated 25th, 50th and 75th percentiles."""
+
+    assert study_analysis._distribution([4.0, 0.0, 3.0, 1.0, 2.0]) == StudyDistributionV1(
+        count=5, median=2.0, lower_quartile=1.0, upper_quartile=3.0, maximum=4.0
+    )
+    assert study_analysis._distribution([]) == StudyDistributionV1(count=0)
+
+
 def test_no_fixed_sentence_says_safer_or_fixes() -> None:
     assert set(FIXED_SENTENCES) == {
         H3_SENTENCE,
@@ -1822,3 +2095,86 @@ def test_every_tested_collision_contrast_flips_whole_logs(
         for row in tested
         if row.outcome != "collision_indicator"
     )
+
+
+def test_an_analysis_called_without_a_reference_is_the_released_one(null_tree: Tree) -> None:
+    summary = analyse_study(
+        null_tree.study,
+        null_tree.arms_root,
+        null_tree.released_root,
+        null_tree.evidence_dir,
+        null_tree.manifest,
+        null_tree.gates(),
+    )
+
+    assert summary.reference == "released"
+    assert summary.exploratory is False
+
+
+def test_only_primary_hypotheses_carry_family_intervals_and_secondary_collisions_flip_logs(
+    null_tree: Tree,
+) -> None:
+    """The simultaneous and Holm-step intervals belong to the primary family alone.
+
+    Q2 and the Q3 check report the 95% interval only, and every secondary
+    collision-indicator contrast takes the sign flip over logs.
+    """
+
+    summary = null_tree.analyse()
+
+    families = [result.family for result in summary.hypotheses]
+    assert families == ["primary"] * 5 + ["Q2"] * 4 + ["Q3-check"] * 10
+    for result in summary.hypotheses:
+        primary = result.family == "primary"
+        assert result.contrast.interval is not None
+        assert (result.contrast.simultaneous_interval is not None) is primary
+        assert (result.contrast.holm_step_interval is not None) is primary
+    collisions = [
+        row.contrast for row in summary.secondary if row.contrast.outcome == "collision_indicator"
+    ]
+    assert len(collisions) == 5 + 2 + 2
+    assert all((row.test, row.test_unit) == ("sign_flip", "log") for row in collisions)
+
+
+def test_the_draws_come_from_the_study_files_seed_and_resample_count(
+    tmp_path: Path, planted_tree: Tree
+) -> None:
+    document = yaml.safe_load(planted_tree.study.read_text(encoding="utf-8"))
+    document["bootstrap"]["seed"] = 7
+    study = tmp_path / "study.yaml"
+    study.write_text(yaml.safe_dump(document, sort_keys=False), encoding="utf-8")
+
+    summary = replace(planted_tree, study=study).analyse()
+
+    outcomes = {
+        arm: arm_outcomes(load_arm(planted_tree.arms_root / arm, STUDY_CELLS, TOKENS))
+        for arm in (A, B)
+    }
+    h2 = hypotheses(summary)["H2"]
+
+    def drawn_with(seed: int) -> Any:
+        return contrast(
+            cluster_bootstrap_weights(TOKENS, FAMILY_OF, LOG_OF, resamples=RESAMPLES, seed=seed),
+            outcomes,
+            ArmCell(B, FULL),
+            ArmCell(A, FULL),
+            "braking_share",
+            "bootstrap",
+            LOG_OF,
+            5,
+            h2.holm_step,
+        )
+
+    expected = drawn_with(7)
+    assert (
+        h2.contrast.interval,
+        h2.contrast.simultaneous_interval,
+        h2.contrast.holm_step_interval,
+        h2.contrast.p_value,
+    ) == (
+        expected.interval,
+        expected.simultaneous_interval,
+        expected.holm_step_interval,
+        expected.p_value,
+    )
+    assert expected.interval != drawn_with(DEFAULT_SEED).interval
