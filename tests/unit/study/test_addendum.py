@@ -1364,3 +1364,28 @@ def test_a_replicate_counted_in_two_collision_columns_is_one_collided_replicate(
         "lower_quartile": 3.0,
         "upper_quartile": 5.0,
     }
+
+
+def test_the_analysis_draws_with_the_seed_and_resample_count_the_summary_records(
+    release: Release, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Six tokens in five clusters allow only nine distinct draws, none rarer than one in
+    sixteen, so the percentile bounds above fall on the smallest and largest of nine means
+    for almost any seed. The draws themselves depend on it."""
+
+    drawn: list[BootstrapWeights] = []
+
+    def recording(*args: Any, **kwargs: Any) -> BootstrapWeights:
+        weights = cluster_bootstrap_weights(*args, **kwargs)
+        drawn.append(weights)
+        return weights
+
+    monkeypatch.setattr("aebrisk.study.addendum.cluster_bootstrap_weights", recording)
+
+    summary = release.analyse()
+    expected = cluster_bootstrap_weights(TOKENS, FAMILY_OF, LOG_OF, resamples=5000, seed=20260831)
+
+    (weights,) = drawn
+    assert (summary.bootstrap.resamples, summary.bootstrap.seed) == (5000, 20260831)
+    assert weights.tokens == expected.tokens
+    assert np.array_equal(weights.weights, expected.weights)
