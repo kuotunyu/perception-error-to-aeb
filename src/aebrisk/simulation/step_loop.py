@@ -52,10 +52,11 @@ import numpy as np
 import numpy.typing as npt
 
 from aebrisk.aeb.controller import limit_acceleration
-from aebrisk.aeb.state_machine import AEBCommand, AEBMemory, AEBState, update_aeb
+from aebrisk.aeb.state_machine import AEBCommand, AEBMemory, AEBState, policy_for, update_aeb
 from aebrisk.aeb.threat import (
     EgoKinematicState,
     assess_threat,
+    collision_course_candidates,
     oriented_box_polygon,
     polygon_clearance,
     separation_at_least,
@@ -189,13 +190,21 @@ def run_steps(
     dt_s: float,
     map_speed_limit_mps: Optional[float],
 ) -> StepLoopOutcome:
-    """Drive one configuration of one scenario, and report what happened."""
+    """Drive one configuration of one scenario, and report what happened.
+
+    The AEB runs the committed policy the configuration names. Under policy v1,
+    the default, every visible track is a candidate, as in every released run;
+    under policy v2 only the tracks its target selection admits are. The
+    minimum time to collision is measured over every visible track either way:
+    the policy decides what the AEB may brake for, not what the run measured.
+    """
 
     if steps < 1:
         raise ValueError(f"steps must be at least one, got {steps}")
     if dt_s <= 0.0 or not math.isfinite(dt_s):
         raise ValueError(f"dt_s must be finite and positive, got {dt_s!r}")
 
+    policy = policy_for(configuration.aeb_policy)
     total_route_m = route_length_m(route_xy)
 
     error_configuration = ErrorConfiguration(
@@ -284,13 +293,19 @@ def run_steps(
             acceleration_mps2=applied,
         )
 
-        threats = tuple(assess_threat(ego, track) for track in observed if track.visible)
+        visible = tuple(track for track in observed if track.visible)
+        threats = tuple(assess_threat(ego, track) for track in visible)
         for threat in threats:
             if threat.ttc_s is not None:
                 min_ttc = threat.ttc_s if min_ttc is None else min(min_ttc, threat.ttc_s)
 
         if configuration.aeb_enabled:
-            memory, command = update_aeb(memory, threats, dt_s=dt_s)
+            # Policy v1 has no target selection, and the assessments come back
+            # as they are; policy v2's gate keeps only the admitted ones.
+            candidates = collision_course_candidates(
+                ego, visible, threats, policy.get("target_selection")
+            )
+            memory, command = update_aeb(memory, candidates, dt_s=dt_s, policy=policy)
             commands.append(command)
             states.append(command.state)
         else:

@@ -348,3 +348,68 @@ def test_a_configuration_with_the_aeb_off_is_allowed_to_be_corrupted() -> None:
     built = configuration(aeb_enabled=False)
 
     assert built.aeb_enabled is False
+
+
+# --------------------------------------------------------------------------
+# The study's arm factors
+# --------------------------------------------------------------------------
+
+
+def test_the_arm_factors_default_to_the_released_run() -> None:
+    """A configuration that names no factor is a cell of the released matrix.
+
+    The released matrix names none of them, so every default must be the
+    policy, keying and velocity estimate every released number was produced
+    with. Every listed value is accepted in every combination.
+    """
+
+    common_cohort = load_common_cohort_module()
+
+    built = configuration()
+
+    assert (built.aeb_policy, built.rng_scheme, built.velocity_estimator) == (
+        "v1",
+        "dropout-keyed",
+        "finite-difference",
+    )
+    assert common_cohort.AEB_POLICIES == ("v1", "v2")
+    assert common_cohort.RNG_SCHEMES == ("dropout-keyed", "channel-independent")
+    assert common_cohort.VELOCITY_ESTIMATORS == ("finite-difference", "cv-kalman")
+    for policy in common_cohort.AEB_POLICIES:
+        for scheme in common_cohort.RNG_SCHEMES:
+            for estimator in common_cohort.VELOCITY_ESTIMATORS:
+                chosen = configuration(
+                    aeb_policy=policy, rng_scheme=scheme, velocity_estimator=estimator
+                )
+                assert (chosen.aeb_policy, chosen.rng_scheme, chosen.velocity_estimator) == (
+                    policy,
+                    scheme,
+                    estimator,
+                )
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("aeb_policy", "v3"),
+        ("aeb_policy", "V1"),
+        ("aeb_policy", "aeb-policy/v2"),
+        ("rng_scheme", "channel-keyed"),
+        ("rng_scheme", ""),
+        ("velocity_estimator", "kalman"),
+        ("velocity_estimator", None),
+    ],
+)
+def test_the_configuration_refuses_an_unknown_policy_scheme_or_estimator(
+    field: str, value: object
+) -> None:
+    """A misspelt factor must stop the run, not fall back to the released one.
+
+    A run that silently used the default would file policy v1 numbers under a
+    policy v2 arm, and nothing in its records would show it.
+    """
+
+    load_common_cohort_module()
+
+    with pytest.raises(ValueError, match=rf"^{field} must be one of \(.+\), got {value!r}$"):
+        configuration(**{field: value})

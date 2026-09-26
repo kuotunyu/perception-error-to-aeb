@@ -23,6 +23,21 @@ from aebrisk.nuplan_adapter.query_scenario import ScenarioReference
 
 OBSERVATION_MODES: tuple[str, ...] = ("oracle", "corrupted")
 
+#: The committed AEB policies a configuration can name. "v1" is the released
+#: controller; "v2" adds the collision-course gate of the policy v2 study.
+AEB_POLICIES: tuple[str, ...] = ("v1", "v2")
+
+#: How the error draws are keyed. "dropout-keyed" is the released key, which
+#: names the dropout channel and carries its severity; "channel-independent"
+#: keys them with a fixed severity, so changing the dropout severity does not
+#: redraw the other channels.
+RNG_SCHEMES: tuple[str, ...] = ("dropout-keyed", "channel-independent")
+
+#: How an observed track's velocity is estimated. "finite-difference" is the
+#: released estimate from successive positions; "cv-kalman" is a
+#: constant-velocity Kalman filter.
+VELOCITY_ESTIMATORS: tuple[str, ...] = ("finite-difference", "cv-kalman")
+
 
 @dataclass(frozen=True)
 class CohortScenario:
@@ -34,13 +49,21 @@ class CohortScenario:
 
 @dataclass(frozen=True)
 class ExperimentConfiguration:
-    """One cell of the experiment matrix."""
+    """One cell of the experiment matrix.
+
+    The last three fields are the arm factors of the policy v2 study. Each
+    defaults to what the released study ran, and the released matrix names
+    none of them, so every released cell is unchanged.
+    """
 
     configuration_id: str
     aeb_enabled: bool
     observation_mode: str
     severity_by_channel: Mapping[str, str]
     replicate_count: int
+    aeb_policy: str = "v1"
+    rng_scheme: str = "dropout-keyed"
+    velocity_estimator: str = "finite-difference"
 
     def __post_init__(self) -> None:
         if not self.configuration_id:
@@ -83,6 +106,18 @@ class ExperimentConfiguration:
             raise ValueError(
                 f"replicate_count must be a positive integer, got {self.replicate_count!r}"
             )
+
+        # A misspelt factor must stop the run rather than fall back to the
+        # released value: the arm would be filed under a name it did not run.
+        factors = (
+            ("aeb_policy", AEB_POLICIES),
+            ("rng_scheme", RNG_SCHEMES),
+            ("velocity_estimator", VELOCITY_ESTIMATORS),
+        )
+        for name, allowed in factors:
+            value = getattr(self, name)
+            if value not in allowed:
+                raise ValueError(f"{name} must be one of {allowed}, got {value!r}")
 
 
 def common_valid_scenarios(

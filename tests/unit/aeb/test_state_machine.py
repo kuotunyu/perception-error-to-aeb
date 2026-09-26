@@ -747,3 +747,58 @@ def test_a_policy_whose_limiter_disagrees_with_the_code_is_refused(
 
     with pytest.raises(ValueError, match=message):
         state_machine.validate_policy(policy)
+
+
+# --------------------------------------------------------------------------
+# The policy a run names
+# --------------------------------------------------------------------------
+
+
+def test_update_aeb_without_a_policy_equals_the_v1_policy_over_the_golden_sequence() -> None:
+    """Omitting the policy is naming policy v1, step for step.
+
+    Every released caller omits it, so the whole transition table must come out
+    the same, memory and command alike, when policy v1 is passed explicitly.
+    """
+
+    state_machine = load_state_machine_module()
+    v1 = state_machine.policy_for("v1")
+    implicit = explicit = monitoring()
+
+    for index, (ttc, decel, _state, _acceleration) in enumerate(GOLDEN):
+        threats = () if ttc is None and decel == 0.0 else (threat(ttc, decel),)
+        implicit, implicit_command = state_machine.update_aeb(implicit, threats)
+        explicit, explicit_command = state_machine.update_aeb(explicit, threats, policy=v1)
+        assert (explicit, explicit_command) == (implicit, implicit_command), f"step {index}"
+
+
+@pytest.mark.parametrize("version", [None, "v1"])
+def test_v1_drops_from_braking_to_warning_at_once(version: Optional[str]) -> None:
+    """A braking stage whose demand falls to a warning ends on that step.
+
+    The release rule's five clear steps apply only when nothing is demanded. A
+    step in the warning band is a demand, and the step that entered braking
+    already counted toward the warning's two, so the warning is entered on the
+    next step and the braking demand ends there. This pins the released
+    downgrade from either braking stage; the golden sequence pins only full to
+    partial.
+    """
+
+    state_machine = load_state_machine_module()
+    keywords: dict[str, Any] = (
+        {} if version is None else {"policy": state_machine.policy_for(version)}
+    )
+    stages = (
+        (threat(2.4, 1.0), state_machine.AEBState.PARTIAL, -3.0),
+        (threat(1.0, 8.0), state_machine.AEBState.FULL, -6.0),
+    )
+
+    for entering, stage, target in stages:
+        memory, braking = state_machine.update_aeb(monitoring(), (entering,), **keywords)
+        _, warning = state_machine.update_aeb(memory, (threat(2.9, 1.0),), **keywords)
+
+        assert braking.state is stage
+        assert braking.target_acceleration_mps2 == target
+        assert warning.state is state_machine.AEBState.WARNING
+        assert warning.target_acceleration_mps2 == 0.0
+        assert warning.selected_track_id == "t-0001"

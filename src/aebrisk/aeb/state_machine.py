@@ -307,15 +307,24 @@ def update_aeb(
     memory: AEBMemory,
     threats: tuple[ThreatAssessment, ...],
     dt_s: float = 0.1,
+    policy: Optional[Mapping[str, Any]] = None,
 ) -> tuple[AEBMemory, AEBCommand]:
-    """Advance the policy by one step and report what the AEB asks for."""
+    """Advance the policy by one step and report what the AEB asks for.
+
+    `policy` is the committed policy the run names, as `policy_for` returns it.
+    Without one this is `committed_policy()`, policy v1, which every released
+    run used. The state machine reads only the thresholds, stages and release
+    rule, which policy v2 copies from v1; policy v2's target selection is
+    applied to `threats` before they get here.
+    """
 
     if not isinstance(dt_s, (int, float)) or isinstance(dt_s, bool):
         raise ValueError("dt_s must be a number")
     if not math.isfinite(dt_s) or dt_s <= 0.0:
         raise ValueError(f"dt_s must be finite and positive, got {dt_s!r}")
 
-    policy = committed_policy()
+    if policy is None:
+        policy = committed_policy()
     selected = select_highest_required_deceleration(threats)
     demanded = _demanded_stage(selected, policy)
 
