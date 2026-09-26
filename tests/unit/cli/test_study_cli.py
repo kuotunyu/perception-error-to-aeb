@@ -349,6 +349,21 @@ def test_a_directory_beside_the_frozen_ones_is_accepted(tmp_path: Path, relative
     refuse_frozen_output(tmp_path / relative, tmp_path)
 
 
+def test_a_relative_output_directory_is_read_from_the_repository_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from aebrisk.cli.study import refuse_frozen_output
+
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
+    repository = tmp_path / "repository"
+
+    with pytest.raises(ValueError, match="refused"):
+        refuse_frozen_output(Path("docs/studies/aeb-policy-v2"), repository)
+    refuse_frozen_output(Path("artifacts/pilot/A-v1-replication"), repository)
+
+
 def test_a_completed_directory_is_refused(workspace: Workspace) -> None:
     output = workspace.root / "arms" / "E-v2-channel-rng"
     output.mkdir(parents=True)

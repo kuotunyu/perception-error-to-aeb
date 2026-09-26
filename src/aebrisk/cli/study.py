@@ -84,9 +84,12 @@ def _utc_now() -> datetime:
 
 
 def refuse_frozen_output(output_dir: Path, repository_root: Path) -> None:
-    """Refuse an output directory under the released records or the documentation."""
+    """Refuse an output directory under the released records or the documentation.
 
-    target = output_dir.resolve()
+    A relative `output_dir` is read from `repository_root`.
+    """
+
+    target = (repository_root / output_dir).resolve()
     for frozen in FROZEN_OUTPUTS:
         if target.is_relative_to((repository_root / frozen).resolve()):
             raise ValueError(
