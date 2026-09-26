@@ -1,0 +1,43 @@
+# The AEB policy of the policy v2 study, docs/studies/aeb-policy-v2/analysis-plan.md.
+#
+# It changes one thing about policy_v1.yaml: which observed bodies the AEB may
+# select. Every other value below is copied from policy_v1.yaml unchanged, and a
+# test holds the two files equal on them, so a v1 and a v2 run differ only in
+# target selection. The analysis plan fixed this gate before any code that
+# applies it existed.
+#
+# A visible observed track is a candidate only when both conditions hold:
+#
+# - predicted_overlap: the released threat assessment, unchanged, predicts an
+#   overlap with the ego's corridor. The rollout is recorded here so that a
+#   reader sees the whole gate in one place; it is the assessment's own, and the
+#   validator refuses a file that records a different one, because the file would
+#   then describe a gate the simulation does not apply.
+# - not_behind: the signed separation of the two centres along the ego's heading
+#   is at least zero. A body exactly abreast is a candidate.
+#
+# The selection rule, the thresholds, the warning dwell and the release rule then
+# act on the candidates exactly as v1 acts on every visible track. With no
+# candidate the AEB sees no threat, as v1 does when no track is visible.
+schema_version: aeb-policy/v2
+nominal_step_s: 0.1
+warning:
+  ttc_lt_s: 3.0
+  required_decel_gt_mps2: 2.0
+  consecutive_steps: 2
+partial:
+  ttc_lt_s: 2.5
+  target_accel_mps2: -3.0
+full:
+  ttc_lt_s: 1.5
+  required_decel_gt_mps2: 5.0
+  target_accel_mps2: -6.0
+release:
+  no_qualifying_ttc_lt_s: 4.0
+  consecutive_steps: 5
+acceleration_bounds_mps2: [-6.0, 2.0]
+jerk_limit_mps3: 5.0
+target_selection:
+  gate: predicted_overlap_not_behind
+  predicted_overlap: {horizon_s: 4.0, step_s: 0.1, corridor_margin_m: 0.5}
+  not_behind: {reference: centre, minimum_signed_separation_m: 0.0, inclusive: true}
