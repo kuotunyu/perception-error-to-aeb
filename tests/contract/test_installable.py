@@ -68,6 +68,11 @@ def test_no_learned_model_or_sensor_stack_is_declared() -> None:
 def test_package_code_under_src_is_not_ignored() -> None:
     """A broad dataset ignore must never hide package code under ``src``."""
 
+    if not (REPO_ROOT / ".git").exists():
+        # The mutation audit runs this suite from a copy of the tree inside the
+        # checkout, which the checkout's own ignore rules cover as a whole.
+        pytest.skip("a copy of the tree, such as mutmut's mutants/, is ignored by its checkout")
+
     result = subprocess.run(
         ["git", "check-ignore", "-q", "src/aebrisk/__init__.py"],
         cwd=REPO_ROOT,
@@ -105,6 +110,10 @@ def test_local_secrets_and_mutation_output_are_ignored(path: str) -> None:
 
 def test_an_environment_template_stays_committable() -> None:
     """The private guard accepts `.env.example`, so the ignore rules must too."""
+
+    if not (REPO_ROOT / ".git").exists():
+        # See test_package_code_under_src_is_not_ignored.
+        pytest.skip("a copy of the tree, such as mutmut's mutants/, is ignored by its checkout")
 
     assert check_ignore(".env.example") == 1
 
