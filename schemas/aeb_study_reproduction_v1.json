@@ -1,0 +1,456 @@
+{
+  "$defs": {
+    "StudyArmRunV1": {
+      "additionalProperties": false,
+      "description": "One arm's run: its tooling commit and image, and the first and last times of its run log.",
+      "properties": {
+        "arm_id": {
+          "minLength": 1,
+          "title": "Arm Id",
+          "type": "string"
+        },
+        "finished_at_utc": {
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{6}Z$",
+          "title": "Finished At Utc",
+          "type": "string"
+        },
+        "image_id": {
+          "minLength": 1,
+          "title": "Image Id",
+          "type": "string"
+        },
+        "numpy_version": {
+          "minLength": 1,
+          "title": "Numpy Version",
+          "type": "string"
+        },
+        "python_version": {
+          "minLength": 1,
+          "title": "Python Version",
+          "type": "string"
+        },
+        "started_at_utc": {
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{6}Z$",
+          "title": "Started At Utc",
+          "type": "string"
+        },
+        "tooling_commit": {
+          "pattern": "^[0-9a-f]{40}$",
+          "title": "Tooling Commit",
+          "type": "string"
+        }
+      },
+      "required": [
+        "arm_id",
+        "tooling_commit",
+        "image_id",
+        "started_at_utc",
+        "finished_at_utc",
+        "python_version",
+        "numpy_version"
+      ],
+      "title": "StudyArmRunV1",
+      "type": "object"
+    },
+    "StudyG0V1": {
+      "additionalProperties": false,
+      "description": "What the operator records for G0, in `g0.json` under the study's artifacts root.\n\nIt is read by `study evidence` and nested in `reproduction.json`; it is\nnever committed on its own. `pilot_gates` is the gate file that\n`study verify --pilot` wrote.",
+      "properties": {
+        "ci_run_id": {
+          "minimum": 1,
+          "title": "Ci Run Id",
+          "type": "integer"
+        },
+        "pilot_gates": {
+          "$ref": "#/$defs/StudyGatesV1"
+        },
+        "pilot_run_contexts": {
+          "additionalProperties": {
+            "$ref": "#/$defs/StudyRunContextV1"
+          },
+          "maxProperties": 5,
+          "minProperties": 5,
+          "title": "Pilot Run Contexts",
+          "type": "object"
+        },
+        "schema_version": {
+          "const": "aeb-study-g0/v1",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "tooling_commit": {
+          "pattern": "^[0-9a-f]{40}$",
+          "title": "Tooling Commit",
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "tooling_commit",
+        "ci_run_id",
+        "pilot_run_contexts",
+        "pilot_gates"
+      ],
+      "title": "StudyG0V1",
+      "type": "object"
+    },
+    "StudyGateFileV1": {
+      "additionalProperties": false,
+      "description": "A published gate file: `gates.json`, or the gate file of an earlier failed attempt.",
+      "properties": {
+        "attempt": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Attempt"
+        },
+        "file": {
+          "pattern": "^gates(-attempt-[1-9][0-9]*)?\\.json$",
+          "title": "File",
+          "type": "string"
+        },
+        "passed": {
+          "title": "Passed",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "file",
+        "attempt",
+        "passed"
+      ],
+      "title": "StudyGateFileV1",
+      "type": "object"
+    },
+    "StudyGateRecordV1": {
+      "additionalProperties": false,
+      "description": "One gate's outcome as `reproduction.json` records it; a gate that did not run counts nothing.",
+      "properties": {
+        "counts": {
+          "additionalProperties": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "title": "Counts",
+          "type": "object"
+        },
+        "gate": {
+          "enum": [
+            "G0",
+            "G1",
+            "G2",
+            "G3",
+            "G4",
+            "G5"
+          ],
+          "title": "Gate",
+          "type": "string"
+        },
+        "outcome": {
+          "enum": [
+            "passed",
+            "failed",
+            "not run"
+          ],
+          "title": "Outcome",
+          "type": "string"
+        }
+      },
+      "required": [
+        "gate",
+        "outcome"
+      ],
+      "title": "StudyGateRecordV1",
+      "type": "object"
+    },
+    "StudyGateV1": {
+      "additionalProperties": false,
+      "description": "One gate's published outcome.",
+      "properties": {
+        "counts": {
+          "additionalProperties": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "title": "Counts",
+          "type": "object"
+        },
+        "gate": {
+          "minLength": 1,
+          "title": "Gate",
+          "type": "string"
+        },
+        "passed": {
+          "title": "Passed",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "gate",
+        "passed",
+        "counts"
+      ],
+      "title": "StudyGateV1",
+      "type": "object"
+    },
+    "StudyGatesV1": {
+      "additionalProperties": false,
+      "description": "The gates of one check, and the study, cohort and protocol they were checked against.\n\n`protocol_sha256` and `cohort_manifest_sha256` are the study file's\n`seed_namespace_protocol_sha256` and cohort membership hash, under the names\nthe claims audit reads.",
+      "properties": {
+        "arms_checked": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Arms Checked",
+          "type": "array"
+        },
+        "artifacts_only_detail": {
+          "additionalProperties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "title": "Artifacts Only Detail",
+          "type": "object"
+        },
+        "cohort_manifest_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Cohort Manifest Sha256",
+          "type": "string"
+        },
+        "exploratory": {
+          "title": "Exploratory",
+          "type": "boolean"
+        },
+        "gates": {
+          "items": {
+            "$ref": "#/$defs/StudyGateV1"
+          },
+          "title": "Gates",
+          "type": "array"
+        },
+        "protocol_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Protocol Sha256",
+          "type": "string"
+        },
+        "reference": {
+          "enum": [
+            "released",
+            "arm-a"
+          ],
+          "title": "Reference",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "aeb-study-gates/v1",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "study_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Study Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "study_sha256",
+        "arms_checked",
+        "protocol_sha256",
+        "cohort_manifest_sha256",
+        "reference",
+        "exploratory",
+        "gates"
+      ],
+      "title": "StudyGatesV1",
+      "type": "object"
+    },
+    "StudyRunContextV1": {
+      "additionalProperties": false,
+      "description": "An arm's `run_context.json`, with the fields of the study's run context in its order.",
+      "properties": {
+        "aeb_policy": {
+          "title": "Aeb Policy",
+          "type": "string"
+        },
+        "arm_id": {
+          "title": "Arm Id",
+          "type": "string"
+        },
+        "cohort_sha256": {
+          "title": "Cohort Sha256",
+          "type": "string"
+        },
+        "commit": {
+          "title": "Commit",
+          "type": "string"
+        },
+        "configuration_id": {
+          "title": "Configuration Id",
+          "type": "string"
+        },
+        "container_digest": {
+          "title": "Container Digest",
+          "type": "string"
+        },
+        "error_config_sha256": {
+          "title": "Error Config Sha256",
+          "type": "string"
+        },
+        "numpy_version": {
+          "title": "Numpy Version",
+          "type": "string"
+        },
+        "policy_sha256": {
+          "title": "Policy Sha256",
+          "type": "string"
+        },
+        "protocol_sha256": {
+          "title": "Protocol Sha256",
+          "type": "string"
+        },
+        "python_version": {
+          "title": "Python Version",
+          "type": "string"
+        },
+        "rng_scheme": {
+          "title": "Rng Scheme",
+          "type": "string"
+        },
+        "study_sha256": {
+          "title": "Study Sha256",
+          "type": "string"
+        },
+        "velocity_estimator": {
+          "title": "Velocity Estimator",
+          "type": "string"
+        },
+        "velocity_parameters": {
+          "title": "Velocity Parameters",
+          "type": "string"
+        }
+      },
+      "required": [
+        "configuration_id",
+        "protocol_sha256",
+        "cohort_sha256",
+        "container_digest",
+        "commit",
+        "study_sha256",
+        "arm_id",
+        "aeb_policy",
+        "policy_sha256",
+        "rng_scheme",
+        "velocity_estimator",
+        "velocity_parameters",
+        "error_config_sha256",
+        "python_version",
+        "numpy_version"
+      ],
+      "title": "StudyRunContextV1",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "How the study's numbers came about, for a reader to check against the freeze point.\n\nThe pre-registration pull request's number, merge commit and `merged_at`\nare read from the GitHub API. Each arm's tooling commit, image and versions\ncome from its run context, and its start and end from the first and last\nlines of its run log. G0 comes from `g0.json`, G1 to G3 and G5 from the gate\nfile, and G4 from the summary, or from `g4.json` when there is no summary.",
+  "properties": {
+    "arms": {
+      "items": {
+        "$ref": "#/$defs/StudyArmRunV1"
+      },
+      "title": "Arms",
+      "type": "array"
+    },
+    "cohort_manifest_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Cohort Manifest Sha256",
+      "type": "string"
+    },
+    "exploratory": {
+      "title": "Exploratory",
+      "type": "boolean"
+    },
+    "g0": {
+      "$ref": "#/$defs/StudyG0V1"
+    },
+    "gate_files": {
+      "items": {
+        "$ref": "#/$defs/StudyGateFileV1"
+      },
+      "title": "Gate Files",
+      "type": "array"
+    },
+    "gates": {
+      "items": {
+        "$ref": "#/$defs/StudyGateRecordV1"
+      },
+      "title": "Gates",
+      "type": "array"
+    },
+    "preregistration_commit": {
+      "pattern": "^[0-9a-f]{40}$",
+      "title": "Preregistration Commit",
+      "type": "string"
+    },
+    "preregistration_merged_at": {
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+      "title": "Preregistration Merged At",
+      "type": "string"
+    },
+    "preregistration_pull_request": {
+      "minimum": 1,
+      "title": "Preregistration Pull Request",
+      "type": "integer"
+    },
+    "protocol_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Protocol Sha256",
+      "type": "string"
+    },
+    "reference": {
+      "enum": [
+        "released",
+        "arm-a"
+      ],
+      "title": "Reference",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "aeb-study-reproduction/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "study_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Study Sha256",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "study_sha256",
+    "protocol_sha256",
+    "cohort_manifest_sha256",
+    "reference",
+    "exploratory",
+    "preregistration_pull_request",
+    "preregistration_commit",
+    "preregistration_merged_at",
+    "arms",
+    "gates",
+    "gate_files",
+    "g0"
+  ],
+  "title": "StudyReproductionV1",
+  "type": "object"
+}

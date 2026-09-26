@@ -1,0 +1,836 @@
+{
+  "$defs": {
+    "StudyContrastV1": {
+      "additionalProperties": false,
+      "description": "A contrast: the sum of its signed terms, over the cohort or over one family.\n\nThe intervals are percentile intervals of the draws of `cluster`; the\nsimultaneous and Holm-step intervals belong to the primary hypotheses.\n`p_value` comes from `test`, flipping `test_unit` for a sign flip. A value a\nrow does not report is left out.",
+      "properties": {
+        "clopper_pearson": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/StudyProportionV1"
+          },
+          "title": "Clopper Pearson",
+          "type": "array"
+        },
+        "cluster": {
+          "anyOf": [
+            {
+              "enum": [
+                "family-log",
+                "family-drive",
+                "log"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cluster"
+        },
+        "estimate": {
+          "title": "Estimate",
+          "type": "number"
+        },
+        "family": {
+          "anyOf": [
+            {
+              "enum": [
+                "lead_or_stopping",
+                "cut_in_or_crossing",
+                "pedestrian_or_crosswalk",
+                "bicycle_or_vru"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Family"
+        },
+        "holm_step_interval": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StudyIntervalV1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "interval": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StudyIntervalV1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "outcome": {
+          "enum": [
+            "collision_indicator",
+            "braking_share",
+            "not_at_fault_contact_rate",
+            "missed_interventions",
+            "false_interventions",
+            "any_contact",
+            "avoided",
+            "induced",
+            "activation_rate",
+            "braking_seconds_per_run",
+            "not_at_fault_contacts_per_run",
+            "simulated_seconds",
+            "early_ends"
+          ],
+          "title": "Outcome",
+          "type": "string"
+        },
+        "p_value": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "P Value"
+        },
+        "simultaneous_interval": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StudyIntervalV1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "terms": {
+          "items": {
+            "$ref": "#/$defs/StudyTermV1"
+          },
+          "minItems": 2,
+          "title": "Terms",
+          "type": "array"
+        },
+        "test": {
+          "anyOf": [
+            {
+              "enum": [
+                "bootstrap",
+                "sign_flip"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Test"
+        },
+        "test_unit": {
+          "anyOf": [
+            {
+              "enum": [
+                "log",
+                "drive"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Test Unit"
+        }
+      },
+      "required": [
+        "outcome",
+        "terms",
+        "estimate"
+      ],
+      "title": "StudyContrastV1",
+      "type": "object"
+    },
+    "StudyDistributionV1": {
+      "additionalProperties": false,
+      "description": "The count, quartiles and maximum of some values; each is left out when there are none.",
+      "properties": {
+        "count": {
+          "minimum": 0,
+          "title": "Count",
+          "type": "integer"
+        },
+        "lower_quartile": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lower Quartile"
+        },
+        "maximum": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Maximum"
+        },
+        "median": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Median"
+        },
+        "upper_quartile": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Upper Quartile"
+        }
+      },
+      "required": [
+        "count"
+      ],
+      "title": "StudyDistributionV1",
+      "type": "object"
+    },
+    "StudyHypothesisResultV1": {
+      "additionalProperties": false,
+      "description": "One pre-registered hypothesis, decided by Holm within its family.",
+      "properties": {
+        "classification": {
+          "enum": [
+            "supported",
+            "contradicted",
+            "not_established",
+            "increase",
+            "decrease"
+          ],
+          "title": "Classification",
+          "type": "string"
+        },
+        "contrast": {
+          "$ref": "#/$defs/StudyContrastV1"
+        },
+        "family": {
+          "minLength": 1,
+          "title": "Family",
+          "type": "string"
+        },
+        "holm_step": {
+          "minimum": 1,
+          "title": "Holm Step",
+          "type": "integer"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "predicted_sign": {
+          "enum": [
+            -1,
+            0,
+            1
+          ],
+          "title": "Predicted Sign",
+          "type": "integer"
+        },
+        "rejected": {
+          "title": "Rejected",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "family",
+        "predicted_sign",
+        "contrast",
+        "holm_step",
+        "rejected",
+        "classification"
+      ],
+      "title": "StudyHypothesisResultV1",
+      "type": "object"
+    },
+    "StudyIntervalV1": {
+      "additionalProperties": false,
+      "description": "A two-sided percentile interval of the cluster-bootstrap draws.",
+      "properties": {
+        "confidence": {
+          "exclusiveMaximum": 1.0,
+          "exclusiveMinimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "high": {
+          "title": "High",
+          "type": "number"
+        },
+        "low": {
+          "title": "Low",
+          "type": "number"
+        }
+      },
+      "required": [
+        "confidence",
+        "low",
+        "high"
+      ],
+      "title": "StudyIntervalV1",
+      "type": "object"
+    },
+    "StudyKeyingRatioV1": {
+      "additionalProperties": false,
+      "description": "The answer to Q3: how much the channel-independent keying tightens a contrast.\n\n`sd_b` and `sd_e` are the cluster-bootstrap standard deviations of the\nbraking-share contrast of the full coalition minus\n`localization_shape-medium`, under B's keying and under E's. The ratio is\nabsent when E's contrast does not vary.",
+      "properties": {
+        "b_terms": {
+          "items": {
+            "$ref": "#/$defs/StudyTermV1"
+          },
+          "title": "B Terms",
+          "type": "array"
+        },
+        "e_terms": {
+          "items": {
+            "$ref": "#/$defs/StudyTermV1"
+          },
+          "title": "E Terms",
+          "type": "array"
+        },
+        "outcome": {
+          "const": "braking_share",
+          "title": "Outcome",
+          "type": "string"
+        },
+        "ratio": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Ratio"
+        },
+        "sd_b": {
+          "minimum": 0.0,
+          "title": "Sd B",
+          "type": "number"
+        },
+        "sd_e": {
+          "minimum": 0.0,
+          "title": "Sd E",
+          "type": "number"
+        }
+      },
+      "required": [
+        "outcome",
+        "b_terms",
+        "e_terms",
+        "sd_b",
+        "sd_e",
+        "ratio"
+      ],
+      "title": "StudyKeyingRatioV1",
+      "type": "object"
+    },
+    "StudyLevelV1": {
+      "additionalProperties": false,
+      "description": "One arm's outcomes in one cell, over the cohort or over one family.\n\n`collisions` and `contacts_not_at_fault` count records, under their released\nnames. Missed and false interventions and matched delays are measured\nagainst the arm's own oracle, so they describe the arm and are never\ncompared across policies.",
+      "properties": {
+        "activation_rate": {
+          "minimum": 0.0,
+          "title": "Activation Rate",
+          "type": "number"
+        },
+        "any_contact": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Any Contact",
+          "type": "number"
+        },
+        "arm": {
+          "minLength": 1,
+          "title": "Arm",
+          "type": "string"
+        },
+        "brake_activations": {
+          "minimum": 0,
+          "title": "Brake Activations",
+          "type": "integer"
+        },
+        "braking_seconds": {
+          "minimum": 0.0,
+          "title": "Braking Seconds",
+          "type": "number"
+        },
+        "braking_seconds_per_run": {
+          "minimum": 0.0,
+          "title": "Braking Seconds Per Run",
+          "type": "number"
+        },
+        "braking_share": {
+          "minimum": 0.0,
+          "title": "Braking Share",
+          "type": "number"
+        },
+        "cell": {
+          "minLength": 1,
+          "title": "Cell",
+          "type": "string"
+        },
+        "collision_clopper_pearson": {
+          "$ref": "#/$defs/StudyProportionV1"
+        },
+        "collision_indicator": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Collision Indicator",
+          "type": "number"
+        },
+        "collision_speed_mps": {
+          "$ref": "#/$defs/StudyDistributionV1"
+        },
+        "collision_tokens": {
+          "minimum": 0,
+          "title": "Collision Tokens",
+          "type": "integer"
+        },
+        "collisions": {
+          "minimum": 0,
+          "title": "Collisions",
+          "type": "integer"
+        },
+        "contacts_not_at_fault": {
+          "minimum": 0,
+          "title": "Contacts Not At Fault",
+          "type": "integer"
+        },
+        "early_ends": {
+          "minimum": 0,
+          "title": "Early Ends",
+          "type": "integer"
+        },
+        "false_interventions": {
+          "minimum": 0,
+          "title": "False Interventions",
+          "type": "integer"
+        },
+        "family": {
+          "anyOf": [
+            {
+              "enum": [
+                "lead_or_stopping",
+                "cut_in_or_crossing",
+                "pedestrian_or_crosswalk",
+                "bicycle_or_vru"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Family"
+        },
+        "matched_delays_s": {
+          "$ref": "#/$defs/StudyDistributionV1"
+        },
+        "max_deceleration_mps2": {
+          "minimum": 0.0,
+          "title": "Max Deceleration Mps2",
+          "type": "number"
+        },
+        "missed_interventions": {
+          "minimum": 0,
+          "title": "Missed Interventions",
+          "type": "integer"
+        },
+        "not_at_fault_contact_rate": {
+          "minimum": 0.0,
+          "title": "Not At Fault Contact Rate",
+          "type": "number"
+        },
+        "records": {
+          "minimum": 1,
+          "title": "Records",
+          "type": "integer"
+        },
+        "runs_never_stopped": {
+          "minimum": 0,
+          "title": "Runs Never Stopped",
+          "type": "integer"
+        },
+        "simulated_seconds": {
+          "minimum": 0.0,
+          "title": "Simulated Seconds",
+          "type": "number"
+        },
+        "stop_distance_m": {
+          "$ref": "#/$defs/StudyDistributionV1"
+        },
+        "tokens": {
+          "minimum": 1,
+          "title": "Tokens",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "arm",
+        "cell",
+        "tokens",
+        "records",
+        "collisions",
+        "collision_tokens",
+        "collision_indicator",
+        "collision_clopper_pearson",
+        "contacts_not_at_fault",
+        "any_contact",
+        "simulated_seconds",
+        "braking_seconds",
+        "braking_share",
+        "braking_seconds_per_run",
+        "not_at_fault_contact_rate",
+        "brake_activations",
+        "activation_rate",
+        "early_ends",
+        "max_deceleration_mps2",
+        "missed_interventions",
+        "false_interventions",
+        "matched_delays_s",
+        "stop_distance_m",
+        "runs_never_stopped",
+        "collision_speed_mps"
+      ],
+      "title": "StudyLevelV1",
+      "type": "object"
+    },
+    "StudyProportionV1": {
+      "additionalProperties": false,
+      "description": "An exact Clopper-Pearson interval for the share of tokens with an event.\n\nIt counts tokens, which are correlated within logs, so it is descriptive and\ntoo narrow.",
+      "properties": {
+        "arm": {
+          "minLength": 1,
+          "title": "Arm",
+          "type": "string"
+        },
+        "cell": {
+          "minLength": 1,
+          "title": "Cell",
+          "type": "string"
+        },
+        "confidence": {
+          "exclusiveMaximum": 1.0,
+          "exclusiveMinimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "event": {
+          "enum": [
+            "collision",
+            "avoided",
+            "induced"
+          ],
+          "title": "Event",
+          "type": "string"
+        },
+        "family": {
+          "anyOf": [
+            {
+              "enum": [
+                "lead_or_stopping",
+                "cut_in_or_crossing",
+                "pedestrian_or_crosswalk",
+                "bicycle_or_vru"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Family"
+        },
+        "high": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "High",
+          "type": "number"
+        },
+        "low": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Low",
+          "type": "number"
+        },
+        "successes": {
+          "minimum": 0,
+          "title": "Successes",
+          "type": "integer"
+        },
+        "trials": {
+          "minimum": 1,
+          "title": "Trials",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "event",
+        "arm",
+        "cell",
+        "successes",
+        "trials",
+        "confidence",
+        "low",
+        "high"
+      ],
+      "title": "StudyProportionV1",
+      "type": "object"
+    },
+    "StudyReportedContrastV1": {
+      "additionalProperties": false,
+      "description": "A secondary or descriptive contrast, reported at 95%.",
+      "properties": {
+        "analysis": {
+          "enum": [
+            "other_cells",
+            "difference_in_differences",
+            "combined_remedy",
+            "benefit_and_harm",
+            "any_contact",
+            "activation_rate",
+            "exposure",
+            "velocity_by_cell",
+            "velocity_interaction",
+            "primary_by_family"
+          ],
+          "title": "Analysis",
+          "type": "string"
+        },
+        "contrast": {
+          "$ref": "#/$defs/StudyContrastV1"
+        },
+        "hypothesis": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Hypothesis"
+        }
+      },
+      "required": [
+        "analysis",
+        "contrast"
+      ],
+      "title": "StudyReportedContrastV1",
+      "type": "object"
+    },
+    "StudySensitivityV1": {
+      "additionalProperties": false,
+      "description": "One sensitivity analysis of a primary hypothesis. It enters no decision.",
+      "properties": {
+        "analysis": {
+          "enum": [
+            "braking_seconds_per_run",
+            "not_at_fault_contacts_per_run",
+            "family_drive_clusters",
+            "drive_sign_flip",
+            "whole_log_bootstrap"
+          ],
+          "title": "Analysis",
+          "type": "string"
+        },
+        "contrast": {
+          "$ref": "#/$defs/StudyContrastV1"
+        },
+        "hypothesis": {
+          "minLength": 1,
+          "title": "Hypothesis",
+          "type": "string"
+        }
+      },
+      "required": [
+        "hypothesis",
+        "analysis",
+        "contrast"
+      ],
+      "title": "StudySensitivityV1",
+      "type": "object"
+    },
+    "StudyTermV1": {
+      "additionalProperties": false,
+      "description": "One signed level of a contrast: an arm's value in one cell.",
+      "properties": {
+        "arm": {
+          "minLength": 1,
+          "title": "Arm",
+          "type": "string"
+        },
+        "cell": {
+          "minLength": 1,
+          "title": "Cell",
+          "type": "string"
+        },
+        "sign": {
+          "enum": [
+            -1,
+            1
+          ],
+          "title": "Sign",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "sign",
+        "arm",
+        "cell"
+      ],
+      "title": "StudyTermV1",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "The numbers of the policy v2 summary, each under the name it has there.",
+  "properties": {
+    "cohort_manifest_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Cohort Manifest Sha256",
+      "type": "string"
+    },
+    "common_valid_tokens": {
+      "minimum": 1,
+      "title": "Common Valid Tokens",
+      "type": "integer"
+    },
+    "descriptive_contrasts": {
+      "items": {
+        "$ref": "#/$defs/StudyReportedContrastV1"
+      },
+      "title": "Descriptive Contrasts",
+      "type": "array"
+    },
+    "exploratory": {
+      "title": "Exploratory",
+      "type": "boolean"
+    },
+    "hypotheses": {
+      "items": {
+        "$ref": "#/$defs/StudyHypothesisResultV1"
+      },
+      "title": "Hypotheses",
+      "type": "array"
+    },
+    "levels": {
+      "items": {
+        "$ref": "#/$defs/StudyLevelV1"
+      },
+      "title": "Levels",
+      "type": "array"
+    },
+    "protocol_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Protocol Sha256",
+      "type": "string"
+    },
+    "q3_ratio": {
+      "$ref": "#/$defs/StudyKeyingRatioV1"
+    },
+    "reference": {
+      "enum": [
+        "released",
+        "arm-a"
+      ],
+      "title": "Reference",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "aeb-policy-v2-evidence/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "secondary": {
+      "items": {
+        "$ref": "#/$defs/StudyReportedContrastV1"
+      },
+      "title": "Secondary",
+      "type": "array"
+    },
+    "sensitivity": {
+      "items": {
+        "$ref": "#/$defs/StudySensitivityV1"
+      },
+      "title": "Sensitivity",
+      "type": "array"
+    },
+    "study_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Study Sha256",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "study_sha256",
+    "protocol_sha256",
+    "cohort_manifest_sha256",
+    "common_valid_tokens",
+    "reference",
+    "exploratory",
+    "hypotheses",
+    "sensitivity",
+    "q3_ratio",
+    "secondary",
+    "descriptive_contrasts",
+    "levels"
+  ],
+  "title": "PolicyV2EvidenceV1",
+  "type": "object"
+}

@@ -1,0 +1,108 @@
+{
+  "$defs": {
+    "StudyGateV1": {
+      "additionalProperties": false,
+      "description": "One gate's published outcome.",
+      "properties": {
+        "counts": {
+          "additionalProperties": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "title": "Counts",
+          "type": "object"
+        },
+        "gate": {
+          "minLength": 1,
+          "title": "Gate",
+          "type": "string"
+        },
+        "passed": {
+          "title": "Passed",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "gate",
+        "passed",
+        "counts"
+      ],
+      "title": "StudyGateV1",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "The gates of one check, and the study, cohort and protocol they were checked against.\n\n`protocol_sha256` and `cohort_manifest_sha256` are the study file's\n`seed_namespace_protocol_sha256` and cohort membership hash, under the names\nthe claims audit reads.",
+  "properties": {
+    "arms_checked": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Arms Checked",
+      "type": "array"
+    },
+    "artifacts_only_detail": {
+      "additionalProperties": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "title": "Artifacts Only Detail",
+      "type": "object"
+    },
+    "cohort_manifest_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Cohort Manifest Sha256",
+      "type": "string"
+    },
+    "exploratory": {
+      "title": "Exploratory",
+      "type": "boolean"
+    },
+    "gates": {
+      "items": {
+        "$ref": "#/$defs/StudyGateV1"
+      },
+      "title": "Gates",
+      "type": "array"
+    },
+    "protocol_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Protocol Sha256",
+      "type": "string"
+    },
+    "reference": {
+      "enum": [
+        "released",
+        "arm-a"
+      ],
+      "title": "Reference",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "aeb-study-gates/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "study_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Study Sha256",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "study_sha256",
+    "arms_checked",
+    "protocol_sha256",
+    "cohort_manifest_sha256",
+    "reference",
+    "exploratory",
+    "gates"
+  ],
+  "title": "StudyGatesV1",
+  "type": "object"
+}

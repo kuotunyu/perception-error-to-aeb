@@ -14,6 +14,11 @@ is read by this same model.
 `PolicyV2SummaryV1` is the study's summary: every number `study analyse`
 computes from the arms, and the reproduction gate's outcome. It holds aggregates
 only, never a token.
+
+`PolicyV2EvidenceV1`, `StudyReproductionV1` and `AttributionAddendumEvidenceV1`
+are the evidence `study evidence` publishes beside the summaries. `StudyG0V1`
+is the operator's record of G0, which reaches the evidence only inside
+`reproduction.json`.
 """
 
 from __future__ import annotations
@@ -566,10 +571,242 @@ class AttributionAddendumV1(_Strict):
     def validate_games(self) -> AttributionAddendumV1:
         """The collision game follows the duration game, so its caution follows that line."""
 
-        games = tuple(game.game for game in self.games)
-        if games != ADDENDUM_GAMES:
+        _refuse_games_out_of_order(self.games)
+        return self
+
+
+def _refuse_games_out_of_order(games: tuple[AddendumGameV1, ...]) -> None:
+    order = tuple(game.game for game in games)
+    if order != ADDENDUM_GAMES:
+        raise ValueError(
+            "games must be the duration game and then the collision game, "
+            f"{list(ADDENDUM_GAMES)}, got {list(order)}"
+        )
+
+
+# --------------------------------------------------------------------------
+# The published evidence
+#
+# `study evidence` writes what a results pull request commits. It copies
+# numbers and recomputes none. The derived evidence of each part holds the
+# numbers of its summary, field for field under the same names, beside the
+# protocol and cohort hashes the claims audit reads; what a summary holds beside
+# its numbers (its fixed sentences and labels, and the outcome of the gate that
+# preceded the analysis) stays in the summary. `reproduction.json` records how
+# the study's numbers came about: the pre-registration, each arm's run, the
+# outcome of every gate, and the gate file of every attempt.
+# --------------------------------------------------------------------------
+
+POLICY_V2_EVIDENCE_SCHEMA_VERSION: Literal["aeb-policy-v2-evidence/v1"] = (
+    "aeb-policy-v2-evidence/v1"
+)
+STUDY_REPRODUCTION_SCHEMA_VERSION: Literal["aeb-study-reproduction/v1"] = (
+    "aeb-study-reproduction/v1"
+)
+ATTRIBUTION_ADDENDUM_EVIDENCE_SCHEMA_VERSION: Literal["aeb-attribution-addendum-evidence/v1"] = (
+    "aeb-attribution-addendum-evidence/v1"
+)
+STUDY_G0_SCHEMA_VERSION: Literal["aeb-study-g0/v1"] = "aeb-study-g0/v1"
+
+#: The gates of the analysis plan, in the order `reproduction.json` records them.
+StudyGateName = Literal["G0", "G1", "G2", "G3", "G4", "G5"]
+STUDY_GATES: tuple[StudyGateName, ...] = ("G0", "G1", "G2", "G3", "G4", "G5")
+
+#: Every arm of the study runs in the pilot that G0 records.
+PILOT_ARMS = 5
+
+Commit = Annotated[str, Field(pattern=r"^[0-9a-f]{40}$")]
+#: A time as each line of an arm's run log begins with it.
+RunLogTime = Annotated[
+    str, Field(pattern=r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{6}Z$")
+]
+#: A time as the GitHub API writes a pull request's `merged_at`.
+GitHubTime = Annotated[
+    str, Field(pattern=r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$")
+]
+
+
+class PolicyV2EvidenceV1(_Strict):
+    """The numbers of the policy v2 summary, each under the name it has there."""
+
+    schema_version: Literal["aeb-policy-v2-evidence/v1"]
+    study_sha256: Sha256
+    protocol_sha256: Sha256
+    cohort_manifest_sha256: Sha256
+    common_valid_tokens: PositiveCount
+    reference: Reference
+    exploratory: StrictBool
+    hypotheses: tuple[StudyHypothesisResultV1, ...]
+    sensitivity: tuple[StudySensitivityV1, ...]
+    q3_ratio: StudyKeyingRatioV1
+    secondary: tuple[StudyReportedContrastV1, ...]
+    descriptive_contrasts: tuple[StudyReportedContrastV1, ...]
+    levels: tuple[StudyLevelV1, ...]
+
+    @model_validator(mode="after")
+    def validate_label(self) -> PolicyV2EvidenceV1:
+        """Tie the exploratory label to the reference, as the summary does."""
+
+        if self.exploratory != (self.reference == "arm-a"):
             raise ValueError(
-                "games must be the duration game and then the collision game, "
-                f"{list(ADDENDUM_GAMES)}, got {list(games)}"
+                "exploratory must be true exactly when the reference is arm-a, got "
+                f"reference {self.reference!r} and exploratory {self.exploratory}"
             )
+        return self
+
+
+class AttributionAddendumEvidenceV1(_Strict):
+    """The numbers of the addendum summary, each under the name it has there.
+
+    Every Shapley value of the addendum and its intervals are here, in `games`.
+    """
+
+    schema_version: Literal["aeb-attribution-addendum-evidence/v1"]
+    protocol_sha256: Sha256
+    cohort_manifest_sha256: Sha256
+    cohort_size: Count
+    common_valid_tokens: Count
+    bootstrap: AddendumBootstrapV1
+    games: tuple[AddendumGameV1, ...]
+    configuration_contrasts: tuple[AddendumContrastV1, ...]
+    oracle_collisions: AddendumOracleCollisionsV1
+    brake_activations: tuple[AddendumActivationRateV1, ...]
+    zero_event_configurations: tuple[AddendumZeroEventV1, ...]
+    matched_onset_delays: tuple[AddendumOnsetDelaysV1, ...]
+    stops_and_collision_speeds: tuple[AddendumStopsAndSpeedsV1, ...]
+
+    @model_validator(mode="after")
+    def validate_games(self) -> AttributionAddendumEvidenceV1:
+        """The collision game follows the duration game, as in the summary."""
+
+        _refuse_games_out_of_order(self.games)
+        return self
+
+
+class StudyRunContextV1(_Strict):
+    """An arm's `run_context.json`, with the fields of the study's run context in its order."""
+
+    configuration_id: str
+    protocol_sha256: str
+    cohort_sha256: str
+    container_digest: str
+    commit: str
+    study_sha256: str
+    arm_id: str
+    aeb_policy: str
+    policy_sha256: str
+    rng_scheme: str
+    velocity_estimator: str
+    velocity_parameters: str
+    error_config_sha256: str
+    python_version: str
+    numpy_version: str
+
+
+class StudyG0V1(_Strict):
+    """What the operator records for G0, in `g0.json` under the study's artifacts root.
+
+    It is read by `study evidence` and nested in `reproduction.json`; it is
+    never committed on its own. `pilot_gates` is the gate file that
+    `study verify --pilot` wrote.
+    """
+
+    schema_version: Literal["aeb-study-g0/v1"]
+    tooling_commit: Commit
+    ci_run_id: PositiveCount
+    pilot_run_contexts: dict[str, StudyRunContextV1] = Field(
+        min_length=PILOT_ARMS, max_length=PILOT_ARMS
+    )
+    pilot_gates: StudyGatesV1
+
+    @model_validator(mode="after")
+    def validate_arms(self) -> StudyG0V1:
+        """File each pilot run context under the arm it names."""
+
+        misfiled = sorted(
+            arm for arm, context in self.pilot_run_contexts.items() if context.arm_id != arm
+        )
+        if misfiled:
+            raise ValueError(f"pilot run contexts filed under another arm's id: {misfiled}")
+        return self
+
+
+class StudyArmRunV1(_Strict):
+    """One arm's run: its tooling commit and image, and the first and last times of its run log."""
+
+    arm_id: Name
+    tooling_commit: Commit
+    image_id: Name
+    started_at_utc: RunLogTime
+    finished_at_utc: RunLogTime
+    python_version: Name
+    numpy_version: Name
+
+
+class StudyGateRecordV1(_Strict):
+    """One gate's outcome as `reproduction.json` records it; a gate that did not run counts nothing."""
+
+    gate: StudyGateName
+    outcome: Literal["passed", "failed", "not run"]
+    counts: dict[str, Count] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def validate_counts(self) -> StudyGateRecordV1:
+        if self.outcome == "not run" and self.counts:
+            raise ValueError(f"{self.gate} did not run, so it counts nothing, got {self.counts}")
+        return self
+
+
+class StudyGateFileV1(_Strict):
+    """A published gate file: `gates.json`, or the gate file of an earlier failed attempt."""
+
+    file: Annotated[str, Field(pattern=r"^gates(-attempt-[1-9][0-9]*)?\.json$")]
+    attempt: Optional[PositiveCount]
+    passed: StrictBool
+
+
+class StudyReproductionV1(_Strict):
+    """How the study's numbers came about, for a reader to check against the freeze point.
+
+    The pre-registration pull request's number, merge commit and `merged_at`
+    are read from the GitHub API. Each arm's tooling commit, image and versions
+    come from its run context, and its start and end from the first and last
+    lines of its run log. G0 comes from `g0.json`, G1 to G3 and G5 from the gate
+    file, and G4 from the summary, or from `g4.json` when there is no summary.
+    """
+
+    schema_version: Literal["aeb-study-reproduction/v1"]
+    study_sha256: Sha256
+    protocol_sha256: Sha256
+    cohort_manifest_sha256: Sha256
+    reference: Reference
+    exploratory: StrictBool
+    preregistration_pull_request: PositiveCount
+    preregistration_commit: Commit
+    preregistration_merged_at: GitHubTime
+    arms: tuple[StudyArmRunV1, ...]
+    gates: tuple[StudyGateRecordV1, ...]
+    gate_files: tuple[StudyGateFileV1, ...]
+    g0: StudyG0V1
+
+    @model_validator(mode="after")
+    def validate_record(self) -> StudyReproductionV1:
+        """Refuse a record that contradicts itself or keeps a local detail."""
+
+        if self.exploratory != (self.reference == "arm-a"):
+            raise ValueError(
+                "exploratory must be true exactly when the reference is arm-a, got "
+                f"reference {self.reference!r} and exploratory {self.exploratory}"
+            )
+        gates = tuple(record.gate for record in self.gates)
+        if gates != STUDY_GATES:
+            raise ValueError(f"gates must be {list(STUDY_GATES)} in that order, got {list(gates)}")
+        for label, names in (
+            ("arms", [arm.arm_id for arm in self.arms]),
+            ("gate files", [gate_file.file for gate_file in self.gate_files]),
+        ):
+            if len(set(names)) != len(names):
+                raise ValueError(f"{label} appear more than once: {names}")
+        if self.g0.pilot_gates.artifacts_only_detail:
+            raise ValueError("the pilot's gate file is recorded without its artifacts_only_detail")
         return self
