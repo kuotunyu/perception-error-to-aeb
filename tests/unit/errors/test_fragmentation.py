@@ -939,3 +939,223 @@ def test_hidden_and_reacquired_first_tracks_do_not_discard_later_tracks() -> Non
         ("visible", True),
     ]
     assert [track.track_id for track in released_result] == ["released#1", "visible"]
+
+
+# --------------------------------------------------------------------------
+# The constant-velocity Kalman estimate follows the released memory rules
+# --------------------------------------------------------------------------
+
+
+def run_with_filter(
+    tracks: list[Any],
+    velocity: Any,
+    *,
+    fragment_at: tuple[int, ...] = (),
+    memories: Any = None,
+) -> tuple[list[Any], list[dict[str, Any]]]:
+    """Feed one observation per step through the channel with a Kalman filter attached.
+
+    Returns what the channel emitted and a copy of the filter state after each step.
+    """
+
+    fragmentation = load_fragmentation_module()
+    memories = {} if memories is None else memories
+    emitted: list[Any] = []
+    states: list[dict[str, Any]] = []
+    for step, track in enumerate(tracks):
+        (observed,), memories = fragmentation.update_fragmentation(
+            (track,),
+            memories,
+            rate_per_s=CERTAIN_RATE if step in fragment_at else 0.0,
+            reacquisition_delay_s=0.2,
+            key=make_key(),
+            step=step,
+            velocity=velocity,
+        )
+        emitted.append(observed)
+        states.append(dict(velocity.state))
+    return emitted, states
+
+
+def fused(
+    start: tuple[float, float],
+    reported: tuple[float, float],
+    *measured: tuple[float, float],
+) -> tuple[float, float]:
+    """The velocity a freshly initialised filter gives after fusing each position, 0.1 s apart."""
+
+    from aebrisk.observation.tracking import (
+        CV_KALMAN_PARAMETERS,
+        kalman_initialise,
+        kalman_predict_update,
+    )
+
+    velocities = []
+    for axis in (0, 1):
+        state = kalman_initialise(start[axis], reported[axis], CV_KALMAN_PARAMETERS)
+        for position in measured:
+            state = kalman_predict_update(state, position[axis], 0.1, CV_KALMAN_PARAMETERS)
+        velocities.append(state.velocity_mps)
+    return (velocities[0], velocities[1])
+
+
+def initialised(center: tuple[float, float], reported: tuple[float, float], stamp: int) -> Any:
+    from aebrisk.observation.tracking import CV_KALMAN_PARAMETERS, kalman_initialise
+
+    return (
+        kalman_initialise(center[0], reported[0], CV_KALMAN_PARAMETERS),
+        kalman_initialise(center[1], reported[1], CV_KALMAN_PARAMETERS),
+        stamp,
+    )
+
+
+def test_first_sighting_and_reacquisition_emit_the_reported_velocity() -> None:
+    """The filter starts where the released estimator falls back to the reported value.
+
+    Broken at step 1 with a 0.2 s delay, the track is released at step 3 under
+    a new identity. There, as on first sighting, the filter starts again from
+    the observed position and the reported velocity, and emits the latter.
+    """
+
+    from aebrisk.observation.tracking import CVKalmanVelocity
+
+    tracks = [
+        make_track(
+            center=(10.0 + 3.0 * step, 2.0 + 0.5 * step),
+            timestamp_us=BASE_US + step * STEP_US,
+            velocity=(7.0 + step, -1.0 - step),
+        )
+        for step in range(5)
+    ]
+
+    emitted, states = run_with_filter(tracks, CVKalmanVelocity(), fragment_at=(1,))
+
+    assert emitted[0].velocity_xy_mps == (7.0, -1.0)
+    assert states[0] == {"t-0001": initialised((10.0, 2.0), (7.0, -1.0), BASE_US)}
+    assert [track.visible for track in emitted] == [True, False, False, True, True]
+    assert emitted[3].track_id == "t-0001#1"
+    assert emitted[3].velocity_xy_mps == (10.0, -4.0)
+    assert states[3] == {"t-0001": initialised((19.0, 3.5), (10.0, -4.0), BASE_US + 3 * STEP_US)}
+    assert emitted[4].velocity_xy_mps == fused((19.0, 3.5), (10.0, -4.0), (22.0, 4.0))
+
+
+def test_nothing_is_fused_during_a_fragmentation_outage(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A broken track reaches no tracker, so its detections cannot move the filter.
+
+    The detections at the break and during the outage are far from the track's
+    path, so fusing either would move the state. The release step starts the
+    filter again rather than fusing, so the only measurements ever fused are
+    those of the step after the release.
+    """
+
+    from aebrisk.observation import tracking
+
+    measurements: list[float] = []
+    original = tracking.kalman_predict_update
+
+    def recording(axis: Any, measurement_m: float, dt_s: float, parameters: Any) -> Any:
+        measurements.append(measurement_m)
+        return original(axis, measurement_m, dt_s, parameters)
+
+    monkeypatch.setattr(tracking, "kalman_predict_update", recording)
+    centers = [(10.0, 2.0), (500.0, -300.0), (-400.0, 250.0), (11.5, 2.5), (12.0, 3.0)]
+    tracks = [
+        make_track(center=center, timestamp_us=BASE_US + step * STEP_US)
+        for step, center in enumerate(centers)
+    ]
+
+    emitted, states = run_with_filter(tracks, tracking.CVKalmanVelocity(), fragment_at=(1,))
+
+    assert measurements == [12.0, 3.0]
+    assert states[1] == states[0]
+    assert states[2] == states[0]
+    assert emitted[1].velocity_xy_mps == (5.0, 0.0)
+    assert emitted[2].velocity_xy_mps == (5.0, 0.0)
+    assert states[3] == {"t-0001": initialised((11.5, 2.5), (5.0, 0.0), BASE_US + 3 * STEP_US)}
+
+
+def test_a_detection_hidden_by_dropout_is_fused() -> None:
+    """As in the released estimator, a detection dropout hid still reaches the tracker.
+
+    The hidden detection stays hidden, carries the fused velocity, and moves the
+    filter exactly as it would had it been visible.
+    """
+
+    from aebrisk.observation.tracking import CVKalmanVelocity
+
+    centers = [(10.0, 2.0), (10.8, 1.5), (11.1, 1.7)]
+
+    def tracks(hidden_step: int) -> list[Any]:
+        return [
+            make_track(
+                center=center,
+                timestamp_us=BASE_US + step * STEP_US,
+                velocity=(5.0, -2.0),
+                visible=step != hidden_step,
+            )
+            for step, center in enumerate(centers)
+        ]
+
+    visible, _ = run_with_filter(tracks(-1), CVKalmanVelocity())
+    hidden, _ = run_with_filter(tracks(1), CVKalmanVelocity())
+
+    assert [track.visible for track in hidden] == [True, False, True]
+    assert hidden[1].velocity_xy_mps == fused((10.0, 2.0), (5.0, -2.0), (10.8, 1.5))
+    assert hidden[1].velocity_xy_mps != (5.0, -2.0)
+    assert hidden[2].velocity_xy_mps == fused((10.0, 2.0), (5.0, -2.0), (10.8, 1.5), (11.1, 1.7))
+    assert [track.velocity_xy_mps for track in hidden] == [
+        track.velocity_xy_mps for track in visible
+    ]
+    assert [track.center_xy_m for track in hidden] == centers
+
+
+@pytest.mark.parametrize("offset_us", [0, -50_000])
+def test_a_repeated_timestamp_emits_the_reported_velocity_without_fusing(offset_us: int) -> None:
+    """No elapsed time means nothing to predict over, so the released fallback applies.
+
+    The next detection is fused over the time elapsed since the last fused one.
+    """
+
+    from aebrisk.observation.tracking import CVKalmanVelocity
+
+    tracks = [
+        make_track(center=(10.0, 2.0), timestamp_us=BASE_US, velocity=(5.0, 0.0)),
+        make_track(center=(40.0, -7.0), timestamp_us=BASE_US + offset_us, velocity=(8.0, 1.0)),
+        make_track(center=(10.7, 2.1), timestamp_us=BASE_US + STEP_US, velocity=(5.0, 0.0)),
+    ]
+
+    emitted, states = run_with_filter(tracks, CVKalmanVelocity())
+
+    assert emitted[1].velocity_xy_mps == (8.0, 1.0)
+    assert states[1] == states[0]
+    assert emitted[2].velocity_xy_mps == fused((10.0, 2.0), (5.0, 0.0), (10.7, 2.1))
+
+
+@pytest.mark.parametrize("missing", ["filter state", "remembered position"])
+def test_a_track_without_filter_state_or_a_remembered_position_restarts_the_filter(
+    missing: str,
+) -> None:
+    """Where the released estimator has no history it reports the velocity; so does the filter."""
+
+    from aebrisk.observation.tracking import CVKalmanVelocity
+
+    fragmentation = load_fragmentation_module()
+    velocity = CVKalmanVelocity()
+    if missing == "filter state":
+        previous: Any = (10.0, 2.0)
+    else:
+        velocity.initialise(make_track(center=(10.0, 2.0), timestamp_us=BASE_US))
+        previous = None
+    memory = fragmentation.TrackMemory(
+        public_track_id="t-0001",
+        source_track_id="t-0001",
+        last_seen_timestamp_us=BASE_US,
+        reacquire_after_us=0,
+        previous_center_xy_m=previous,
+    )
+    track = make_track(center=(11.0, 2.5), timestamp_us=BASE_US + STEP_US, velocity=(6.0, 1.0))
+
+    emitted, states = run_with_filter([track], velocity, memories={"t-0001": memory})
+
+    assert emitted[0].velocity_xy_mps == (6.0, 1.0)
+    assert states[0] == {"t-0001": initialised((11.0, 2.5), (6.0, 1.0), BASE_US + STEP_US)}

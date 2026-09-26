@@ -222,8 +222,17 @@ def run_steps(
     )
     # Bound ONCE for the whole run. Dropout keeps its draw record and
     # fragmentation its track memory across steps, so rebuilding per step would
-    # redraw every choice and no track would ever stay lost for its delay.
-    bound = BIND_CHANNELS(error_configuration, dt_s=dt_s)
+    # redraw every choice and no track would ever stay lost for its delay. The
+    # velocity estimator is named only when it is not the released finite
+    # difference, so the released binding is unchanged.
+    if configuration.velocity_estimator == "finite-difference":
+        bound = BIND_CHANNELS(error_configuration, dt_s=dt_s)
+    else:
+        bound = BIND_CHANNELS(
+            error_configuration,
+            dt_s=dt_s,
+            velocity_estimator=configuration.velocity_estimator,
+        )
 
     history: list[WorldFrame] = []
     states: list[AEBState] = []

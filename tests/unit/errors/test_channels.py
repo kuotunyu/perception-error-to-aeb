@@ -444,3 +444,134 @@ def test_channels_bound_without_a_document_use_the_validated_committed_config(
             channels.ScenarioChannels(configuration("zero"))
     finally:
         pipeline.committed_error_config.cache_clear()
+
+
+# --------------------------------------------------------------------------
+# The velocity estimator a run names
+# --------------------------------------------------------------------------
+
+
+def observe_with(config: Any, frames: list, **options: Any) -> tuple[list, Any]:
+    """Run one bound pipeline over a history; return its observations and the bound channels."""
+
+    from aebrisk.errors.pipeline import apply_error_pipeline
+
+    channels = load_channels_module()
+    bound = channels.ScenarioChannels(config, **options)
+    observations = [
+        apply_error_pipeline(frames, index, config, key(), stages=bound.stages())
+        for index in range(len(frames))
+    ]
+    return observations, bound
+
+
+def test_the_finite_difference_default_is_unchanged() -> None:
+    """Naming the released estimator, or no estimator, gives the released observations.
+
+    The run's filter is never touched, and naming the filter does change the
+    observations, so the comparison is not between two things that cannot differ.
+    """
+
+    from aebrisk.errors import fragmentation
+
+    config = configuration("medium")
+    frames = history()
+
+    released, released_bound = observe_with(config, frames)
+    named, named_bound = observe_with(config, frames, velocity_estimator="finite-difference")
+    kalman, _ = observe_with(config, frames, velocity_estimator="cv-kalman")
+
+    assert named == released
+    assert released_bound.velocity_filter.state == {}
+    assert named_bound.velocity_filter.state == {}
+    assert kalman != released
+
+    source = frames[1].tracks
+    arguments: dict[str, Any] = {
+        "rate_per_s": 0.0,
+        "reacquisition_delay_s": 0.1,
+        "key": key(),
+        "step": 1,
+    }
+    _, memories = fragmentation.update_fragmentation(frames[0].tracks, {}, **arguments)
+    assert fragmentation.update_fragmentation(
+        source, memories, **arguments
+    ) == fragmentation.update_fragmentation(source, memories, velocity=None, **arguments)
+
+
+def test_the_filter_is_passed_on_only_for_the_kalman_estimator(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The released call to the fragmentation channel is kept exactly."""
+
+    channels = load_channels_module()
+    received: list[dict[str, Any]] = []
+    original = channels.update_fragmentation
+
+    def recording(*arguments: Any, **keywords: Any) -> Any:
+        received.append(keywords)
+        return original(*arguments, **keywords)
+
+    monkeypatch.setattr(channels, "update_fragmentation", recording)
+    source = frame(0, tracks=1).tracks
+    released = channels.ScenarioChannels(configuration("zero"))
+    kalman = channels.ScenarioChannels(configuration("zero"), velocity_estimator="cv-kalman")
+
+    released.tracking(source, key=key(), current_index=0)
+    kalman.tracking(source, key=key(), current_index=0)
+
+    assert "velocity" not in received[0]
+    assert received[1]["velocity"] is kalman.velocity_filter
+    assert {name: value for name, value in received[1].items() if name != "velocity"} == (
+        received[0]
+    )
+
+
+def test_two_runs_never_share_filter_state() -> None:
+    """Each scenario run owns its filter, as it owns its dropout and track memory.
+
+    Two runs stepped alternately give exactly what each gives alone.
+    """
+
+    from aebrisk.errors.pipeline import apply_error_pipeline
+
+    channels = load_channels_module()
+    config = configuration("zero", localization_shape="medium")
+    first_frames = history()
+    second_frames = [frame(index + 5) for index in range(12)]
+
+    first_alone, _ = observe_with(config, first_frames, velocity_estimator="cv-kalman")
+    second_alone, _ = observe_with(config, second_frames, velocity_estimator="cv-kalman")
+
+    first = channels.ScenarioChannels(config, velocity_estimator="cv-kalman")
+    second = channels.ScenarioChannels(config, velocity_estimator="cv-kalman")
+    assert first.velocity_filter is not second.velocity_filter
+    first_interleaved = []
+    second_interleaved = []
+    for index in range(12):
+        first_interleaved.append(
+            apply_error_pipeline(first_frames, index, config, key(), stages=first.stages())
+        )
+        second_interleaved.append(
+            apply_error_pipeline(second_frames, index, config, key(), stages=second.stages())
+        )
+
+    assert first_interleaved == first_alone
+    assert second_interleaved == second_alone
+    assert first_alone != second_alone
+
+
+def test_an_unknown_velocity_estimator_is_refused() -> None:
+    """A misspelt estimator must not fall back to the released one."""
+
+    from aebrisk.simulation.common_cohort import VELOCITY_ESTIMATORS
+
+    channels = load_channels_module()
+
+    for estimator in VELOCITY_ESTIMATORS:
+        channels.ScenarioChannels(configuration("zero"), velocity_estimator=estimator)
+    with pytest.raises(ValueError) as refused:
+        channels.ScenarioChannels(configuration("zero"), velocity_estimator="kalman")
+    assert str(refused.value) == (
+        f"velocity_estimator must be one of {VELOCITY_ESTIMATORS}, got 'kalman'"
+    )

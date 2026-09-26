@@ -40,11 +40,17 @@ from aebrisk.errors.pipeline import (
     parameter,
 )
 from aebrisk.observation.models import TrackState
+from aebrisk.observation.tracking import CVKalmanVelocity
 
 #: Latency chooses WHICH frame is observed, so it must run first. The same
 #: parameters in another order produce a different corruption, and no published
 #: number would say which order made it.
 STAGE_ORDER: tuple[str, ...] = ("latency", "visibility", "geometry", "tracking")
+
+#: The tracking stage's velocity estimates. The first is the released finite
+#: difference; the second is the constant-velocity Kalman filter of the policy
+#: v2 study.
+_VELOCITY_ESTIMATORS: tuple[str, ...] = ("finite-difference", "cv-kalman")
 
 
 class ScenarioChannels:
@@ -55,6 +61,7 @@ class ScenarioChannels:
         config: ErrorConfiguration,
         error_config: Optional[Mapping[str, Any]] = None,
         dt_s: float = 0.1,
+        velocity_estimator: str = "finite-difference",
     ) -> None:
         if config.imported:
             raise ValueError(
@@ -67,6 +74,13 @@ class ScenarioChannels:
             raise ValueError("dt_s must be a number")
         if not math.isfinite(dt_s) or dt_s <= 0.0:
             raise ValueError(f"dt_s must be finite and positive, got {dt_s!r}")
+        if velocity_estimator not in _VELOCITY_ESTIMATORS:
+            # Falling back to the released estimate would file a run under an
+            # estimator it did not use.
+            raise ValueError(
+                f"velocity_estimator must be one of {_VELOCITY_ESTIMATORS}, "
+                f"got {velocity_estimator!r}"
+            )
 
         self._severities = dict(config.severity_by_channel)
         self._document = committed_error_config() if error_config is None else error_config
@@ -75,6 +89,11 @@ class ScenarioChannels:
         self.dropout_state: Optional[DropoutState] = None
         self.track_memories: dict[str, TrackMemory] = {}
         self.latency_selection: Optional[LatencySelection] = None
+        # One filter per run, like the memories above. It is handed to the
+        # tracking stage only when the run names it, so the released call is
+        # unchanged and a finite-difference run never touches it.
+        self._velocity_estimator = velocity_estimator
+        self.velocity_filter = CVKalmanVelocity()
 
     def _parameter(self, channel: str, name: str) -> float:
         return parameter(channel, name, self._severities[channel], self._document)
@@ -142,6 +161,9 @@ class ScenarioChannels:
     ) -> tuple[TrackState, ...]:
         """Break tracks, hold them, return them renamed, and estimate velocity."""
 
+        estimator: dict[str, Any] = {}
+        if self._velocity_estimator != "finite-difference":
+            estimator["velocity"] = self.velocity_filter
         updated, self.track_memories = update_fragmentation(
             tracks,
             self.track_memories,
@@ -150,6 +172,7 @@ class ScenarioChannels:
             key=key,
             step=current_index,
             dt_s=self._dt_s,
+            **estimator,
         )
         return updated
 

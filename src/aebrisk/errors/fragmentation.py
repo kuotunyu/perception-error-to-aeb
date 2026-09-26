@@ -30,7 +30,7 @@ from typing import Optional
 
 from aebrisk.errors.pipeline import ErrorKey, track_field_generator
 from aebrisk.observation.models import TrackState
-from aebrisk.observation.tracking import finite_difference_velocity
+from aebrisk.observation.tracking import CVKalmanVelocity, finite_difference_velocity
 
 MICROSECONDS_PER_SECOND = 1_000_000
 
@@ -153,8 +153,16 @@ def update_fragmentation(
     key: ErrorKey,
     step: int,
     dt_s: float = 0.1,
+    velocity: Optional[CVKalmanVelocity] = None,
 ) -> tuple[tuple[TrackState, ...], dict[str, TrackMemory]]:
-    """Break tracks, hold them for the reacquisition delay, and return them renamed."""
+    """Break tracks, hold them for the reacquisition delay, and return them renamed.
+
+    Without ``velocity`` a track's velocity is the released finite difference.
+    With a constant-velocity Kalman filter it is the filter's estimate instead,
+    under the same memory rules: the filter starts from the reported velocity on
+    first sighting and on reacquisition, fuses every detection outside an
+    outage, and is not called at the break or during the outage.
+    """
 
     rate_per_s = _require_non_negative(rate_per_s, "rate_per_s")
     reacquisition_delay_s = _require_non_negative(reacquisition_delay_s, "reacquisition_delay_s")
@@ -194,6 +202,8 @@ def update_fragmentation(
             # The release frame. A new identity, no history to difference
             # against, and a covariance that admits it.
             reacquired = next_public_id(public_id)
+            if velocity is not None:
+                velocity.initialise(track)
             updated.append(
                 _emit(
                     track,
@@ -238,12 +248,18 @@ def update_fragmentation(
             )
             continue
 
+        if velocity is None:
+            estimate = _estimated_velocity(track, memory)
+        elif memory is None:
+            estimate = velocity.initialise(track)
+        else:
+            estimate = velocity.update(track, memory)
         updated.append(
             _emit(
                 track,
                 track_id=public_id,
                 visible=track.visible,
-                velocity_xy_mps=_estimated_velocity(track, memory),
+                velocity_xy_mps=estimate,
                 covariance_xy=track.covariance_xy,
             )
         )
