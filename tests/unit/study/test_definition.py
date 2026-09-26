@@ -12,6 +12,7 @@ from __future__ import annotations
 import dataclasses
 import hashlib
 import json
+import re
 from collections import Counter
 from pathlib import Path
 from typing import Any, Callable
@@ -404,6 +405,52 @@ def test_an_input_hash_that_differs_from_the_file_is_refused(tmp_path: Path, nam
         load_study(path)
 
 
+def test_an_input_hash_refusal_states_both_hashes_and_what_the_arms_would_read(
+    tmp_path: Path,
+) -> None:
+    """The whole message: the file, the hash it has, the hash recorded, and why it matters.
+
+    The committed study file loads, so the hash it records for the matrix is the
+    hash the loader computes for it.
+    """
+
+    name = "experiments/formal_v1.yaml"
+    actual = committed_document()["input_sha256"][name]
+    path = edited_study(
+        tmp_path, lambda document: document["input_sha256"].update({name: "0" * 64})
+    )
+    message = (
+        f"{name} has SHA-256 {actual}, but the study file records {'0' * 64}; "
+        "the arms would not read the inputs the study names"
+    )
+
+    with pytest.raises(ValueError, match=f"^{re.escape(message)}$"):
+        load_study(path)
+
+
+def test_an_input_named_by_an_absolute_path_is_looked_up_under_the_packaged_configs(
+    tmp_path: Path,
+) -> None:
+    """An input is named by its path under `configs/`, so no name reaches a file outside it.
+
+    The file exists and the study records its true hash, so only where the loader
+    looks decides the outcome: the name's parts are joined under the package's
+    configs, where no such file exists.
+    """
+
+    outside = tmp_path / "policy_v3.yaml"
+    outside.write_text("stage: outside\n", encoding="utf-8")
+    name = outside.as_posix()
+    recorded = hashlib.sha256(outside.read_bytes()).hexdigest()
+    path = edited_study(
+        tmp_path, lambda document: document["input_sha256"].update({name: recorded})
+    )
+
+    assert outside.is_absolute()
+    with pytest.raises(FileNotFoundError):
+        load_study(path)
+
+
 @pytest.mark.parametrize(
     ("factor", "value"),
     [("aeb_policy", "v3"), ("rng_scheme", "per-channel"), ("velocity_estimator", "ukf")],
@@ -496,6 +543,22 @@ def test_a_token_with_two_accepted_rows_is_refused(tmp_path: Path) -> None:
     eligibility.write_text(json.dumps(document), encoding="utf-8")
 
     with pytest.raises(ValueError, match=f"token '{token}' has 2 accepted rows"):
+        token_log_map(eligibility, MANIFEST)
+
+
+def test_a_token_refusal_names_the_file_and_that_exactly_one_row_is_required(
+    tmp_path: Path,
+) -> None:
+    token = _first_cohort_token()
+    document = _eligibility_rows()
+    for row in document["examined"]:
+        if row["scenario_token"] == token:
+            row["accepted"] = False
+    eligibility = tmp_path / "eligibility.json"
+    eligibility.write_text(json.dumps(document), encoding="utf-8")
+    message = f"token {token!r} has 0 accepted rows in eligibility.json; exactly one is required"
+
+    with pytest.raises(ValueError, match=f"^{re.escape(message)}$"):
         token_log_map(eligibility, MANIFEST)
 
 
