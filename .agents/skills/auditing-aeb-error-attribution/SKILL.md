@@ -34,8 +34,9 @@ Write each Markdown result line or result-table cell in this shape:
    Their units differ, so they do not form one sum, comparison, ranking, or predictor.
 4. If the line states `oracle_aeb` collisions, include the exact
    `contacts_not_at_fault` count and both claim markers on that line.
-5. Use only `common_valid_tokens` as the cohort denominator. Read it from
-   `shapley.json`; do not substitute runs, replicates, or the frozen input cohort.
+5. Use only `common_valid_tokens` as the cohort denominator. Read it from the
+   registry's evidence that carries `common_valid_tokens`; do not substitute
+   runs, replicates, or the frozen input cohort.
 
 ```markdown
 Dropout's Shapley `collision_indicator` = -0.0021802325581395357. <!-- claim: p3.shapley.collision_indicator-values-dropout -->

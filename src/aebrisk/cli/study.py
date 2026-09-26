@@ -23,6 +23,9 @@ analysed. No arm writes under the released records,
 and each log the cohort references. `study verify` runs the gates over the arms
 of one attempt (`aebrisk.study.gates`). Each writes a gate file, and exits 1
 when a check the mode requires fails.
+
+`study claims` builds the claims registry of the study or of the addendum from
+that part's published evidence (`aebrisk.study.claims`).
 """
 
 # Like `simulate.py`, this module deliberately does NOT use
@@ -42,6 +45,7 @@ import numpy
 import typer
 import yaml
 
+from aebrisk.analysis.claims import ClaimsRegistryV1
 from aebrisk.artifacts.study_documents import Reference
 from aebrisk.cli.simulate import (
     COMMIT_VAR,
@@ -56,6 +60,7 @@ from aebrisk.cli.simulate import (
 from aebrisk.cohort.manifest import membership_sha256
 from aebrisk.committed_config import read_committed_config
 from aebrisk.observation.tracking import CV_KALMAN_PARAMETERS
+from aebrisk.study.claims import build_addendum_claims, build_study_claims
 from aebrisk.study.definition import (
     StudyRunContext,
     arm_configurations,
@@ -76,6 +81,12 @@ from aebrisk.study.gates import (
 
 #: Where no arm may write: the released records and the published documentation.
 FROZEN_OUTPUTS: tuple[str, ...] = ("artifacts/formal/nuplan_aeb_v2", "docs")
+
+#: The registry builder of each part: the policy v2 study and the post-hoc addendum.
+CLAIMS_BUILDERS: dict[str, Callable[[Path, Path], ClaimsRegistryV1]] = {
+    "study": build_study_claims,
+    "addendum": build_addendum_claims,
+}
 
 app = typer.Typer(
     add_completion=False,
@@ -345,3 +356,31 @@ def verify_command(
     typer.echo(f"the gate file is at {output}")
     if not required_gates_passed(results, mode):
         raise typer.Exit(code=1)
+
+
+@app.command("claims")
+def claims_command(
+    part: Annotated[str, typer.Option("--part", help="study or addendum.")],
+    evidence_dir: Annotated[
+        Path, typer.Option("--evidence-dir", help="The part's published evidence directory.")
+    ],
+    output: Annotated[Path, typer.Option("--output", help="Where the claims registry is written.")],
+) -> None:
+    """Build a part's claims registry from its published evidence, from the repository root."""
+
+    if part not in CLAIMS_BUILDERS:
+        _refuse(f"--part is study or addendum, got {part!r}")
+    try:
+        registry = CLAIMS_BUILDERS[part](evidence_dir, Path.cwd())
+    except (OSError, ValueError) as error:
+        _refuse(f"the {part} claims cannot be built: {error}")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with output.open("w", encoding="utf-8", newline="\n") as handle:
+        yaml.safe_dump(
+            registry.model_dump(mode="json"),
+            handle,
+            allow_unicode=True,
+            sort_keys=False,
+            width=100,
+        )
+    typer.echo(f"built {len(registry.claims)} claims in {output}")

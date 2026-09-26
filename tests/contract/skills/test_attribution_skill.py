@@ -1055,3 +1055,319 @@ def test_the_thin_entry_point_exposes_every_input_option() -> None:
     assert result.returncode == 0, result.stderr
     for option in ("--claims", "--repo-root", "--proposal", "--document"):
         assert option in result.stdout
+
+
+# --------------------------------------------------------------------------
+# The registries of the policy v2 study and of the post-hoc addendum
+# --------------------------------------------------------------------------
+
+STUDY_PREFIX = "p3.study.policy-v2."
+ADDENDUM_PREFIX = "p3.posthoc.v1-addendum."
+ADDENDUM_PATH = "docs/posthoc/nuplan_aeb_v2-addendum/evidence/attribution-addendum-evidence.json"
+POLICY_PATH = "docs/studies/aeb-policy-v2/evidence/policy-v2-evidence.json"
+GATES_PATH = "docs/studies/aeb-policy-v2/evidence/gates.json"
+ATTEMPT_PATH = "docs/studies/aeb-policy-v2/evidence/gates-attempt-2.json"
+ADDENDUM_SHAPLEY = _claim(
+    f"{ADDENDUM_PREFIX}shapley.collision_indicator.dropout.estimate",
+    ADDENDUM_PATH,
+    "/games/1/shapley_values/dropout/estimate",
+    "Shapley value of dropout in the collision_indicator game: estimate is -0.0022.",
+)
+POLICY_ESTIMATE = _claim(
+    f"{STUDY_PREFIX}hypotheses.h1.contrast-estimate",
+    POLICY_PATH,
+    "/hypotheses/0/contrast/estimate",
+    "H1: contrast estimate is -0.0022.",
+)
+GATE_COUNT = _claim(
+    f"{STUDY_PREFIX}gates.g2.dropout-medium",
+    GATES_PATH,
+    "/gates/0/counts/dropout-medium",
+    "G2 counted 3 for dropout-medium.",
+)
+
+
+def _evidence(root: Path, relative: str, **fields: Any) -> None:
+    """Write one evidence document under the workspace's protocol and cohort."""
+
+    path = root / relative
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {"protocol_sha256": PROTOCOL_HASH, "cohort_manifest_sha256": COHORT_HASH, **fields}
+        ),
+        encoding="utf-8",
+    )
+
+
+def _registry(workspace: dict[str, Path], claims: list[dict[str, str]]) -> None:
+    """Replace the workspace's registry with `claims`, and write the evidence they cite."""
+
+    root = workspace["root"]
+    _evidence(
+        root,
+        ADDENDUM_PATH,
+        common_valid_tokens=344,
+        games=[{}, {"shapley_values": {"dropout": {"estimate": -0.0022}}}],
+    )
+    _evidence(
+        root,
+        POLICY_PATH,
+        common_valid_tokens=344,
+        hypotheses=[{"contrast": {"estimate": -0.0022}}],
+    )
+    gate_file = {"gates": [{"gate": "G2", "passed": False, "counts": {"dropout-medium": 3}}]}
+    _evidence(root, GATES_PATH, **gate_file)
+    _evidence(root, ATTEMPT_PATH, **gate_file)
+    workspace["claims"].write_text(
+        yaml.safe_dump(
+            {
+                "allowed_evidence_types": list(ALLOWED_EVIDENCE_TYPES),
+                "claim_required_fields": list(CLAIM_REQUIRED_FIELDS),
+                "allowed_statuses": list(ALLOWED_STATUSES),
+                "claims": claims,
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+
+
+def _renamed(claim: dict[str, str], claim_id: str, **fields: str) -> dict[str, str]:
+    return {**claim, "claim_id": claim_id, **fields}
+
+
+def test_a_registry_without_shapley_json_reads_its_cohort_from_its_other_evidence(
+    workspace: dict[str, Path],
+) -> None:
+    """A registry that cites no Shapley value still resolves its common-valid cohort."""
+
+    _registry(
+        workspace,
+        [
+            _claim(
+                "p3.evaluation.common_valid_tokens",
+                EVALUATION_PATH,
+                "/common_valid_tokens",
+                "Evaluation common_valid_tokens is 344.",
+            ),
+            *CLAIMS[3:],
+        ],
+    )
+    document = _write(
+        workspace["root"],
+        "README.md",
+        "The common-valid cohort has `common_valid_tokens` = 344. "
+        "<!-- claim: p3.evaluation.common_valid_tokens -->\n"
+        "Oracle AEB recorded `collisions` = 39 <!-- claim: p3.baseline.collisions.oracle_aeb --> "
+        "and `contacts_not_at_fault` = 1095 "
+        "<!-- claim: p3.baseline.contacts_not_at_fault.oracle_aeb -->\n",
+    )
+
+    violations, status = _validate(workspace, documents=(document,))
+
+    assert violations == ()
+    assert status["common_valid_tokens"] == 344
+
+
+def test_a_registry_whose_evidence_states_no_cohort_flags_any_stated_cohort(
+    workspace: dict[str, Path],
+) -> None:
+    """A gate-only registry has no cohort, so a page bound to it may state none."""
+
+    _registry(workspace, [GATE_COUNT])
+    bound = _write(
+        workspace["root"],
+        "bound.md",
+        f"G2 found `dropout_medium` = 3 <!-- claim: {GATE_COUNT['claim_id']} --> differing.\n",
+    )
+    stated = _write(workspace["root"], "stated.md", "The cohort of 344 tokens was not analysed.\n")
+
+    violations, status = _validate(workspace, documents=(bound,))
+
+    assert violations == ()
+    assert status["common_valid_tokens"] is None
+
+    violations, _ = _validate(workspace, documents=(stated,))
+
+    assert (
+        "stated.md:1: stated cohort 344, but no evidence of this registry records a "
+        "common-valid cohort"
+    ) in violations
+
+
+def test_registry_evidence_that_states_two_cohorts_stops_the_audit(
+    workspace: dict[str, Path], capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Two artifacts that disagree on the cohort leave no denominator to check against."""
+
+    evaluation_path = workspace["root"] / EVALUATION_PATH
+    evaluation = json.loads(evaluation_path.read_text(encoding="utf-8"))
+    evaluation["common_valid_tokens"] = 343
+    evaluation_path.write_text(json.dumps(evaluation), encoding="utf-8")
+    document = _write(workspace["root"], "README.md", _clean_markdown())
+
+    with pytest.raises(ValueError, match="different common-valid cohorts"):
+        _validate(workspace, documents=(document,))
+
+    exit_code = _module().main(
+        [
+            "--claims",
+            str(workspace["claims"]),
+            "--repo-root",
+            str(workspace["root"]),
+            "--document",
+            str(document),
+        ]
+    )
+
+    assert exit_code == 2
+    assert "validation could not run" in capsys.readouterr().err
+
+
+def test_a_shapley_number_may_trace_to_the_addendum_evidence_in_the_addendum_registry_only(
+    workspace: dict[str, Path],
+) -> None:
+    """The addendum's own Shapley values are a source in its registry, and in no other."""
+
+    line = "Dropout's Shapley `estimate` = -0.0022 <!-- claim: {} -->\n"
+    _registry(workspace, [ADDENDUM_SHAPLEY])
+    document = _write(workspace["root"], "results.md", line.format(ADDENDUM_SHAPLEY["claim_id"]))
+
+    violations, status = _validate(workspace, documents=(document,))
+
+    assert violations == ()
+    assert status["common_valid_tokens"] == 344
+
+    released_id = "p3.addendum-copy.shapley.collision_indicator.dropout"
+    _registry(workspace, [*CLAIMS, _renamed(ADDENDUM_SHAPLEY, released_id)])
+    document = _write(workspace["root"], "results.md", line.format(released_id))
+
+    violations, _ = _validate(workspace, documents=(document,))
+
+    assert violations == ("results.md:1: every Shapley number must trace to shapley.json",)
+
+
+def test_a_shapley_number_traced_to_the_policy_v2_evidence_fails(
+    workspace: dict[str, Path],
+) -> None:
+    """The study's evidence holds no Shapley value, so the released rule applies unchanged."""
+
+    _registry(workspace, [POLICY_ESTIMATE])
+    document = _write(
+        workspace["root"],
+        "results.md",
+        f"The Shapley `estimate` = -0.0022 <!-- claim: {POLICY_ESTIMATE['claim_id']} -->\n",
+    )
+
+    violations, _ = _validate(workspace, documents=(document,))
+
+    assert violations == ("results.md:1: every Shapley number must trace to shapley.json",)
+
+
+def test_the_addendum_registry_names_both_shapley_sources(workspace: dict[str, Path]) -> None:
+    """In the addendum's registry a Shapley line may cite either source, and the rule names both."""
+
+    oracle = _renamed(CLAIMS[3], f"{ADDENDUM_PREFIX}baseline.collisions.oracle_aeb")
+    contact = _renamed(CLAIMS[4], f"{ADDENDUM_PREFIX}baseline.contacts_not_at_fault.oracle_aeb")
+    _registry(workspace, [ADDENDUM_SHAPLEY, oracle, contact])
+    document = _write(
+        workspace["root"],
+        "results.md",
+        f"Unlike its Shapley values, oracle AEB recorded `collisions` = 39 "
+        f"<!-- claim: {oracle['claim_id']} --> and `contacts_not_at_fault` = 1095 "
+        f"<!-- claim: {contact['claim_id']} -->\n",
+    )
+
+    violations, _ = _validate(workspace, documents=(document,))
+
+    assert violations == (
+        "results.md:1: every Shapley number must trace to shapley.json or "
+        "attribution-addendum-evidence.json",
+    )
+
+
+def test_duplicate_claim_ids_are_refused(workspace: dict[str, Path]) -> None:
+    """One id for two claims would let a marker cite whichever the registry lists last."""
+
+    _registry(workspace, [*CLAIMS, CLAIMS[0]])
+    document = _write(workspace["root"], "README.md", _clean_markdown())
+
+    violations, _ = _validate(workspace, documents=(document,))
+
+    assert violations == ("registry: claim id p3.shapley.common_valid_tokens appears 2 times",)
+
+
+@pytest.mark.parametrize(
+    ("claims", "message"),
+    [
+        (
+            [POLICY_ESTIMATE, ADDENDUM_SHAPLEY],
+            "registry: claim ids begin with both p3.study.policy-v2. and "
+            "p3.posthoc.v1-addendum.; the study and the addendum each keep their own registry",
+        ),
+        (
+            [ADDENDUM_SHAPLEY, CLAIMS[0]],
+            "registry: every claim id of a registry that uses p3.posthoc.v1-addendum. must "
+            "begin with it; ids that do not: 1, such as p3.shapley.common_valid_tokens",
+        ),
+    ],
+    ids=["the-other-part", "the-released-registry"],
+)
+def test_ids_with_another_prefix_than_the_registrys_part_are_refused(
+    workspace: dict[str, Path], claims: list[dict[str, str]], message: str
+) -> None:
+    """A part's registry holds only its own ids; a mixed one keeps the released Shapley rule."""
+
+    _registry(workspace, claims)
+    document = _write(
+        workspace["root"],
+        "results.md",
+        f"Dropout's Shapley `estimate` = -0.0022 <!-- claim: {ADDENDUM_SHAPLEY['claim_id']} -->\n",
+    )
+
+    violations, _ = _validate(workspace, documents=(document,))
+
+    assert violations == (
+        message,
+        "results.md:1: every Shapley number must trace to shapley.json",
+    )
+
+
+def test_a_gate_count_binds_under_its_key_spelled_with_underscores(
+    workspace: dict[str, Path],
+) -> None:
+    """A cell such as `dropout-medium` is no metric key, so its count binds as `dropout_medium`."""
+
+    earlier = _renamed(
+        GATE_COUNT, f"{STUDY_PREFIX}attempt-2.g2.dropout-medium", artifact_path=ATTEMPT_PATH
+    )
+    _registry(workspace, [GATE_COUNT, earlier])
+    bound = _write(
+        workspace["root"],
+        "bound.md",
+        f"G2 found `dropout_medium` = 3 <!-- claim: {GATE_COUNT['claim_id']} --> and before "
+        f"`dropout_medium` = 3 <!-- claim: {earlier['claim_id']} -->\n",
+    )
+    raw = _write(
+        workspace["root"],
+        "raw.md",
+        f"G2 found `dropout-medium` = 3 <!-- claim: {GATE_COUNT['claim_id']} -->\n",
+    )
+
+    violations, _ = _validate(workspace, documents=(bound,))
+
+    assert violations == ()
+
+    violations, _ = _validate(workspace, documents=(raw,))
+
+    assert any("unsupported result syntax" in violation for violation in violations)
+
+
+def test_the_skill_reads_the_cohort_from_the_registrys_evidence() -> None:
+    """Step 5 names every registry's evidence, not only the released Shapley values."""
+
+    text = " ".join(SKILL_DOC.read_text(encoding="utf-8").split())
+
+    assert "Read it from the registry's evidence that carries `common_valid_tokens`" in text
+    assert "Read it from `shapley.json`" not in text
