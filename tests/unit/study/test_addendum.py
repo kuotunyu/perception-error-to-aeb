@@ -1207,3 +1207,160 @@ def test_the_document_refuses_more_events_than_tokens(dumped: dict[str, Any]) ->
 
     with pytest.raises(ValidationError, match="events cannot exceed tokens"):
         AttributionAddendumV1.model_validate(changed(dumped, replace))
+
+
+# --------------------------------------------------------------------------
+# Checks that run the analysis themselves
+# --------------------------------------------------------------------------
+
+
+def test_every_summary_check_holds_on_a_summary_computed_inside_the_test(
+    release: Release,
+) -> None:
+    """The module's `summary` is computed once, inside the first test that asks for it, so
+    the checks that read it afterwards never run the analysis themselves. This test runs
+    the analysis and holds its own summary to every one of those checks."""
+
+    summary = release.analyse()
+    dumped = summary.model_dump(mode="json")
+
+    test_the_summary_records_the_reproduction_gate_and_the_hash_list_sha256(
+        release, release.gate(), summary
+    )
+    test_the_summary_round_trips_through_its_model(summary)
+    test_the_summary_has_no_p_value_or_classification_field(dumped)
+    test_the_collision_game_sentence_is_fixed_and_follows_the_duration_game(dumped)
+    for game in ("intervention_duration_s", "collision_indicator"):
+        test_the_eight_shapley_values_are_the_released_values_with_95_percent_intervals(
+            release, summary, game
+        )
+        test_the_localization_shape_differences_have_simultaneous_and_95_percent_intervals(
+            release, summary, game
+        )
+        test_the_other_three_pairs_per_game_have_95_percent_intervals(release, summary, game)
+    test_every_interval_is_drawn_from_one_family_stratified_log_cluster_bootstrap(release, summary)
+    test_the_configuration_contrasts_are_the_four_pairs_on_three_outcomes(summary)
+    test_a_configuration_contrast_is_a_difference_of_ratios_of_sums(summary)
+    test_avoided_and_induced_collisions_are_token_counts_with_clopper_pearson_intervals(summary)
+    test_brake_activations_per_hour_cover_every_aeb_configuration(summary)
+    test_zero_event_configurations_get_clopper_pearson_intervals_overall_and_per_family(summary)
+    test_matched_onset_delays_are_described_for_coalition_none_and_the_latency_cells(summary)
+    test_first_stop_distances_and_ego_speeds_at_counted_collisions(summary)
+    test_the_summary_labels_what_was_computed_before_the_plan(summary)
+
+
+def test_a_gate_that_recomputes_nothing_is_the_reproduction_gate_and_did_not_pass(
+    release: Release,
+) -> None:
+    result = release.gate(expected_hashes_sha256="0" * 64)
+
+    assert result.gate == "reproduction"
+    assert result.passed is False
+
+
+@pytest.mark.parametrize(
+    ("change", "message"),
+    [
+        (
+            {"protocol_sha256": "a" * 64},
+            "formal documents do not match the manifest protocol hash",
+        ),
+        (
+            {"split": "development"},
+            "completion marker cohort hash does not match the manifest",
+        ),
+    ],
+)
+def test_the_reproduction_gate_holds_the_records_to_the_manifest_it_is_given(
+    release: Release, tmp_path: Path, change: dict[str, str], message: str
+) -> None:
+    """Same tokens in the same families, but another protocol or split: not the cohort the
+    records were run on, and the gate refuses them."""
+
+    other = write_json(tmp_path / "manifest.json", {**manifest_document("evaluation"), **change})
+
+    with pytest.raises(ValueError, match=f"^{re.escape(message)}$"):
+        release.gate(manifest=other)
+
+
+def test_the_gate_detail_names_the_shapley_json_path_of_each_differing_value(
+    release: Release, tmp_path: Path
+) -> None:
+    copy = copied_evidence(release, tmp_path)
+    metrics = copy.evidence("shapley.json")["metrics"]
+    value = metrics["collision_indicator"]["values"]["localization_shape"]
+    residual = metrics["intervention_duration_s"]["efficiency_max_abs_residual"]
+
+    def move(document: dict[str, Any]) -> None:
+        moved = document["metrics"]
+        moved["collision_indicator"]["values"]["localization_shape"] = one_ulp_up(value)
+        moved["intervention_duration_s"]["efficiency_max_abs_residual"] = one_ulp_up(residual)
+
+    rewrite(copy, "shapley.json", move)
+
+    assert copy.gate().local_detail == (
+        f"shapley.json /metrics/collision_indicator/values/localization_shape is "
+        f"{one_ulp_up(value)!r}, and the records give {value!r}",
+        f"shapley.json /metrics/intervention_duration_s/efficiency_max_abs_residual is "
+        f"{one_ulp_up(residual)!r}, and the records give {residual!r}",
+    )
+
+
+def test_the_addendum_refuses_a_failed_gate_in_these_words(release: Release) -> None:
+    message = (
+        "the reproduction gate failed with counts {'released_hash_list_refused': 1}; the "
+        "addendum computes nothing from records or evidence it cannot reproduce"
+    )
+
+    with pytest.raises(ValueError, match=f"^{re.escape(message)}$"):
+        release.analyse(expected_hashes_sha256="0" * 64)
+
+
+def test_avoided_and_induced_shares_between_token_counts_are_refused_in_these_words(
+    tmp_path: Path,
+) -> None:
+    """lead-b collides in every oracle replicate and only in the first no_aeb one, so two of
+    its three replicates are induced collisions."""
+
+    variant = build_release(tmp_path, nondeterministic=True)
+    message = (
+        f"a token's induced collisions differ across replicates ({2 / 3}); the addendum "
+        "counts them as tokens because no_aeb and oracle_aeb are deterministic"
+    )
+
+    with pytest.raises(ValueError, match=f"^{re.escape(message)}$"):
+        variant.analyse()
+
+
+def test_a_replicate_counted_in_two_collision_columns_is_one_collided_replicate(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A record may count a vehicle and an object at once, and the released evaluation
+    counts that replicate as collided. Here lead-a's no_aeb collisions are counted in both
+    columns: the oracle still avoids them, and each still has an ego speed."""
+
+    one_column = record
+
+    def two_columns(
+        cell: str, token: str, replicate: int, nondeterministic: bool
+    ) -> AEBScenarioResultV2:
+        result = one_column(cell, token, replicate, nondeterministic)
+        if cell == "no_aeb" and token == "lead-a":
+            return result.model_copy(update={"collision_object": 1})
+        return result
+
+    monkeypatch.setitem(globals(), "record", two_columns)
+
+    variant = build_release(tmp_path).analyse()
+    rows = {item.configuration_id: item for item in variant.stops_and_collision_speeds}
+
+    assert (variant.oracle_collisions.avoided.events, variant.oracle_collisions.induced.events) == (
+        2,
+        1,
+    )
+    assert rows["no_aeb"].ego_speed_at_collision_mps.model_dump() == {
+        "count": 9,
+        "median": 4.0,
+        "lower_quartile": 3.0,
+        "upper_quartile": 5.0,
+    }
