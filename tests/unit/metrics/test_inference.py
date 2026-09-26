@@ -202,6 +202,35 @@ def test_impossible_sign_flip_settings_are_refused(
         inference.sign_flip_p_value([1, 1], **arguments)
 
 
+@pytest.mark.parametrize("differences", [[-(2**63)], [2**62, 2**62], [2**62, -(2**62)]])
+def test_differences_whose_sum_could_overflow_are_refused(differences: list[int]) -> None:
+    """The sums run in int64, so an input whose absolute total exceeds it is refused.
+
+    Without the refusal these inputs wrapped silently: [-2**63] and [2**62, 2**62]
+    gave p = 0.0, where the exact p is 1.0 and 0.5.
+    """
+
+    inference = load_inference_module()
+
+    with pytest.raises(
+        ValueError, match=r"^the absolute log differences must sum to at most 2\*\*63 - 1, got "
+    ):
+        inference.sign_flip_p_value(differences)
+
+
+@pytest.mark.parametrize(
+    ("differences", "expected"), [([2**63 - 1], 1.0), ([2**62, 2**62 - 1], 0.5)]
+)
+def test_differences_at_the_int64_limit_give_the_exact_p(
+    differences: list[int], expected: float
+) -> None:
+    """At an absolute total of 2**63 - 1 every sum still fits, so p is exact."""
+
+    inference = load_inference_module()
+
+    assert inference.sign_flip_p_value(differences) == expected
+
+
 # --------------------------------------------------------------------------
 # Holm
 # --------------------------------------------------------------------------

@@ -68,7 +68,8 @@ def sign_flip_p_value(
     patterns whose |sum| is at least the observed |sum|; logs with no difference
     change no sum. Up to ``enumerate_up_to`` logs every pattern is enumerated.
     Above it, ``random_flips`` patterns are drawn from ``seed`` and
-    p = (1 + count) / (1 + random_flips). With m = 0, p = 1.
+    p = (1 + count) / (1 + random_flips). With m = 0, p = 1. The absolute
+    differences must sum to at most 2**63 - 1, so every total is exact in int64.
     """
 
     _check_count("enumerate_up_to", enumerate_up_to, 0)
@@ -78,6 +79,13 @@ def sign_flip_p_value(
             raise ValueError(
                 f"log differences must be integers (thirds of a collision), got {value!r}"
             )
+    # Every total below is a signed sum of these values, so this bound keeps
+    # the int64 arithmetic exact instead of letting it wrap.
+    absolute_total = sum(abs(int(value)) for value in log_differences_in_thirds)
+    if absolute_total > np.iinfo(np.int64).max:
+        raise ValueError(
+            f"the absolute log differences must sum to at most 2**63 - 1, got {absolute_total}"
+        )
 
     differences = np.array(
         [int(value) for value in log_differences_in_thirds if value != 0], dtype=np.int64
