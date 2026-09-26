@@ -208,6 +208,94 @@ The experiment card's
 [Reading the braking numbers](experiment-card.md#reading-the-braking-numbers)
 explains how these choices show up in the released results.
 
+## Study-only options
+
+The pre-registered policy v2 study
+([analysis plan](studies/aeb-policy-v2/analysis-plan.md)) runs this simulation
+with three factors the release does not use. Each is a field of
+`ExperimentConfiguration` (`simulation/common_cohort.py`) whose default is the
+released behaviour: `aeb_policy="v1"`, `rng_scheme="dropout-keyed"` and
+`velocity_estimator="finite-difference"`. No configuration of the formal matrix
+sets any of them, so `aeb-risk simulate` and every released record are
+unchanged, and the study's arm A, which sets none of them, must reproduce the
+released records byte for byte. Only `aeb-risk study simulate` sets them, from
+the arm's entry in `configs/experiments/aeb_policy_v2_study.yaml`, and each
+arm's `run_context.json` names the three values it ran. Everything in the
+section above holds under every option, except where this section says
+otherwise.
+
+**Policy v2 selects only bodies on a collision course.**
+`configs/aeb/policy_v2.yaml` copies every value of `policy_v1.yaml` and adds a
+`target_selection` block, and the loader refuses any other block
+(`aeb/state_machine.py`). Each step, every visible track is still assessed by
+the unchanged `assess_threat`, and `min_ttc_s` is still taken over all of them.
+`collision_course_candidates` (`aeb/threat.py`) then keeps a track as a
+candidate only when both of these hold:
+
+- the assessment predicts an overlap: the ego is rolled out along its current
+  heading and the track at its observed velocity, at constant velocity over
+  4.0 s in 0.1 s samples with a 0.5 m margin, the assessment's own defaults;
+- the body is not behind: the signed separation of the two centres along the
+  ego's heading is at least zero, zero included.
+
+The AEB selects among the candidates only, with the selection rule, thresholds,
+stages, warning dwell and release rule of v1. With no candidate it sees no
+threat, and its command names no selected track; no record carries that field.
+`tests/unit/aeb/test_collision_course_gate.py` pins the gate on the cases of
+the target-selection limitation above, and
+`tests/unit/aeb/test_policy_v2_behaviour.py` pins what follows in the closed
+loop: v2 does not brake for a parked car beside the path or for a slower car
+behind, and an off-path body no longer masks an in-path one.
+
+The gate leaks through the velocity. The rollout uses the tracked velocity,
+which outside the oracle is the finite difference above, so under localization
+error the noise on a parked car's velocity can predict an overlap on some
+steps. A car parked 20 m ahead of an ego at 15 m/s and 3.5 m to its side, but
+observed moving toward the path at 2.0 m/s, is a candidate with a time to
+collision of 1.0 s, below the full-braking threshold; the gate's test file pins
+this case. Section 4.2 of the analysis plan estimates how often such steps
+occur, and explains why one leaking step in several can hold the AEB in
+braking.
+
+**Channel-independent keying.** `error_key_for` (`errors/pipeline.py`) builds
+the root error key of a run, and both the step loop and `aeb-risk replay` build
+theirs with it. Under `dropout-keyed`, the released scheme above, the key
+carries the configuration's dropout severity. Under `channel-independent` it
+carries severity zero in every configuration, so each channel's draws depend
+only on the token, the replicate, the track, the step and the channel's own
+field labels, and never on any severity. Three consequences follow. In every
+configuration whose dropout severity is zero, the two schemes build the same key
+and draw the same noise. The tracks dropout hides become nested across its
+severities. And the full coalition shares its localization/shape and
+track-instability draws with the single-channel configurations of those
+channels. `tests/unit/errors/test_error_key_schemes.py` pins the key equality,
+the independence from every severity and the nesting.
+
+**Constant-velocity Kalman velocity.** Under `cv-kalman`, `CVKalmanVelocity`
+(`observation/tracking.py`) replaces the finite difference with one
+constant-velocity Kalman filter per source track and per axis. Its process
+noise is 3.0 m/s², its measurement noise 0.5 m and its initial velocity
+standard deviation 1.0 m/s (`CV_KALMAN_PARAMETERS`); the study file records the
+same values, and each arm's run context names them. The fragmentation channel
+calls it under the released memory rules:
+
+- on a track's first observation, and on its first after reacquisition, the
+  filter starts from the observed position and the reported velocity, and emits
+  the reported velocity, as the finite difference does;
+- every later detection outside a fragmentation outage is fused, including one
+  that dropout hid from the AEB; nothing is fused during an outage;
+- a detection with no elapsed source time since the last fused one is not
+  fused, and its reported velocity is emitted;
+- the elapsed time is measured from the last fused detection, where the finite
+  difference measures from the last detection seen, so the two differ in this
+  only after an out-of-order timestamp.
+
+Only the velocity changes: the position, heading and size passed to the AEB
+stay the observed ones. Each run owns its filters, so no state passes from one
+run to another. The filter trails a decelerating body, a cost section 4.4 of
+the analysis plan states. `aeb-risk replay` rebuilds released configurations
+only, and all of them use the finite difference.
+
 ## Measured simulation exposure
 
 New runs emit `aeb-scenario-result/v2`. Its required `simulated_duration_s` is

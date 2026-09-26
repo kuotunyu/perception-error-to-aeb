@@ -1,0 +1,16 @@
+# The limits the v1.0.0 formal run ran under, for the arms of the policy v2
+# study: `docker compose -f compose.yaml -f compose.formal-cpu.yaml run ... dev`.
+# Arm A reruns released cells and must reproduce their records byte for byte, so
+# every arm runs with the same CPU and memory limits, unbuffered output and
+# single-threaded numerical libraries as that run.
+services:
+  dev:
+    cpus: 8.0
+    mem_limit: 12g
+    memswap_limit: 12g
+    environment:
+      PYTHONUNBUFFERED: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      NUMEXPR_NUM_THREADS: "1"
