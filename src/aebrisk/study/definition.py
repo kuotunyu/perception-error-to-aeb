@@ -11,6 +11,9 @@ The loader refuses a file that describes a study the plan does not: a cell the
 released matrix does not have, an arm without its own oracle, two arms under
 one name, replicates other than the released three, and an input whose bytes
 are not the ones recorded.
+
+`StudyRunContext` is what each arm's run records about itself, and what the
+gates read back.
 """
 
 from __future__ import annotations
@@ -298,3 +301,32 @@ def drive_of(log_name: str) -> str:
     if match is None:
         raise ValueError(f"{log_name!r} is not a nuPlan log name")
     return match.group(1)
+
+
+@dataclasses.dataclass(frozen=True)
+class StudyRunContext:
+    """Everything that identifies one arm's run, written beside its documents.
+
+    The first five fields are those of the released run context, with the arm
+    named in `configuration_id` as ``study:<arm id>``. The others name the study
+    file, the arm and its three factors, the committed policy and error
+    configuration the arm read, and the Python and numpy versions inside the
+    container, so that each gate can check an arm from its own directory. Like
+    the released run context, it carries no schema version.
+    """
+
+    configuration_id: str
+    protocol_sha256: str
+    cohort_sha256: str
+    container_digest: str
+    commit: str
+    study_sha256: str
+    arm_id: str
+    aeb_policy: str
+    policy_sha256: str
+    rng_scheme: str
+    velocity_estimator: str
+    velocity_parameters: str
+    error_config_sha256: str
+    python_version: str
+    numpy_version: str

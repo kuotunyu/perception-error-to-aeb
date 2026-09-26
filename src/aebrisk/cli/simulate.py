@@ -26,6 +26,11 @@ are produced twice.
 `--dry-run` stops after the run context. It is what an operator uses to check
 the arguments, the mount and the manifest in a second, rather than by starting a
 job that takes hours to reach its first refusal.
+
+`study simulate` runs one arm of the policy v2 study through the same two
+steps: `read_run_inputs` checks and reads the inputs, and `execute_matrix`
+writes the run context, runs the cells, and writes the documents and the
+completion marker.
 """
 
 # This module deliberately does NOT use `from __future__ import annotations`.
@@ -38,17 +43,18 @@ job that takes hours to reach its first refusal.
 import hashlib
 import json
 import os
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated, Optional, Union
 
 import typer
 
 from aebrisk.artifacts.envelope import canonical_json_bytes
 from aebrisk.attribution.factorial import formal_configurations
-from aebrisk.cohort.manifest import load_manifest, membership_sha256
+from aebrisk.cohort.manifest import CohortManifestV1, load_manifest, membership_sha256
 from aebrisk.nuplan_adapter.database import resolve_installation
+from aebrisk.simulation.common_cohort import ExperimentConfiguration
 from aebrisk.simulation.orchestrate import (
     TokenRun,
     configurations_for,
@@ -61,6 +67,7 @@ from aebrisk.simulation.orchestrate import (
     write_run_complete,
     write_token_run,
 )
+from aebrisk.study.definition import StudyRunContext
 
 #: Where the mounted nuPlan split is named. Read from the environment rather than
 #: taken as an option so one operator decision cannot disagree with another.
@@ -69,6 +76,11 @@ DATA_ROOT_VAR = "NUPLAN_DATA_ROOT"
 #: Set by the container image so a run can name the environment it happened in.
 IMAGE_DIGEST_VAR = "AEBRISK_IMAGE_DIGEST"
 UNKNOWN_DIGEST = "unknown"
+
+#: Set by the operator so a run can name the commit it ran. The default is the
+#: all-zero SHA, which names no commit.
+COMMIT_VAR = "AEBRISK_COMMIT"
+UNKNOWN_COMMIT = "0" * 40
 
 SCENARIO_SOURCES: tuple[str, ...] = ("synthetic", "nuplan")
 
@@ -106,7 +118,7 @@ def container_digest(environment: Optional[Mapping[str, str]] = None) -> str:
     return source.get(IMAGE_DIGEST_VAR) or UNKNOWN_DIGEST
 
 
-def write_run_context(context: RunContext, path: Path) -> None:
+def write_run_context(context: Union[RunContext, StudyRunContext], path: Path) -> None:
     """Write the run context beside its results, in canonical bytes."""
 
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -115,7 +127,7 @@ def write_run_context(context: RunContext, path: Path) -> None:
         handle.write("\n")
 
 
-def _validate_resume_context(context: RunContext, output_dir: Path) -> None:
+def _validate_resume_context(context: Union[RunContext, StudyRunContext], output_dir: Path) -> None:
     """Refuse to reuse evidence until its recorded inputs match this invocation."""
 
     path = output_dir / "run_context.json"
@@ -148,32 +160,17 @@ def _refuse(message: str) -> None:
     raise typer.Exit(code=1)
 
 
-@app.callback(invoke_without_command=True)
-def simulate(
-    protocol: Annotated[Path, typer.Option("--protocol", help="The frozen protocol file.")],
-    manifest: Annotated[Path, typer.Option("--manifest", help="The frozen cohort manifest.")],
-    config_id: Annotated[str, typer.Option("--config-id", help="One cell of the matrix.")],
-    output_dir: Annotated[Path, typer.Option("--output-dir", help="Where results are written.")],
-    scenario_source: Annotated[
-        str, typer.Option("--scenario-source", help="synthetic or nuplan.")
-    ] = "nuplan",
-    split: Annotated[
-        str, typer.Option("--split", help="Which nuPlan split the scenarios come from.")
-    ] = "val",
-    dry_run: Annotated[
-        bool,
-        typer.Option("--dry-run", help="Check the inputs and the mount, and run nothing."),
-    ] = False,
-    workers: Annotated[
-        int, typer.Option("--workers", min=1, help="Number of token worker processes.")
-    ] = 1,
-    resume: Annotated[
-        bool, typer.Option("--resume", help="Skip tokens with every requested result file.")
-    ] = False,
-) -> None:
-    """Run one configuration and write its results and run context."""
+def read_run_inputs(
+    protocol: Path, manifest: Path, output_dir: Path, scenario_source: str, split: str
+) -> tuple[CohortManifestV1, str]:
+    """Check a run's inputs before anything is written, and read its cohort.
 
-    _known_configuration(config_id)
+    A finished run, an unknown scenario source, a missing protocol or manifest,
+    an unmounted split, a manifest this project cannot read, and a protocol
+    other than the one the cohort was frozen under are refused. Returns the
+    cohort manifest and the protocol's SHA-256.
+    """
+
     if (output_dir / "run_complete.json").exists():
         _refuse(
             "this run is already complete; a second run into the same directory would overwrite evidence"
@@ -212,23 +209,33 @@ def simulate(
     protocol_sha256 = hashlib.sha256(protocol.read_bytes()).hexdigest()
     if protocol_sha256 != cohort_manifest.protocol_sha256:
         _refuse("the protocol hash does not match the frozen cohort manifest")
-    cohort_manifest_sha256 = membership_sha256(cohort_manifest)
-    context = RunContext(
-        configuration_id=config_id,
-        protocol_sha256=protocol_sha256,
-        cohort_sha256=cohort_manifest_sha256,
-        container_digest=container_digest(),
-        commit=os.environ.get("AEBRISK_COMMIT", "0" * 40),
-    )
-    chosen = configurations_for(
-        formal_configurations(),
-        None if config_id == ALL_CONFIGURATIONS else config_id,
-    )
-    written_configurations = (
-        tuple(configuration.configuration_id for configuration in formal_configurations())
-        if config_id == ALL_CONFIGURATIONS
-        else (config_id,)
-    )
+    return cohort_manifest, protocol_sha256
+
+
+def execute_matrix(
+    context: Union[RunContext, StudyRunContext],
+    cohort_manifest: CohortManifestV1,
+    configurations: Sequence[ExperimentConfiguration],
+    written_configurations: Sequence[str],
+    output_dir: Path,
+    *,
+    scenario_source: str,
+    split: str,
+    workers: int,
+    resume: bool,
+    dry_run: bool,
+    report: Callable[[str], None] = typer.echo,
+) -> None:
+    """Record the run context, run the cells over the cohort, and write what came back.
+
+    `configurations` are the cells that run, the oracle among them, and
+    `written_configurations` the cells whose documents this run writes. With
+    `resume`, the recorded context and every existing document must match this
+    run before any of them is reused. Every progress line goes to `report`.
+    """
+
+    protocol_sha256 = context.protocol_sha256
+    cohort_manifest_sha256 = context.cohort_sha256
     try:
         synthetic = (
             resolve_synthetic_cohort(cohort_manifest) if scenario_source == "synthetic" else None
@@ -244,10 +251,10 @@ def simulate(
             )
         if not resume or not (output_dir / "run_context.json").exists():
             write_run_context(context, output_dir / "run_context.json")
-        typer.echo(f"run context for {config_id} is recorded at {output_dir}")
+        report(f"run context for {context.configuration_id} is recorded at {output_dir}")
 
         if dry_run:
-            typer.echo(f"nothing was simulated ({scenario_source}, dry-run={dry_run})")
+            report(f"nothing was simulated ({scenario_source}, dry-run={dry_run})")
             return
 
         cohort = (
@@ -258,7 +265,7 @@ def simulate(
                 resolve_installation(Path(os.environ.get(DATA_ROOT_VAR, "")), split=split),
             )
         )
-        typer.echo(f"resolved {len(cohort)} tokens from {len(cohort_manifest.log_names)} logs")
+        report(f"resolved {len(cohort)} tokens from {len(cohort_manifest.log_names)} logs")
         finished = (
             finished_tokens(output_dir, written_configurations, (s.reference.token for s in cohort))
             if resume
@@ -278,7 +285,7 @@ def simulate(
                     cohort_manifest_sha256=cohort_manifest_sha256,
                 )
             )
-            typer.echo(
+            report(
                 f"  {run.token} {run.family} "
                 f"{'ok' if run.invalid is None else 'INVALID ' + run.invalid.reason}"
             )
@@ -286,7 +293,7 @@ def simulate(
         runs = (
             run_cohort(
                 pending,
-                chosen,
+                configurations,
                 protocol_hash=protocol_sha256,
                 protocol=cohort_manifest,
                 on_token=persist,
@@ -313,7 +320,66 @@ def simulate(
         return
 
     counts = summarize(runs)
-    typer.echo(
+    report(
         f"wrote {len(paths)} result documents: {counts['tokens']} tokens, "
         f"{counts['valid']} valid, {counts['invalid']} invalid, {counts['records']} records"
+    )
+
+
+@app.callback(invoke_without_command=True)
+def simulate(
+    protocol: Annotated[Path, typer.Option("--protocol", help="The frozen protocol file.")],
+    manifest: Annotated[Path, typer.Option("--manifest", help="The frozen cohort manifest.")],
+    config_id: Annotated[str, typer.Option("--config-id", help="One cell of the matrix.")],
+    output_dir: Annotated[Path, typer.Option("--output-dir", help="Where results are written.")],
+    scenario_source: Annotated[
+        str, typer.Option("--scenario-source", help="synthetic or nuplan.")
+    ] = "nuplan",
+    split: Annotated[
+        str, typer.Option("--split", help="Which nuPlan split the scenarios come from.")
+    ] = "val",
+    dry_run: Annotated[
+        bool,
+        typer.Option("--dry-run", help="Check the inputs and the mount, and run nothing."),
+    ] = False,
+    workers: Annotated[
+        int, typer.Option("--workers", min=1, help="Number of token worker processes.")
+    ] = 1,
+    resume: Annotated[
+        bool, typer.Option("--resume", help="Skip tokens with every requested result file.")
+    ] = False,
+) -> None:
+    """Run one configuration and write its results and run context."""
+
+    _known_configuration(config_id)
+    cohort_manifest, protocol_sha256 = read_run_inputs(
+        protocol, manifest, output_dir, scenario_source, split
+    )
+    context = RunContext(
+        configuration_id=config_id,
+        protocol_sha256=protocol_sha256,
+        cohort_sha256=membership_sha256(cohort_manifest),
+        container_digest=container_digest(),
+        commit=os.environ.get(COMMIT_VAR, UNKNOWN_COMMIT),
+    )
+    chosen = configurations_for(
+        formal_configurations(),
+        None if config_id == ALL_CONFIGURATIONS else config_id,
+    )
+    written_configurations = (
+        tuple(configuration.configuration_id for configuration in formal_configurations())
+        if config_id == ALL_CONFIGURATIONS
+        else (config_id,)
+    )
+    execute_matrix(
+        context,
+        cohort_manifest,
+        chosen,
+        written_configurations,
+        output_dir,
+        scenario_source=scenario_source,
+        split=split,
+        workers=workers,
+        resume=resume,
+        dry_run=dry_run,
     )

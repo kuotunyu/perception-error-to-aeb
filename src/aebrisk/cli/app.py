@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import typer
 
-from aebrisk.cli import data, evaluate, families, figures, replay, report, simulate
+from aebrisk.cli import data, evaluate, families, figures, replay, report, simulate, study
 
 app = typer.Typer(
     add_completion=False,
@@ -36,6 +36,7 @@ app.command("generate-claims")(report.generate_claims_command)
 app.command("summarize-families")(families.summarize_families)
 app.command("figures")(figures.figures)
 app.command("replay")(replay.replay)
+app.add_typer(study.app, name="study")
 
 
 @app.callback()
