@@ -179,6 +179,17 @@ def test_the_stored_path_cannot_be_written_through() -> None:
         plan.lateral_path_xy[0, 0] = 1.0
 
 
+def test_a_route_of_integers_is_held_as_float64() -> None:
+    """The path is recorded as float64, the type `plan_bytes` hashes, whatever arrives."""
+
+    route_follower = load_route_follower_module()
+
+    plan = route_follower.build_nominal_plan(np.array([[0, 0], [10, 0]]), 8.0, 8.0, 13.0)
+
+    assert plan.lateral_path_xy.dtype == np.float64
+    assert np.array_equal(plan.lateral_path_xy, [[0.0, 0.0], [10.0, 0.0]])
+
+
 def test_the_plan_carries_the_target_speed() -> None:
     """The same rule as `target_speed`, reachable from the plan a run records."""
 
