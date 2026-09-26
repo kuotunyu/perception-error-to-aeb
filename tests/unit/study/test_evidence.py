@@ -1365,6 +1365,25 @@ def test_overwriting_a_different_file_is_refused_and_nothing_is_written(study: S
     assert existing.read_text(encoding="utf-8") == "{}\n"
 
 
+def scratch_repository(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """A working directory holding the three evidence directories and nothing else.
+
+    A writer that failed to refuse one of them would write here, and not into
+    the repository's released evidence; with no committed cohort file here, it
+    would then fail before writing anything.
+    """
+
+    root = tmp_path / "repository"
+    for directory in (
+        "docs/evidence/nuplan_aeb_v2",
+        "docs/studies/aeb-policy-v2",
+        "docs/posthoc/nuplan_aeb_v2-addendum",
+    ):
+        (root / directory).mkdir(parents=True)
+    monkeypatch.chdir(root)
+    return root
+
+
 STUDY_REFUSED_DIRECTORIES = (
     "docs/evidence/nuplan_aeb_v2",
     "docs/evidence/nuplan_aeb_v2/policy-v2",
@@ -1376,14 +1395,15 @@ STUDY_REFUSED_DIRECTORIES = (
 @pytest.mark.parametrize("relative", STUDY_REFUSED_DIRECTORIES)
 @pytest.mark.parametrize("absolute", [False, True], ids=["relative", "absolute"])
 def test_the_study_writer_refuses_the_released_evidence_and_the_addendums_directory(
-    study: Study, relative: str, absolute: bool
+    study: Study, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, relative: str, absolute: bool
 ) -> None:
-    output_dir = ROOT / relative if absolute else Path(relative)
-    before = sorted(path.name for path in (ROOT / relative).parent.iterdir())
+    root = scratch_repository(tmp_path, monkeypatch)
+    output_dir = root / relative if absolute else Path(relative)
+    before = sorted(path.name for path in (root / relative).parent.iterdir())
 
     with pytest.raises(ValueError, match="never written under"):
         study.write(output_dir=output_dir)
-    assert sorted(path.name for path in (ROOT / relative).parent.iterdir()) == before
+    assert sorted(path.name for path in (root / relative).parent.iterdir()) == before
 
 
 # --------------------------------------------------------------------------
@@ -1500,14 +1520,15 @@ ADDENDUM_REFUSED_DIRECTORIES = (
 @pytest.mark.parametrize("relative", ADDENDUM_REFUSED_DIRECTORIES)
 @pytest.mark.parametrize("absolute", [False, True], ids=["relative", "absolute"])
 def test_the_addendum_writer_refuses_the_released_evidence_and_the_studys_directory(
-    addendum: Path, relative: str, absolute: bool
+    addendum: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, relative: str, absolute: bool
 ) -> None:
-    output_dir = ROOT / relative if absolute else Path(relative)
-    before = sorted(path.name for path in (ROOT / relative).parent.iterdir())
+    root = scratch_repository(tmp_path, monkeypatch)
+    output_dir = root / relative if absolute else Path(relative)
+    before = sorted(path.name for path in (root / relative).parent.iterdir())
 
     with pytest.raises(ValueError, match="never written under"):
         write_addendum_evidence(addendum, output_dir)
-    assert sorted(path.name for path in (ROOT / relative).parent.iterdir()) == before
+    assert sorted(path.name for path in (root / relative).parent.iterdir()) == before
 
 
 # --------------------------------------------------------------------------
