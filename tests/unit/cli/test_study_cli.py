@@ -1101,3 +1101,599 @@ def test_preflight_refuses_without_a_data_root(
     assert result.exit_code == 1
     assert "NUPLAN_DATA_ROOT" in result.output
     assert not preflight_inputs.output.exists()
+
+
+# --------------------------------------------------------------------------
+# study analyse, study addendum and study evidence
+#
+# Each command hands its files to the function that does the work
+# (`analyse_study`, `analyse_addendum`, `write_study_evidence` and
+# `write_addendum_evidence`, each tested on its own) and writes what it
+# returns. These tests hold the commands to their option names, to what they
+# pass on, and to refusing with a diagnostic, and writing nothing, whenever
+# that function refuses.
+# --------------------------------------------------------------------------
+
+STUDY_ARMS = tuple(ARM_FACTORS)
+PREREGISTRATION_COMMIT = "abcdef0123456789abcdef0123456789abcdef01"
+MERGED_AT = "2026-09-26T08:12:34Z"
+
+ANALYSE_OPTIONS = (
+    "--study",
+    "--arms-root",
+    "--released-root",
+    "--evidence-dir",
+    "--manifest",
+    "--gates",
+    "--reference",
+    "--output",
+)
+ADDENDUM_OPTIONS = (
+    "--released-root",
+    "--released-hashes",
+    "--evidence-dir",
+    "--manifest",
+    "--eligibility",
+    "--output",
+)
+EVIDENCE_OPTIONS = (
+    "--part",
+    "--summary",
+    "--gates",
+    "--arms-root",
+    "--g0",
+    "--preregistration-pr",
+    "--preregistration-commit",
+    "--preregistration-merged-at",
+    "--output-dir",
+    "--not-completed",
+    "--earlier-gates",
+    "--g4",
+    "--addendum",
+)
+
+
+def declared_options(command: str) -> set[str]:
+    """Every option name a `study` command declares, read from the command itself."""
+
+    import click
+    import typer.main
+
+    root = typer.main.get_command(app)
+    assert isinstance(root, click.Group)
+    group = root.commands["study"]
+    assert isinstance(group, click.Group)
+    return {option for parameter in group.commands[command].params for option in parameter.opts}
+
+
+def study_summary(reference: str = "released") -> Any:
+    """The smallest valid policy v2 summary: what `study analyse` writes, with no contrast."""
+
+    from aebrisk.artifacts.study_documents import PolicyV2SummaryV1
+
+    return PolicyV2SummaryV1.model_validate(
+        {
+            "schema_version": "aeb-policy-v2-summary/v1",
+            "study_sha256": "5" * 64,
+            "protocol_sha256": PROTOCOL_SHA,
+            "cohort_manifest_sha256": "6" * 64,
+            "common_valid_tokens": 1,
+            "reference": reference,
+            "exploratory": reference == "arm-a",
+            "g4": {"gate": "G4", "passed": True, "counts": {"cells": 8}},
+            "hypotheses": [],
+            "q1_label": "no_support",
+            "h5_qualifier": False,
+            "statements": {"h3": "H3.", "h4": "H4.", "h5": "H5."},
+            "sensitivity": [],
+            "q3_ratio": {
+                "outcome": "braking_share",
+                "b_terms": [],
+                "e_terms": [],
+                "sd_b": 0.0,
+                "sd_e": 0.0,
+                "ratio": None,
+            },
+            "secondary": [],
+            "descriptive_contrasts": [],
+            "levels": [],
+        }
+    )
+
+
+def addendum_summary() -> Any:
+    """The smallest valid addendum summary: both games, in order, and no interval."""
+
+    from aebrisk.artifacts.study_documents import (
+        ADDENDUM_GAMES,
+        COLLISION_GAME_SENTENCE,
+        AttributionAddendumV1,
+    )
+
+    proportion = {"events": 0, "tokens": 1, "confidence": 0.95, "low": 0.0, "high": 0.975}
+    return AttributionAddendumV1.model_validate(
+        {
+            "schema_version": "aeb-attribution-addendum/v1",
+            "protocol_sha256": PROTOCOL_SHA,
+            "cohort_manifest_sha256": "6" * 64,
+            "cohort_size": 1,
+            "common_valid_tokens": 1,
+            "released_output_hashes_sha256": "4" * 64,
+            "reproduction_gate": {"gate": "reproduction", "passed": True, "counts": {"values": 1}},
+            "bootstrap": {"cluster": "family-log", "clusters": 1, "resamples": 5000, "seed": 1},
+            "games": [
+                {
+                    "game": game,
+                    "shapley_values": {},
+                    "localization_shape_differences": [],
+                    "other_differences": [],
+                    "caution": COLLISION_GAME_SENTENCE if game == "collision_indicator" else None,
+                }
+                for game in ADDENDUM_GAMES
+            ],
+            "configuration_contrasts": [],
+            "oracle_collisions": {
+                "avoided": proportion,
+                "induced": proportion,
+                "oracle_aeb_contacts_not_at_fault": 0,
+                "computed_before_plan": True,
+            },
+            "brake_activations": [],
+            "zero_event_configurations": [],
+            "matched_onset_delays": [],
+            "stops_and_collision_speeds": [],
+        }
+    )
+
+
+def write_gate_file(path: Path, reference: str = "released", failed: tuple[str, ...] = ()) -> Path:
+    """A gate file of the committed study over all five arms, as `study verify` writes one."""
+
+    from typing import cast
+
+    from aebrisk.artifacts.study_documents import Reference
+    from aebrisk.study.gates import GateResult, gates_document, write_gates
+
+    results = [
+        GateResult(name, name not in failed, {"checked": 1}, ())
+        for name in ("G1", "G2", "G3", "G5")
+    ]
+    mode = cast("Reference", reference)
+    write_gates(path, gates_document(COMMITTED_STUDY, STUDY_ARMS, results, mode))
+    return path
+
+
+def study_analyse(*extra: str) -> Any:
+    return invoke(
+        "study",
+        "analyse",
+        "--study",
+        str(COMMITTED_STUDY),
+        "--arms-root",
+        "attempt-1",
+        "--released-root",
+        "released",
+        "--evidence-dir",
+        "evidence",
+        "--manifest",
+        "evaluation.json",
+        "--gates",
+        "attempt-1.gates.json",
+        *extra,
+    )
+
+
+def study_addendum(*extra: str) -> Any:
+    return invoke(
+        "study",
+        "addendum",
+        "--released-root",
+        "released",
+        "--released-hashes",
+        "output-hashes.json",
+        "--evidence-dir",
+        "evidence",
+        "--manifest",
+        "evaluation.json",
+        "--eligibility",
+        "evaluation-eligibility.json",
+        *extra,
+    )
+
+
+def written_files(root: Path) -> list[str]:
+    return sorted(path.relative_to(root).as_posix() for path in root.rglob("*") if path.is_file())
+
+
+@pytest.mark.parametrize(
+    ("command", "options"),
+    [("analyse", ANALYSE_OPTIONS), ("addendum", ADDENDUM_OPTIONS), ("evidence", EVIDENCE_OPTIONS)],
+)
+def test_study_analyse_addendum_and_evidence_take_exactly_the_documented_options(
+    command: str, options: tuple[str, ...]
+) -> None:
+    """No option name is derived from a parameter name, such as `--summary-path`."""
+
+    assert declared_options(command) == set(options)
+    assert invoke("study", command, "--help").exit_code == 0
+
+
+@pytest.mark.parametrize("reference", ["released", "arm-a"])
+def test_study_analyse_analyses_with_the_gate_file_it_loads_and_writes_the_summary(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, reference: str
+) -> None:
+    """G4 is written beside the summary, and `--reference arm-a` selects arm-A reference mode."""
+
+    from aebrisk.artifacts.study_documents import PolicyV2SummaryV1
+    from aebrisk.study.gates import load_gates
+
+    monkeypatch.chdir(tmp_path)
+    gate_file = write_gate_file(tmp_path / "attempt-1.gates.json", reference, ("G2",))
+    summary = study_summary(reference)
+    seen: dict[str, Any] = {}
+
+    def analyse(
+        study: Path,
+        arms_root: Path,
+        released_root: Path,
+        evidence_dir: Path,
+        manifest: Path,
+        gates: Any,
+        reference: str = "released",
+        g4_path: Optional[Path] = None,
+    ) -> Any:
+        seen.update(
+            study=study,
+            arms_root=arms_root,
+            released_root=released_root,
+            evidence_dir=evidence_dir,
+            manifest=manifest,
+            gates=gates,
+            reference=reference,
+            g4_path=g4_path,
+        )
+        return summary
+
+    monkeypatch.setattr("aebrisk.cli.study.analyse_study", analyse)
+    output = Path("artifacts") / "studies" / "aeb_policy_v2" / "summary.json"
+    flag = ("--reference", reference) if reference == "arm-a" else ()
+
+    result = study_analyse(*flag, "--output", str(output))
+
+    assert result.exit_code == 0, result.output
+    assert seen == {
+        "study": COMMITTED_STUDY,
+        "arms_root": Path("attempt-1"),
+        "released_root": Path("released"),
+        "evidence_dir": Path("evidence"),
+        "manifest": Path("evaluation.json"),
+        "gates": load_gates(gate_file),
+        "reference": reference,
+        "g4_path": output.parent / "g4.json",
+    }
+    written = (tmp_path / output).read_bytes()
+    assert PolicyV2SummaryV1.model_validate_json(written) == summary
+    assert written.endswith(b"}\n")
+    assert str(output) in result.output
+
+
+@pytest.mark.parametrize(
+    ("gate_reference", "flag", "message"),
+    [
+        ("released", (), "failed"),
+        ("arm-a", (), "reference"),
+        ("released", ("--reference", "arm-a"), "reference"),
+        ("released", ("--reference", "arm-b"), "unknown reference"),
+    ],
+)
+def test_study_analyse_refuses_unless_the_gates_passed_as_the_mode_requires(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    gate_reference: str,
+    flag: tuple[str, ...],
+    message: str,
+) -> None:
+    """A failed G2 is accepted only in arm-A reference mode, from a gate file of that mode."""
+
+    monkeypatch.chdir(tmp_path)
+    write_gate_file(tmp_path / "attempt-1.gates.json", gate_reference, ("G2",))
+
+    result = study_analyse(*flag, "--output", "summary.json")
+
+    assert result.exit_code == 1
+    assert "the study is not analysed" in result.output
+    assert message in result.output
+    assert written_files(tmp_path) == ["attempt-1.gates.json"]
+
+
+def test_study_analyse_refuses_a_gate_file_it_cannot_read(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "attempt-1.gates.json").write_text("{}", encoding="utf-8")
+
+    result = study_analyse("--output", "summary.json")
+
+    assert result.exit_code == 1
+    assert "the study is not analysed" in result.output
+    assert written_files(tmp_path) == ["attempt-1.gates.json"]
+
+
+def test_study_addendum_holds_the_hash_list_to_the_value_pinned_when_it_runs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The pinned SHA-256 is read from its module at run time, so a patched value reaches it."""
+
+    from aebrisk.artifacts.study_documents import AttributionAddendumV1
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr("aebrisk.study.addendum.RELEASED_OUTPUT_HASHES_SHA256", "e" * 64)
+    summary = addendum_summary()
+    seen: dict[str, Any] = {}
+
+    def analyse(
+        released_root: Path,
+        released_hashes: Path,
+        evidence_dir: Path,
+        manifest: Path,
+        eligibility: Path,
+        expected_hashes_sha256: str = "not passed",
+    ) -> Any:
+        seen.update(
+            released_root=released_root,
+            released_hashes=released_hashes,
+            evidence_dir=evidence_dir,
+            manifest=manifest,
+            eligibility=eligibility,
+            expected_hashes_sha256=expected_hashes_sha256,
+        )
+        return summary
+
+    monkeypatch.setattr("aebrisk.cli.study.analyse_addendum", analyse)
+    output = Path("artifacts") / "posthoc" / "addendum-summary.json"
+
+    result = study_addendum("--output", str(output))
+
+    assert result.exit_code == 0, result.output
+    assert seen == {
+        "released_root": Path("released"),
+        "released_hashes": Path("output-hashes.json"),
+        "evidence_dir": Path("evidence"),
+        "manifest": Path("evaluation.json"),
+        "eligibility": Path("evaluation-eligibility.json"),
+        "expected_hashes_sha256": "e" * 64,
+    }
+    assert AttributionAddendumV1.model_validate_json((tmp_path / output).read_bytes()) == summary
+    assert str(output) in result.output
+
+
+def test_study_addendum_refuses_a_hash_list_other_than_the_pinned_one(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The reproduction gate fails before any record is read, and nothing is written."""
+
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "output-hashes.json").write_text("{}\n", encoding="utf-8")
+
+    result = study_addendum("--output", "addendum-summary.json")
+
+    assert result.exit_code == 1
+    assert "the addendum is not computed" in result.output
+    assert "reproduction gate failed" in result.output
+    assert written_files(tmp_path) == ["output-hashes.json"]
+
+
+def study_evidence(*arguments: str) -> Any:
+    return invoke("study", "evidence", *arguments)
+
+
+STUDY_EVIDENCE_INPUTS = (
+    "--gates",
+    "artifacts/formal/aeb_policy_v2/attempt-2.gates.json",
+    "--arms-root",
+    "artifacts/formal/aeb_policy_v2/attempt-2",
+    "--g0",
+    "artifacts/formal/aeb_policy_v2/g0.json",
+    "--preregistration-pr",
+    "5",
+    "--preregistration-commit",
+    PREREGISTRATION_COMMIT,
+    "--preregistration-merged-at",
+    MERGED_AT,
+    "--output-dir",
+    "docs/studies/aeb-policy-v2/evidence",
+)
+
+
+@pytest.mark.parametrize(
+    ("extra", "expected"),
+    [
+        (
+            (
+                "--summary",
+                "artifacts/studies/aeb_policy_v2/summary.json",
+                "--earlier-gates",
+                "artifacts/formal/aeb_policy_v2/attempt-1.gates-A.json",
+            ),
+            {
+                "summary_path": Path("artifacts/studies/aeb_policy_v2/summary.json"),
+                "not_completed": False,
+                "earlier_gates": (Path("artifacts/formal/aeb_policy_v2/attempt-1.gates-A.json"),),
+                "g4_path": None,
+            },
+        ),
+        (
+            (
+                "--not-completed",
+                "--earlier-gates",
+                "artifacts/formal/aeb_policy_v2/attempt-1.gates.json",
+                "--earlier-gates",
+                "artifacts/formal/aeb_policy_v2/attempt-0.gates.json",
+                "--g4",
+                "artifacts/studies/aeb_policy_v2/g4.json",
+            ),
+            {
+                "summary_path": None,
+                "not_completed": True,
+                "earlier_gates": (
+                    Path("artifacts/formal/aeb_policy_v2/attempt-1.gates.json"),
+                    Path("artifacts/formal/aeb_policy_v2/attempt-0.gates.json"),
+                ),
+                "g4_path": Path("artifacts/studies/aeb_policy_v2/g4.json"),
+            },
+        ),
+        (
+            ("--not-completed",),
+            {"summary_path": None, "not_completed": True, "earlier_gates": (), "g4_path": None},
+        ),
+    ],
+)
+def test_study_evidence_of_the_study_passes_every_input_to_its_writer(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    extra: tuple[str, ...],
+    expected: dict[str, Any],
+) -> None:
+    """A completed study names its summary; one reported not completed names none."""
+
+    monkeypatch.chdir(tmp_path)
+    seen: dict[str, Any] = {}
+
+    def write(
+        summary_path: Optional[Path],
+        gates_path: Path,
+        g0_path: Path,
+        arms_root: Path,
+        preregistration_pr: int,
+        preregistration_commit: str,
+        preregistration_merged_at: str,
+        output_dir: Path,
+        not_completed: bool = False,
+        earlier_gates: Any = (),
+        g4_path: Optional[Path] = None,
+    ) -> tuple[Path, ...]:
+        seen.update(
+            summary_path=summary_path,
+            gates_path=gates_path,
+            g0_path=g0_path,
+            arms_root=arms_root,
+            preregistration_pr=preregistration_pr,
+            preregistration_commit=preregistration_commit,
+            preregistration_merged_at=preregistration_merged_at,
+            output_dir=output_dir,
+            not_completed=not_completed,
+            earlier_gates=earlier_gates,
+            g4_path=g4_path,
+        )
+        return (output_dir / "gates.json", output_dir / "reproduction.json")
+
+    monkeypatch.setattr("aebrisk.cli.study.write_study_evidence", write)
+
+    result = study_evidence("--part", "study", *STUDY_EVIDENCE_INPUTS, *extra)
+
+    assert result.exit_code == 0, result.output
+    evidence = Path("docs/studies/aeb-policy-v2/evidence")
+    assert seen == {
+        "gates_path": Path("artifacts/formal/aeb_policy_v2/attempt-2.gates.json"),
+        "g0_path": Path("artifacts/formal/aeb_policy_v2/g0.json"),
+        "arms_root": Path("artifacts/formal/aeb_policy_v2/attempt-2"),
+        "preregistration_pr": 5,
+        "preregistration_commit": PREREGISTRATION_COMMIT,
+        "preregistration_merged_at": MERGED_AT,
+        "output_dir": evidence,
+        **expected,
+    }
+    for name in ("gates.json", "reproduction.json"):
+        assert str(evidence / name) in result.output
+
+
+def test_study_evidence_of_the_addendum_writes_its_two_files(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from aebrisk.artifacts.documents import write_document
+    from aebrisk.artifacts.study_documents import AttributionAddendumV1
+
+    monkeypatch.chdir(tmp_path)
+    cohort = tmp_path / "docs" / "evidence" / "nuplan_aeb_v2" / "cohort" / "evaluation.json"
+    cohort.parent.mkdir(parents=True)
+    cohort.write_text(json.dumps(manifest_document("evaluation")), encoding="utf-8")
+    summary = addendum_summary()
+    write_document(summary, tmp_path / "artifacts" / "addendum-summary.json")
+    evidence = Path("docs") / "posthoc" / "nuplan_aeb_v2-addendum" / "evidence"
+
+    result = study_evidence(
+        "--part",
+        "addendum",
+        "--addendum",
+        "artifacts/addendum-summary.json",
+        "--output-dir",
+        str(evidence),
+    )
+
+    assert result.exit_code == 0, result.output
+    assert written_files(tmp_path / evidence) == [
+        "addendum-summary.json",
+        "attribution-addendum-evidence.json",
+    ]
+    copied = (tmp_path / evidence / "addendum-summary.json").read_bytes()
+    assert AttributionAddendumV1.model_validate_json(copied) == summary
+    for name in ("addendum-summary.json", "attribution-addendum-evidence.json"):
+        assert str(evidence / name) in result.output
+
+
+@pytest.mark.parametrize(
+    ("arguments", "message"),
+    [
+        (("--part", "released", "--output-dir", "evidence"), "--part is study or addendum"),
+        (("--part", "addendum", "--output-dir", "evidence"), "--part addendum needs --addendum"),
+        (
+            (
+                "--part",
+                "addendum",
+                "--addendum",
+                "a.json",
+                "--gates",
+                "g.json",
+                "--not-completed",
+                "--output-dir",
+                "evidence",
+            ),
+            "--part addendum does not take --gates, --not-completed",
+        ),
+        (
+            ("--part", "study", *STUDY_EVIDENCE_INPUTS, "--summary", "s.json", "--addendum", "a"),
+            "--part study does not take --addendum",
+        ),
+        (
+            ("--part", "study", *STUDY_EVIDENCE_INPUTS[:4], *STUDY_EVIDENCE_INPUTS[6:]),
+            "--part study needs --g0",
+        ),
+        (
+            ("--part", "study", *STUDY_EVIDENCE_INPUTS, "--summary", "s.json", "--not-completed"),
+            "has no summary",
+        ),
+        (
+            (
+                "--part",
+                "addendum",
+                "--addendum",
+                "a.json",
+                "--output-dir",
+                "docs/evidence/nuplan_aeb_v2/extra",
+            ),
+            "never written under docs/evidence/nuplan_aeb_v2/",
+        ),
+    ],
+)
+def test_study_evidence_refuses_what_it_cannot_write(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, arguments: tuple[str, ...], message: str
+) -> None:
+    """Options of the other part, a missing input and a writer's refusal each write nothing."""
+
+    monkeypatch.chdir(tmp_path)
+
+    result = study_evidence(*arguments)
+
+    assert result.exit_code == 1
+    assert message in result.output
+    assert written_files(tmp_path) == []

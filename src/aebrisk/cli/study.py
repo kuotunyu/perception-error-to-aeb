@@ -24,8 +24,17 @@ and each log the cohort references. `study verify` runs the gates over the arms
 of one attempt (`aebrisk.study.gates`). Each writes a gate file, and exits 1
 when a check the mode requires fails.
 
-`study claims` builds the claims registry of the study or of the addendum from
-that part's published evidence (`aebrisk.study.claims`).
+`study analyse` reads the gate file `study verify` wrote over all five arms,
+refuses unless its gates passed as the mode requires, runs the study's G4 on the
+released evidence, writes G4 to `g4.json` beside the summary whether it passes
+or fails, and only then writes the summary (`aebrisk.study.analysis`).
+`study addendum` runs the addendum's reproduction gate against the hash list
+whose SHA-256 the addendum plan states, and computes the post-hoc addendum only
+when it passes (`aebrisk.study.addendum`). `study evidence` writes the
+evidence either part publishes, from the repository root
+(`aebrisk.study.evidence`), and `study claims` builds that part's claims
+registry from it (`aebrisk.study.claims`). Each command refuses with a
+diagnostic, and writes nothing, when the function it calls refuses.
 """
 
 # Like `simulate.py`, this module deliberately does NOT use
@@ -39,13 +48,14 @@ import platform
 from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Annotated, NoReturn, Optional, cast
+from typing import Annotated, NoReturn, Optional, TypeVar, cast
 
 import numpy
 import typer
 import yaml
 
 from aebrisk.analysis.claims import ClaimsRegistryV1
+from aebrisk.artifacts.documents import write_document
 from aebrisk.artifacts.study_documents import Reference
 from aebrisk.cli.simulate import (
     COMMIT_VAR,
@@ -60,6 +70,9 @@ from aebrisk.cli.simulate import (
 from aebrisk.cohort.manifest import membership_sha256
 from aebrisk.committed_config import read_committed_config
 from aebrisk.observation.tracking import CV_KALMAN_PARAMETERS
+from aebrisk.study import addendum as addendum_analysis
+from aebrisk.study.addendum import analyse_addendum
+from aebrisk.study.analysis import analyse_study
 from aebrisk.study.claims import build_addendum_claims, build_study_claims
 from aebrisk.study.definition import (
     StudyRunContext,
@@ -67,20 +80,30 @@ from aebrisk.study.definition import (
     load_study,
     study_sha256,
 )
+from aebrisk.study.evidence import write_addendum_evidence, write_study_evidence
 from aebrisk.study.gates import (
     PILOT_ROOT,
     PILOT_SPLIT,
     RELEASED,
     checked_arms,
     gates_document,
+    load_gates,
     preflight,
     required_gates_passed,
     verify_study,
     write_gates,
 )
 
+_T = TypeVar("_T")
+
 #: Where no arm may write: the released records and the published documentation.
 FROZEN_OUTPUTS: tuple[str, ...] = ("artifacts/formal/nuplan_aeb_v2", "docs")
+
+#: The file `study analyse` writes the study's G4 to, beside the summary.
+G4_FILE = "g4.json"
+
+#: The two parts that publish evidence: the policy v2 study and the post-hoc addendum.
+PARTS: tuple[str, ...] = ("study", "addendum")
 
 #: The registry builder of each part: the policy v2 study and the post-hoc addendum.
 CLAIMS_BUILDERS: dict[str, Callable[[Path, Path], ClaimsRegistryV1]] = {
@@ -100,6 +123,14 @@ def _refuse(message: str) -> NoReturn:
 
     typer.echo(message)
     raise typer.Exit(code=1)
+
+
+def _needed(value: Optional[_T], option: str, part: str) -> _T:
+    """An input the part's evidence cannot be written without; without it the command ends."""
+
+    if value is None:
+        _refuse(f"--part {part} needs {option}")
+    return value
 
 
 def _utc_now() -> datetime:
@@ -356,6 +387,190 @@ def verify_command(
     typer.echo(f"the gate file is at {output}")
     if not required_gates_passed(results, mode):
         raise typer.Exit(code=1)
+
+
+@app.command("analyse")
+def analyse_command(
+    study: Annotated[Path, typer.Option("--study", help="The study file.")],
+    arms_root: Annotated[
+        Path, typer.Option("--arms-root", help="The directory with one directory per arm.")
+    ],
+    released_root: Annotated[Path, typer.Option("--released-root", help="The released records.")],
+    evidence_dir: Annotated[
+        Path,
+        typer.Option("--evidence-dir", help="The released evidence the study's G4 reproduces."),
+    ],
+    manifest: Annotated[Path, typer.Option("--manifest", help="The frozen cohort manifest.")],
+    gates: Annotated[
+        Path,
+        typer.Option("--gates", help="The gate file study verify wrote over all five arms."),
+    ],
+    output: Annotated[
+        Path,
+        typer.Option("--output", help="Where the summary is written; g4.json goes beside it."),
+    ],
+    reference: Annotated[
+        str,
+        typer.Option("--reference", help="released, or arm-a for arm-A reference mode."),
+    ] = RELEASED,
+) -> None:
+    """Analyse the five arms of an attempt whose gates passed, and write the study's summary."""
+
+    g4_path = output.parent / G4_FILE
+    try:
+        summary = analyse_study(
+            study,
+            arms_root,
+            released_root,
+            evidence_dir,
+            manifest,
+            load_gates(gates),
+            cast(Reference, reference),
+            g4_path=g4_path,
+        )
+    except (OSError, ValueError, yaml.YAMLError) as error:
+        _refuse(f"the study is not analysed: {error}")
+    write_document(summary, output)
+    typer.echo(f"G4 passed, as {g4_path} records; the summary is at {output}")
+
+
+@app.command("addendum")
+def addendum_command(
+    released_root: Annotated[Path, typer.Option("--released-root", help="The released records.")],
+    released_hashes: Annotated[
+        Path,
+        typer.Option(
+            "--released-hashes", help="The released run's list of the SHA-256 of every output."
+        ),
+    ],
+    evidence_dir: Annotated[
+        Path,
+        typer.Option("--evidence-dir", help="The released evidence the reproduction gate checks."),
+    ],
+    manifest: Annotated[Path, typer.Option("--manifest", help="The frozen cohort manifest.")],
+    eligibility: Annotated[
+        Path,
+        typer.Option("--eligibility", help="The cohort's eligibility record, naming each log."),
+    ],
+    output: Annotated[
+        Path, typer.Option("--output", help="Where the addendum summary is written.")
+    ],
+) -> None:
+    """Run the addendum's reproduction gate, then compute the addendum and write its summary."""
+
+    try:
+        summary = analyse_addendum(
+            released_root,
+            released_hashes,
+            evidence_dir,
+            manifest,
+            eligibility,
+            expected_hashes_sha256=addendum_analysis.RELEASED_OUTPUT_HASHES_SHA256,
+        )
+    except (OSError, ValueError) as error:
+        _refuse(f"the addendum is not computed: {error}")
+    write_document(summary, output)
+    typer.echo(f"the reproduction gate passed; the addendum summary is at {output}")
+
+
+@app.command("evidence")
+def evidence_command(
+    part: Annotated[str, typer.Option("--part", help="study or addendum.")],
+    output_dir: Annotated[
+        Path, typer.Option("--output-dir", help="The part's published evidence directory.")
+    ],
+    summary: Annotated[
+        Optional[Path], typer.Option("--summary", help="The summary study analyse wrote.")
+    ] = None,
+    gates: Annotated[
+        Optional[Path],
+        typer.Option("--gates", help="The gate file of the attempt the evidence comes from."),
+    ] = None,
+    arms_root: Annotated[
+        Optional[Path],
+        typer.Option("--arms-root", help="That attempt's directory with one directory per arm."),
+    ] = None,
+    g0: Annotated[
+        Optional[Path], typer.Option("--g0", help="The operator's G0 record, g0.json.")
+    ] = None,
+    preregistration_pr: Annotated[
+        Optional[int],
+        typer.Option(
+            "--preregistration-pr", min=1, help="The pre-registration pull request's number."
+        ),
+    ] = None,
+    preregistration_commit: Annotated[
+        Optional[str],
+        typer.Option("--preregistration-commit", help="Its merge commit, 40 hex digits."),
+    ] = None,
+    preregistration_merged_at: Annotated[
+        Optional[str],
+        typer.Option(
+            "--preregistration-merged-at", help="Its merged_at, as the GitHub API gives it."
+        ),
+    ] = None,
+    not_completed: Annotated[
+        bool,
+        typer.Option(
+            "--not-completed", help="The study is reported not completed; it has no summary."
+        ),
+    ] = False,
+    earlier_gates: Annotated[
+        Optional[list[Path]],
+        typer.Option(
+            "--earlier-gates", help="An earlier failed attempt's gate file; one per attempt."
+        ),
+    ] = None,
+    g4: Annotated[
+        Optional[Path],
+        typer.Option("--g4", help="The g4.json study analyse wrote; read with --not-completed."),
+    ] = None,
+    addendum: Annotated[
+        Optional[Path], typer.Option("--addendum", help="The summary study addendum wrote.")
+    ] = None,
+) -> None:
+    """Write a part's published evidence, from the repository root."""
+
+    if part not in PARTS:
+        _refuse(f"--part is study or addendum, got {part!r}")
+    try:
+        if part == "study":
+            if addendum is not None:
+                _refuse("--part study does not take --addendum")
+            written = write_study_evidence(
+                summary,
+                _needed(gates, "--gates", part),
+                _needed(g0, "--g0", part),
+                _needed(arms_root, "--arms-root", part),
+                _needed(preregistration_pr, "--preregistration-pr", part),
+                _needed(preregistration_commit, "--preregistration-commit", part),
+                _needed(preregistration_merged_at, "--preregistration-merged-at", part),
+                output_dir,
+                not_completed=not_completed,
+                earlier_gates=tuple(earlier_gates or ()),
+                g4_path=g4,
+            )
+        else:
+            study_inputs = {
+                "--summary": summary is not None,
+                "--gates": gates is not None,
+                "--arms-root": arms_root is not None,
+                "--g0": g0 is not None,
+                "--preregistration-pr": preregistration_pr is not None,
+                "--preregistration-commit": preregistration_commit is not None,
+                "--preregistration-merged-at": preregistration_merged_at is not None,
+                "--not-completed": not_completed,
+                "--earlier-gates": bool(earlier_gates),
+                "--g4": g4 is not None,
+            }
+            given = [option for option, present in study_inputs.items() if present]
+            if given:
+                _refuse(f"--part addendum does not take {', '.join(given)}")
+            written = write_addendum_evidence(_needed(addendum, "--addendum", part), output_dir)
+    except (OSError, ValueError) as error:
+        _refuse(f"the {part} evidence is not written: {error}")
+    for path in written:
+        typer.echo(f"wrote {path}")
 
 
 @app.command("claims")
