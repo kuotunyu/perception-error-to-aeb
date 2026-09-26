@@ -1732,7 +1732,7 @@ def test_each_analysis_resamples_the_clusters_the_plan_names(
         for arm in (A, B)
     }
     drives = {token: drive_of(log) for token, log in LOG_OF.items()}
-    weights = {
+    weights: dict[str, BootstrapWeights] = {
         "family-log": cluster_bootstrap_weights(TOKENS, FAMILY_OF, LOG_OF, resamples=RESAMPLES),
         "family-drive": cluster_bootstrap_weights(TOKENS, FAMILY_OF, drives, resamples=RESAMPLES),
         "log": cluster_bootstrap_weights(
