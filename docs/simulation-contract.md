@@ -225,10 +225,12 @@ section above holds under every option, except where this section says
 otherwise.
 
 **Policy v2 selects only bodies on a collision course.**
-`configs/aeb/policy_v2.yaml` copies every value of `policy_v1.yaml` and adds a
-`target_selection` block, and the loader refuses any other block
-(`aeb/state_machine.py`). Each step, every visible track is still assessed by
-the unchanged `assess_threat`, and `min_ttc_s` is still taken over all of them.
+`configs/aeb/policy_v2.yaml` has the schema version `aeb-policy/v2`, copies
+every other value of `policy_v1.yaml` and adds a `target_selection` block. The
+policy validator refuses any other `target_selection` block, and refuses one in
+a v1 policy (`aeb/state_machine.py`). Each step, every visible track is still
+assessed by the unchanged `assess_threat`, and `min_ttc_s` is still taken over
+all of them.
 `collision_course_candidates` (`aeb/threat.py`) then keeps a track as a
 candidate only when both of these hold:
 
@@ -284,8 +286,8 @@ calls it under the released memory rules:
   the reported velocity, as the finite difference does;
 - every later detection outside a fragmentation outage is fused, including one
   that dropout hid from the AEB; nothing is fused during an outage;
-- a detection with no elapsed source time since the last fused one is not
-  fused, and its reported velocity is emitted;
+- a detection whose source time is not later than that of the last fused one
+  is not fused, and its reported velocity is emitted;
 - the elapsed time is measured from the last fused detection, where the finite
   difference measures from the last detection seen, so the two differ in this
   only after an out-of-order timestamp.

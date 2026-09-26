@@ -8,11 +8,13 @@ merged study tooling to the two results pull requests. The two plans decide
 what is computed and what a failure means; this procedure gives the commands
 and the records the operator keeps. Nothing here is a result.
 
-Every command runs from the repository root, in the pinned container, on CPU
-only. Paths are relative to the repository root, and the nuPlan installation is
-the one `$NUPLAN_DATA_ROOT` names on the host, which `compose.yaml` mounts
-read-only. The code blocks are POSIX shell. Nothing under `artifacts/` is
-committed: it holds licensed per-token records and local details.
+Every command runs from the repository root. Each `docker compose run` command
+runs in the pinned container, on CPU only; the other `git`, `gh`, `docker` and
+shell lines run on the host. Paths are relative to the repository root, and the
+nuPlan installation is the one `$NUPLAN_DATA_ROOT` names on the host, which
+`compose.yaml` mounts read-only. The code blocks are POSIX shell. Nothing under
+`artifacts/` is committed: it holds licensed per-token records and local
+details.
 
 ## 1. Before the first command
 
@@ -57,16 +59,16 @@ version command prints the Python and numpy versions the study file records,
 `3.9.19 1.23.4`, which G5 checks in every arm's run context.
 
 Every arm runs under [`compose.formal-cpu.yaml`](../../compose.formal-cpu.yaml),
-an override of `compose.yaml` with the limits of the v1.0.0 run: 8 CPUs, 12 GB of
+an override of `compose.yaml` with the limits of the v1.0.0 run: 8 CPUs, 12 GiB of
 memory and no swap beyond it, unbuffered output, and single-threaded OpenBLAS,
 OpenMP, MKL and numexpr. `compose-config.yaml` is the resolved configuration; its
 SHA-256 fixes those limits, which the gates cannot see.
 
-From here until the gate file of section 7 is written, the working tree stays
-at `$SHA`: no switch, pull, merge, commit or edit, and no `docker compose build`.
-The project is installed in editable mode and the tree is mounted into the
-container, so an arm runs whatever the tree holds, whatever `AEBRISK_COMMIT`
-says. Before each launch, `git rev-parse HEAD` must print `$SHA`,
+From here until the gate file and the hash list of section 8 are written, the
+working tree stays at `$SHA`: no switch, pull, merge, commit or edit, and no
+`docker compose build`. The project is installed in editable mode and the tree
+is mounted into the container, so an arm runs whatever the tree holds, whatever
+`AEBRISK_COMMIT` says. Before each launch, `git rev-parse HEAD` must print `$SHA`,
 `git status --porcelain` must print nothing, and the image ID must still be
 `$IMAGE`.
 
@@ -353,6 +355,9 @@ In arm-A reference mode, `study analyse` takes `--reference arm-a`.
   image and UTC start and end, and G0 to G5: G0 from `g0.json`, G1 to G3 and G5
   from the gate file, and G4 from the summary. With a summary, a `--g4` file is
   not read.
+- `--gates` names the gate file `study analyse` accepted. With a summary,
+  `study evidence` checks that the summary and the gate file name the same
+  study file, protocol, cohort and reference, not that the gates passed.
 - If an earlier attempt failed, `study evidence` takes
   `--earlier-gates artifacts/formal/aeb_policy_v2/attempt-<m>.gates.json` (or
   `attempt-<m>.gates-A.json`) once for each earlier attempt m. Each is published
