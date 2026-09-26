@@ -125,3 +125,17 @@ def test_every_listed_path_exists_and_every_copied_file_has_its_directory() -> N
             )
         else:
             assert path.parent in made, copied
+
+
+def test_the_audit_copies_the_operator_procedure_its_contract_test_reads() -> None:
+    """`test_policy_v2_study_procedure.py` reads the procedure from the tree the suite runs in.
+
+    Nothing else makes `docs/verification/` in that tree, so the procedure is
+    copied with its directory; a copy of the file alone would have nowhere to go.
+    """
+
+    procedure = PurePosixPath("docs/verification/policy-v2-study.md")
+
+    assert [entry for entry in mutmut_config()["also_copy"] if covers(entry, procedure)] == [
+        "docs/verification"
+    ]

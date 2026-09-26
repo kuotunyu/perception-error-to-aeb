@@ -107,6 +107,7 @@ also_copy = [
     "docs/studies",
     "docs/posthoc",
     "docs/figures",
+    "docs/verification",
     "NOTICE",
     "compose.formal-cpu.yaml",
     "src/aebrisk/__init__.py",
