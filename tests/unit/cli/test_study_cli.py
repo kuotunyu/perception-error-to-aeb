@@ -14,6 +14,11 @@ The scenarios are synthetic, so nothing here reads a licensed log and nothing
 here is a result. A formal run (without `--pilot`) sets `AEBRISK_COMMIT` and
 `AEBRISK_IMAGE_DIGEST`, and reads a study file written for the synthetic
 manifest, because the committed study file records the released cohort.
+
+`study verify` and `study preflight` write their gate files. The first is run on
+five synthetic arms simulated here beside the released command's cells, so it
+checks the gates against what the runner actually writes; the second reads
+small fixtures in the shape of the released run's two private records.
 """
 
 from __future__ import annotations
@@ -22,6 +27,7 @@ import hashlib
 import json
 import platform
 import re
+import shutil
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -658,3 +664,440 @@ def test_a_pilot_on_a_manifest_other_than_smoke_is_refused(workspace: Workspace)
     assert result.exit_code == 1
     assert "smoke" in result.output
     assert not output.exists()
+
+
+# --------------------------------------------------------------------------
+# study verify
+# --------------------------------------------------------------------------
+
+
+def verified_study_for(manifest: Path, path: Path) -> Path:
+    """The committed study file, recording the synthetic cohort and protocol instead.
+
+    The integrity gate holds every arm's run context to the protocol and the
+    cohort the study file records.
+    """
+
+    document = yaml.safe_load(COMMITTED_STUDY.read_text(encoding="utf-8"))
+    document["seed_namespace_protocol_sha256"] = PROTOCOL_SHA
+    document["cohort_membership_sha256"] = membership_sha256(load_manifest(manifest))
+    path.write_text(yaml.safe_dump(document, sort_keys=False), encoding="utf-8")
+    return path
+
+
+@pytest.fixture(scope="module")
+def synthetic_attempt(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """Released cells, the five arms of one attempt and one pilot arm, all synthetic."""
+
+    root = tmp_path_factory.mktemp("synthetic-attempt")
+    with pytest.MonkeyPatch.context() as patch:
+        patch.chdir(root)
+        patch.setenv("AEBRISK_COMMIT", COMMIT)
+        patch.setenv("AEBRISK_IMAGE_DIGEST", IMAGE)
+        (root / "protocol.yaml").write_text(PROTOCOL_TEXT, encoding="utf-8")
+        for split, name in (("evaluation", "evaluation.json"), ("smoke", "smoke.json")):
+            (root / name).write_text(json.dumps(manifest_document(split)), encoding="utf-8")
+        verified_study_for(root / "evaluation.json", root / "study.yaml")
+        common = ("--protocol", "protocol.yaml", "--scenario-source", "synthetic")
+        arm_run = ("study", "simulate", "--study", "study.yaml", "--arm")
+        runs = [
+            ("simulate", "--config-id", "all", "--manifest", "evaluation.json", *common),
+            *((*arm_run, arm, "--manifest", "evaluation.json", *common) for arm in ARM_FACTORS),
+            (*arm_run, "E-v2-channel-rng", "--manifest", "smoke.json", "--pilot", *common),
+        ]
+        outputs = [
+            "released",
+            *(f"attempt-1/{arm}" for arm in ARM_FACTORS),
+            "artifacts/pilot/E-v2-channel-rng",
+        ]
+        for arguments, output in zip(runs, outputs):
+            result = invoke(*arguments, "--output-dir", output)
+            assert result.exit_code == 0, result.output
+    return root
+
+
+@pytest.fixture()
+def attempt(synthetic_attempt: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """A copy of the synthetic attempt, as the working directory."""
+
+    root = tmp_path / "repository"
+    shutil.copytree(synthetic_attempt, root)
+    monkeypatch.chdir(root)
+    return root
+
+
+def study_verify(*extra: str, released: bool = True) -> Any:
+    return invoke(
+        "study",
+        "verify",
+        "--study",
+        "study.yaml",
+        "--arms-root",
+        "attempt-1",
+        "--manifest",
+        "evaluation.json",
+        *(("--released-root", "released") if released else ()),
+        *extra,
+    )
+
+
+def gate_outcomes(path: Path) -> list[tuple[str, bool]]:
+    from aebrisk.study.gates import load_gates
+
+    return [(gate.gate, gate.passed) for gate in load_gates(path).gates]
+
+
+def change_one_released_oracle_document(attempt: Path) -> None:
+    """A released document whose bytes differ and whose content does not."""
+
+    released = attempt / "released" / "oracle_aeb" / f"{TOKEN}.json"
+    released.write_bytes(released.read_bytes().replace(b'"replicate": 2', b'"replicate":  2'))
+
+
+def test_study_verify_and_preflight_take_the_documented_options() -> None:
+    verify = invoke("study", "verify", "--help")
+    preflight = invoke("study", "preflight", "--help")
+
+    assert verify.exit_code == 0, verify.output
+    for option in (
+        "--study",
+        "--arms-root",
+        "--released-root",
+        "--manifest",
+        "--arm",
+        "--reference",
+        "--pilot",
+        "--output",
+    ):
+        assert option in verify.output
+    assert preflight.exit_code == 0, preflight.output
+    for option in (
+        "--study",
+        "--protocol",
+        "--released-root",
+        "--released-hashes",
+        "--input-databases",
+        "--manifest",
+        "--split",
+        "--output",
+    ):
+        assert option in preflight.output
+
+
+def test_study_verify_passes_every_gate_on_the_arms_the_runner_writes(attempt: Path) -> None:
+    """Arm A reproduces the released cells, no_aeb is one, and the oracles agree by policy."""
+
+    from aebrisk.study.gates import load_gates
+
+    result = study_verify("--output", "attempt-1.gates.json")
+
+    assert result.exit_code == 0, result.output
+    gates = load_gates(attempt / "attempt-1.gates.json")
+    assert [(gate.gate, gate.passed) for gate in gates.gates] == [
+        ("G1", True),
+        ("G2", True),
+        ("G3", True),
+        ("G5", True),
+    ]
+    assert gates.arms_checked == tuple(ARM_FACTORS)
+    assert (gates.reference, gates.exploratory) == ("released", False)
+    assert gates.study_sha256 == hashlib.sha256((attempt / "study.yaml").read_bytes()).hexdigest()
+    assert gates.protocol_sha256 == PROTOCOL_SHA
+    assert gates.gates[0].counts["documents"] == 4 * 8 + 4
+    for gate in ("G1", "G2", "G3", "G5"):
+        assert f"{gate} passed" in result.output
+
+
+def test_study_verify_exits_1_when_a_required_gate_fails_and_still_writes_the_gate_file(
+    attempt: Path,
+) -> None:
+    from aebrisk.study.gates import load_gates
+
+    change_one_released_oracle_document(attempt)
+
+    result = study_verify("--output", "attempt-1.gates.json")
+
+    assert result.exit_code == 1
+    assert gate_outcomes(attempt / "attempt-1.gates.json") == [
+        ("G1", True),
+        ("G2", False),
+        ("G3", False),
+        ("G5", True),
+    ]
+    gates = load_gates(attempt / "attempt-1.gates.json")
+    assert gates.gates[1].counts["oracle_aeb"] == 1
+    assert "G2 failed" in result.output
+
+
+def test_study_verify_in_arm_a_reference_mode_labels_the_gate_file_exploratory(
+    attempt: Path,
+) -> None:
+    from aebrisk.study.gates import load_gates
+
+    change_one_released_oracle_document(attempt)
+
+    result = study_verify("--reference", "arm-a", "--output", "attempt-1.gates.json")
+
+    assert result.exit_code == 0, result.output
+    gates = load_gates(attempt / "attempt-1.gates.json")
+    assert (gates.reference, gates.exploratory) == ("arm-a", True)
+    assert [(gate.gate, gate.passed) for gate in gates.gates] == [
+        ("G1", True),
+        ("G2", False),
+        ("G3", True),
+        ("G5", True),
+    ]
+
+
+def test_study_verify_of_arm_a_alone_runs_g1_g2_and_g5(attempt: Path) -> None:
+    from aebrisk.study.gates import load_gates
+
+    for arm in list(ARM_FACTORS)[1:]:
+        shutil.rmtree(attempt / "attempt-1" / arm)
+
+    result = study_verify("--arm", "A-v1-replication", "--output", "attempt-1.gates-A.json")
+
+    assert result.exit_code == 0, result.output
+    assert gate_outcomes(attempt / "attempt-1.gates-A.json") == [
+        ("G1", True),
+        ("G2", True),
+        ("G5", True),
+    ]
+    assert load_gates(attempt / "attempt-1.gates-A.json").arms_checked == ("A-v1-replication",)
+
+
+def test_a_pilot_verify_needs_no_released_root(attempt: Path) -> None:
+    from aebrisk.study.gates import load_gates
+
+    result = invoke(
+        "study",
+        "verify",
+        "--pilot",
+        "--study",
+        "study.yaml",
+        "--arms-root",
+        "artifacts/pilot",
+        "--manifest",
+        "smoke.json",
+        "--arm",
+        "E-v2-channel-rng",
+        "--output",
+        "pilot.verify.json",
+    )
+
+    assert result.exit_code == 0, result.output
+    assert gate_outcomes(attempt / "pilot.verify.json") == [("G1", True), ("G5", True)]
+    assert load_gates(attempt / "pilot.verify.json").arms_checked == ("E-v2-channel-rng",)
+
+
+def test_a_pilot_verify_outside_artifacts_pilot_is_refused(attempt: Path) -> None:
+    result = study_verify("--pilot", "--output", "pilot.verify.json", released=False)
+
+    assert result.exit_code == 1
+    assert "artifacts/pilot/" in result.output
+    assert not (attempt / "pilot.verify.json").exists()
+
+
+@pytest.mark.parametrize(
+    ("extra", "released", "message"),
+    [
+        ((), False, "released records"),
+        (("--reference", "arm-b"), True, "reference"),
+        (("--arm", "F-unknown"), True, "F-unknown"),
+    ],
+)
+def test_study_verify_refuses_what_it_cannot_check(
+    attempt: Path, extra: tuple[str, ...], released: bool, message: str
+) -> None:
+    result = study_verify(*extra, "--output", "attempt-1.gates.json", released=released)
+
+    assert result.exit_code == 1
+    assert message in result.output
+    assert not (attempt / "attempt-1.gates.json").exists()
+
+
+# --------------------------------------------------------------------------
+# study preflight
+# --------------------------------------------------------------------------
+
+LOG = "2021.01.01.00.00.00_veh-01_00000_00100.db"
+
+
+def crlf_json(path: Path, value: Any) -> Path:
+    """JSON in the shape of the released run's private records: CRLF, a final LF."""
+
+    path.write_bytes(("\r\n".join(json.dumps(value, indent=2).split("\n")) + "\n").encode())
+    return path
+
+
+@dataclass(frozen=True)
+class PreflightInputs:
+    root: Path
+    study: Path
+    hashes: Path
+    log: Path
+    output: Path
+
+    def run(self) -> Any:
+        return invoke(
+            "study",
+            "preflight",
+            "--study",
+            str(self.study),
+            "--protocol",
+            str(self.root / "protocol.yaml"),
+            "--released-root",
+            str(self.root / "released"),
+            "--released-hashes",
+            str(self.hashes),
+            "--input-databases",
+            str(self.root / "d2-input-databases.json"),
+            "--manifest",
+            str(self.root / "evaluation.json"),
+            "--split",
+            "val",
+            "--output",
+            str(self.output),
+        )
+
+
+@pytest.fixture()
+def preflight_inputs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> PreflightInputs:
+    """One released document, one log, and the two private records that list them."""
+
+    (tmp_path / "protocol.yaml").write_text(PROTOCOL_TEXT, encoding="utf-8")
+    manifest = tmp_path / "evaluation.json"
+    manifest.write_text(
+        json.dumps({**manifest_document("evaluation"), "log_names": [LOG]}), encoding="utf-8"
+    )
+    released = tmp_path / "released" / "no_aeb" / f"{TOKEN}.json"
+    released.parent.mkdir(parents=True)
+    released.write_bytes(b"{}\n")
+    hashes = crlf_json(
+        tmp_path / "output-hashes.json",
+        {
+            "schema_version": "aeb-d2-output-hashes/v2",
+            "generated_at_utc": "2026-09-06T20:54:13.4306365Z",
+            "formal_files": [
+                {
+                    "path": f"no_aeb/{TOKEN}.json",
+                    "bytes": 3,
+                    "sha256": hashlib.sha256(b"{}\n").hexdigest(),
+                }
+            ],
+            "operation_files": [],
+        },
+    )
+    data_root = tmp_path / "data"
+    log = data_root / "nuplan-v1.1" / "splits" / "val" / LOG
+    log.parent.mkdir(parents=True)
+    log.write_bytes(b"not a real log\n" * 64)
+    record = crlf_json(
+        tmp_path / "d2-input-databases.json",
+        {
+            "kind": "private-d2-dataset-input-fingerprint",
+            "dataset": "nuplan-v1.1",
+            "split": "val",
+            "started_at_utc": "2026-09-06T16:43:44.8540585Z",
+            "finished_at_utc": "2026-09-06T16:51:21.6058631Z",
+            "files": [
+                {
+                    "relative_path": f"nuplan-v1.1/splits/val/{LOG}",
+                    "bytes": log.stat().st_size,
+                    "sha256": hashlib.sha256(log.read_bytes()).hexdigest(),
+                    "last_write_time_utc": "2022-09-23T05:47:01.0000000Z",
+                }
+            ],
+        },
+    )
+    study = verified_study_for(manifest, tmp_path / "study.yaml")
+    document = yaml.safe_load(study.read_text(encoding="utf-8"))
+    document["cohort_manifest_file_sha256"] = hashlib.sha256(manifest.read_bytes()).hexdigest()
+    document["released_output_hashes_sha256"] = hashlib.sha256(hashes.read_bytes()).hexdigest()
+    document["input_databases_sha256"] = hashlib.sha256(record.read_bytes()).hexdigest()
+    study.write_text(yaml.safe_dump(document, sort_keys=False), encoding="utf-8")
+    monkeypatch.setenv("NUPLAN_DATA_ROOT", str(data_root))
+    return PreflightInputs(
+        root=tmp_path,
+        study=study,
+        hashes=hashes,
+        log=log,
+        output=tmp_path / "artifacts" / "formal" / "aeb_policy_v2" / "preflight.json",
+    )
+
+
+def test_preflight_writes_its_result_and_names_what_it_checked(
+    preflight_inputs: PreflightInputs,
+) -> None:
+    from aebrisk.study.gates import load_gates
+
+    result = preflight_inputs.run()
+
+    assert result.exit_code == 0, result.output
+    study_sha256 = hashlib.sha256(preflight_inputs.study.read_bytes()).hexdigest()
+    assert f"study file SHA-256 {study_sha256}" in result.output
+    gates = load_gates(preflight_inputs.output)
+    assert [(gate.gate, gate.passed) for gate in gates.gates] == [("preflight", True)]
+    assert gates.arms_checked == ()
+    assert gates.study_sha256 == study_sha256
+    assert gates.protocol_sha256 == PROTOCOL_SHA
+    assert gates.cohort_manifest_sha256 == membership_sha256(
+        load_manifest(preflight_inputs.root / "evaluation.json")
+    )
+    assert (gates.reference, gates.exploratory) == ("released", False)
+    assert gates.gates[0].counts["referenced_logs"] == 1
+    assert gates.gates[0].counts["log_bytes"] == preflight_inputs.log.stat().st_size
+    detail = gates.artifacts_only_detail["preflight"]
+    assert f"split directory {preflight_inputs.log.parent}" in detail
+    hashes_sha256 = hashlib.sha256(preflight_inputs.hashes.read_bytes()).hexdigest()
+    assert f"released output hash list SHA-256 {hashes_sha256}" in detail
+    record_sha256 = hashlib.sha256(
+        (preflight_inputs.root / "d2-input-databases.json").read_bytes()
+    ).hexdigest()
+    assert f"input databases record SHA-256 {record_sha256}" in detail
+    modified = datetime.fromtimestamp(
+        preflight_inputs.log.stat().st_mtime_ns // 10**9, timezone.utc
+    )
+    assert any(line.startswith(f"{LOG} modified {modified:%Y-%m-%dT%H:%M:%S}.") for line in detail)
+
+
+def test_preflight_exits_1_and_writes_a_failed_result_when_a_log_differs(
+    preflight_inputs: PreflightInputs,
+) -> None:
+    from aebrisk.study.gates import load_gates
+
+    data = bytearray(preflight_inputs.log.read_bytes())
+    data[0] ^= 0x01
+    preflight_inputs.log.write_bytes(bytes(data))
+
+    result = preflight_inputs.run()
+
+    assert result.exit_code == 1
+    gates = load_gates(preflight_inputs.output)
+    assert [(gate.gate, gate.passed) for gate in gates.gates] == [("preflight", False)]
+    assert gates.gates[0].counts["log_hash_mismatches"] == 1
+    assert "preflight failed" in result.output
+
+
+def test_preflight_refuses_a_hash_list_other_than_the_pinned_one(
+    preflight_inputs: PreflightInputs,
+) -> None:
+    preflight_inputs.hashes.write_bytes(preflight_inputs.hashes.read_bytes() + b"\n")
+
+    result = preflight_inputs.run()
+
+    assert result.exit_code == 1
+    assert "pins" in result.output
+    assert not preflight_inputs.output.exists()
+
+
+def test_preflight_refuses_without_a_data_root(
+    preflight_inputs: PreflightInputs, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("NUPLAN_DATA_ROOT")
+
+    result = preflight_inputs.run()
+
+    assert result.exit_code == 1
+    assert "NUPLAN_DATA_ROOT" in result.output
+    assert not preflight_inputs.output.exists()

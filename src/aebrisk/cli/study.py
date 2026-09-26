@@ -18,6 +18,11 @@ image identifier set, because the integrity gate checks both. A pilot
 (`--pilot`) runs on the smoke manifest into `artifacts/pilot/`, where nothing is
 analysed. No arm writes under the released records,
 `artifacts/formal/nuplan_aeb_v2/`, or under `docs/`.
+
+`study preflight` checks, before any arm runs, the inputs, the released records
+and each log the cohort references. `study verify` runs the gates over the arms
+of one attempt (`aebrisk.study.gates`). Each writes a gate file, and exits 1
+when a check the mode requires fails.
 """
 
 # Like `simulate.py`, this module deliberately does NOT use
@@ -31,14 +36,16 @@ import platform
 from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Annotated, NoReturn
+from typing import Annotated, NoReturn, Optional, cast
 
 import numpy
 import typer
 import yaml
 
+from aebrisk.artifacts.study_documents import Reference
 from aebrisk.cli.simulate import (
     COMMIT_VAR,
+    DATA_ROOT_VAR,
     IMAGE_DIGEST_VAR,
     UNKNOWN_COMMIT,
     UNKNOWN_DIGEST,
@@ -55,15 +62,20 @@ from aebrisk.study.definition import (
     load_study,
     study_sha256,
 )
+from aebrisk.study.gates import (
+    PILOT_ROOT,
+    PILOT_SPLIT,
+    RELEASED,
+    checked_arms,
+    gates_document,
+    preflight,
+    required_gates_passed,
+    verify_study,
+    write_gates,
+)
 
 #: Where no arm may write: the released records and the published documentation.
 FROZEN_OUTPUTS: tuple[str, ...] = ("artifacts/formal/nuplan_aeb_v2", "docs")
-
-#: Where a pilot writes, one directory per arm. Nothing under it is analysed.
-PILOT_ROOT = "artifacts/pilot"
-
-#: The split a pilot's manifest declares.
-PILOT_SPLIT = "smoke"
 
 app = typer.Typer(
     add_completion=False,
@@ -244,3 +256,92 @@ def simulate_arm(
         dry_run=dry_run,
         report=report,
     )
+
+
+@app.command("preflight")
+def preflight_command(
+    study: Annotated[Path, typer.Option("--study", help="The study file.")],
+    protocol: Annotated[Path, typer.Option("--protocol", help="The frozen protocol file.")],
+    released_root: Annotated[Path, typer.Option("--released-root", help="The released records.")],
+    released_hashes: Annotated[
+        Path,
+        typer.Option(
+            "--released-hashes", help="The released run's list of the SHA-256 of every output."
+        ),
+    ],
+    input_databases: Annotated[
+        Path,
+        typer.Option(
+            "--input-databases", help="The released run's record of each log's size and SHA-256."
+        ),
+    ],
+    manifest: Annotated[Path, typer.Option("--manifest", help="The frozen cohort manifest.")],
+    split: Annotated[
+        str, typer.Option("--split", help="The directory nuplan-v1.1/splits/<split> to read.")
+    ],
+    output: Annotated[Path, typer.Option("--output", help="Where the result is written.")],
+) -> None:
+    """Check the inputs, the released records and each referenced log before any arm runs."""
+
+    data_root = os.environ.get(DATA_ROOT_VAR, "")
+    if not data_root:
+        _refuse(f"{DATA_ROOT_VAR} is not set; the preflight reads each referenced log under it")
+    try:
+        result = preflight(
+            study,
+            protocol,
+            released_root,
+            released_hashes,
+            input_databases,
+            manifest,
+            Path(data_root),
+            split,
+        )
+        document = gates_document(study, (), (result,))
+    except (OSError, ValueError, yaml.YAMLError) as error:
+        _refuse(f"the preflight is refused: {error}")
+    typer.echo(f"study file SHA-256 {document.study_sha256}")
+    write_gates(output, document)
+    typer.echo(f"preflight {'passed' if result.passed else 'failed'}; the result is at {output}")
+    if not result.passed:
+        raise typer.Exit(code=1)
+
+
+@app.command("verify")
+def verify_command(
+    study: Annotated[Path, typer.Option("--study", help="The study file.")],
+    arms_root: Annotated[
+        Path, typer.Option("--arms-root", help="The directory with one directory per arm.")
+    ],
+    manifest: Annotated[Path, typer.Option("--manifest", help="The frozen cohort manifest.")],
+    output: Annotated[Path, typer.Option("--output", help="Where the gate file is written.")],
+    released_root: Annotated[
+        Optional[Path],
+        typer.Option("--released-root", help="The released records; a pilot needs none."),
+    ] = None,
+    arm: Annotated[Optional[str], typer.Option("--arm", help="Check this arm only.")] = None,
+    reference: Annotated[
+        str,
+        typer.Option("--reference", help="released, or arm-a for arm-A reference mode."),
+    ] = RELEASED,
+    pilot: Annotated[
+        bool,
+        typer.Option("--pilot", help="Check a pilot under artifacts/pilot/ on the smoke manifest."),
+    ] = False,
+) -> None:
+    """Run the gates over the arms of one attempt and write the gate file."""
+
+    mode = cast(Reference, reference)
+    try:
+        results = verify_study(
+            study, arms_root, released_root, manifest, arm=arm, reference=mode, pilot=pilot
+        )
+        document = gates_document(study, checked_arms(load_study(study), arm), results, mode)
+    except (OSError, ValueError, yaml.YAMLError) as error:
+        _refuse(f"the study cannot be verified: {error}")
+    write_gates(output, document)
+    for result in results:
+        typer.echo(f"{result.gate} {'passed' if result.passed else 'failed'}")
+    typer.echo(f"the gate file is at {output}")
+    if not required_gates_passed(results, mode):
+        raise typer.Exit(code=1)
