@@ -1,0 +1,274 @@
+# The policy v2 study, as docs/studies/aeb-policy-v2/analysis-plan.md fixed it
+# before any arm ran.
+#
+# The study is read from this file rather than from code, so the file a reader
+# checks is the study that runs. Section 4.5 of the analysis plan requires every
+# arm's run context to record this file's SHA-256. The file is read by path and
+# is not shipped in the package; `aebrisk.study.definition.load_study` validates
+# it, and contract tests hold it to the analysis plan, the addendum plan and the
+# released evidence.
+schema_version: aeb-study/v1
+study_id: aeb-policy-v2
+analysis_plan: docs/studies/aeb-policy-v2/analysis-plan.md
+
+# The released protocol's SHA-256, over the CRLF bytes the release hashed. The
+# study changes no value the protocol fixes, and the hash stays the namespace
+# every error draw is keyed in, so the released draws are reproduced exactly.
+seed_namespace_protocol_sha256: bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9
+
+# The released evaluation cohort, unchanged: 344 tokens from 183 nuPlan
+# validation logs. The manifest is named by the SHA-256 of its file and by its
+# membership hash, the one every released document records.
+cohort_manifest: docs/evidence/nuplan_aeb_v2/cohort/evaluation.json
+cohort_manifest_file_sha256: 76d326690b6ba0666a0db9a452bbb38307877dcf6ba730586838ab6b557762d6
+cohort_membership_sha256: 65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9
+# Each token's log is the log_name of its accepted row in this file. The logs
+# are the clusters the bootstrap resamples and the units the sign flip flips.
+token_log_source: docs/evidence/nuplan_aeb_v2/cohort/evaluation-eligibility.json
+
+# The released three replicates of every cell.
+replicates: [0, 1, 2]
+
+# The committed configs the arms read, named by their path under configs/, and
+# the SHA-256 of their bytes. The first, third and fourth are the released
+# files, unchanged. load_study refuses the study if a file the run reads has
+# other bytes.
+input_sha256:
+  aeb/policy_v1.yaml: 263c4eebf718c8d7b748e4d0ad2d93af6654f17c8ce43a3a4d1144f48547564e
+  aeb/policy_v2.yaml: 3ac8c230c2a9df4560eed600e4b6145322449e484169fd0de90b1293ca117709
+  errors/formal_v1.yaml: e13f26aabf749e688fa911fa300e2fa794d32be4e1805443215334398d8f0e4a
+  experiments/formal_v1.yaml: 6d7935977ba4bcea6bd1428c2632ee665a30c1a865fe68ba28eadf9554b254ab
+
+# The one parameter set of the cv-kalman velocity estimate (section 4.4). No
+# other values are run or reported.
+cv_kalman:
+  process_accel_std_mps2: 3.0
+  measurement_std_m: 0.5
+  initial_velocity_std_mps: 1.0
+
+# The versions every arm's container must report, from the committed lock
+# (gate G5, section 8).
+environment:
+  python_version: "3.9.19"
+  numpy_version: "1.23.4"
+
+# The SHA-256 of two records of the released run that are kept outside Git:
+# the list of the SHA-256 of every released output, and the record of each
+# input log's size and SHA-256. The study's preflight refuses either file if its
+# SHA-256 differs. The first is the value section 7 of the addendum plan states.
+released_output_hashes_sha256: 47439aad52f112ff2d3e1142cc8530ddd678c5ae5e58a77416beccfe8c730db0
+input_databases_sha256: ea768654fbb085d1c8e53dc01922bc2301c29d5724fffe741009e688d5206774
+
+# The eight cells of section 4.1, in the order of the formal matrix. Their
+# identifiers are the released ones, so every simulated cell pairs with its
+# released record token by token.
+cells: &study_cells
+  - no_aeb
+  - oracle_aeb
+  - dropout-medium
+  - localization_shape-medium
+  - latency-medium
+  - track_instability-medium
+  - coalition-none
+  - coalition-dropout+localization_shape+latency+track_instability
+
+# The five arms of section 4.5. Each is one simulation run with its own oracle.
+# The factor names are the fields of the experiment configuration they set.
+arms:
+  # The released controller: the replication gate, and the v1 arm of every
+  # contrast.
+  - id: A-v1-replication
+    aeb_policy: v1
+    rng_scheme: dropout-keyed
+    velocity_estimator: finite-difference
+    cells: *study_cells
+  # The primary arm: collision-course target gating, the only change from A.
+  - id: B-v2-gated
+    aeb_policy: v2
+    rng_scheme: dropout-keyed
+    velocity_estimator: finite-difference
+    cells: *study_cells
+  # With D, the 2 x 2 of policy and velocity estimate under the released keying.
+  - id: C-v1-kalman
+    aeb_policy: v1
+    rng_scheme: dropout-keyed
+    velocity_estimator: cv-kalman
+    cells: *study_cells
+  - id: D-v2-kalman
+    aeb_policy: v2
+    rng_scheme: dropout-keyed
+    velocity_estimator: cv-kalman
+    cells: *study_cells
+  # The keying alone, under v2: the two cells whose draws the keying changes,
+  # the oracle every run needs, and no_aeb as a control.
+  - id: E-v2-channel-rng
+    aeb_policy: v2
+    rng_scheme: channel-independent
+    velocity_estimator: finite-difference
+    cells:
+      - no_aeb
+      - oracle_aeb
+      - dropout-medium
+      - coalition-dropout+localization_shape+latency+track_instability
+
+# Section 6. Every interval is a percentile interval over one shared draw of
+# (family, log) clusters, resampled within each family. The primary confidence
+# is the simultaneous Bonferroni level for the five primary hypotheses.
+bootstrap: {seed: 20260831, resamples: 5000, cluster: family-log, primary_confidence: 0.99, secondary_confidence: 0.95}
+# The exact paired sign-flip test over logs for collision-indicator contrasts:
+# every sign pattern up to 20 logs with a non-zero difference, random flips
+# beyond.
+sign_flip: {unit: log, enumerate_up_to: 20, random_flips: 100000, seed: 20260831}
+
+# The hypothesis families of sections 7.1, 7.4 and 7.5, each decided by Holm's
+# procedure at a family-wise 0.05 over its K hypotheses. A hypothesis is the
+# contrast plus arm minus minus arm, in one cell, on one outcome. A
+# collision-indicator contrast is tested with the sign flip and every other
+# with the cluster-bootstrap p. A predicted sign of 0 is two-sided.
+hypothesis_families:
+  # Primary (K = 5): policy v2 minus policy v1, with the released keying and the
+  # finite-difference velocity.
+  - id: primary
+    hypotheses:
+      - id: H1
+        plus: B-v2-gated
+        minus: A-v1-replication
+        cell: oracle_aeb
+        outcome: braking_share
+        test: bootstrap
+        predicted_sign: -1
+      - id: H2
+        plus: B-v2-gated
+        minus: A-v1-replication
+        cell: coalition-dropout+localization_shape+latency+track_instability
+        outcome: braking_share
+        test: bootstrap
+        predicted_sign: -1
+      - id: H3
+        plus: B-v2-gated
+        minus: A-v1-replication
+        cell: oracle_aeb
+        outcome: not_at_fault_contact_rate
+        test: bootstrap
+        predicted_sign: -1
+      - id: H4
+        plus: B-v2-gated
+        minus: A-v1-replication
+        cell: coalition-dropout+localization_shape+latency+track_instability
+        outcome: collision_indicator
+        test: sign_flip
+        predicted_sign: 1
+      - id: H5
+        plus: B-v2-gated
+        minus: A-v1-replication
+        cell: oracle_aeb
+        outcome: collision_indicator
+        test: sign_flip
+        predicted_sign: 0
+  # Q2 (K = 4): the Kalman estimate minus the finite difference, under each
+  # policy, in the two cells with localization error.
+  - id: Q2
+    hypotheses:
+      - id: Q2.1
+        plus: C-v1-kalman
+        minus: A-v1-replication
+        cell: localization_shape-medium
+        outcome: braking_share
+        test: bootstrap
+        predicted_sign: -1
+      - id: Q2.2
+        plus: C-v1-kalman
+        minus: A-v1-replication
+        cell: coalition-dropout+localization_shape+latency+track_instability
+        outcome: braking_share
+        test: bootstrap
+        predicted_sign: -1
+      - id: Q2.3
+        plus: D-v2-kalman
+        minus: B-v2-gated
+        cell: localization_shape-medium
+        outcome: braking_share
+        test: bootstrap
+        predicted_sign: -1
+      - id: Q2.4
+        plus: D-v2-kalman
+        minus: B-v2-gated
+        cell: coalition-dropout+localization_shape+latency+track_instability
+        outcome: braking_share
+        test: bootstrap
+        predicted_sign: -1
+  # The Q3 implementation check (K = 10): E minus B in the two cells whose draws
+  # the keying changes. Both keyings are valid draws from the same
+  # distributions, so the expected difference is zero.
+  - id: Q3-check
+    hypotheses:
+      - id: Q3.1
+        plus: E-v2-channel-rng
+        minus: B-v2-gated
+        cell: dropout-medium
+        outcome: collision_indicator
+        test: sign_flip
+        predicted_sign: 0
+      - id: Q3.2
+        plus: E-v2-channel-rng
+        minus: B-v2-gated
+        cell: dropout-medium
+        outcome: braking_share
+        test: bootstrap
+        predicted_sign: 0
+      - id: Q3.3
+        plus: E-v2-channel-rng
+        minus: B-v2-gated
+        cell: dropout-medium
+        outcome: not_at_fault_contact_rate
+        test: bootstrap
+        predicted_sign: 0
+      - id: Q3.4
+        plus: E-v2-channel-rng
+        minus: B-v2-gated
+        cell: dropout-medium
+        outcome: missed_interventions
+        test: bootstrap
+        predicted_sign: 0
+      - id: Q3.5
+        plus: E-v2-channel-rng
+        minus: B-v2-gated
+        cell: dropout-medium
+        outcome: false_interventions
+        test: bootstrap
+        predicted_sign: 0
+      - id: Q3.6
+        plus: E-v2-channel-rng
+        minus: B-v2-gated
+        cell: coalition-dropout+localization_shape+latency+track_instability
+        outcome: collision_indicator
+        test: sign_flip
+        predicted_sign: 0
+      - id: Q3.7
+        plus: E-v2-channel-rng
+        minus: B-v2-gated
+        cell: coalition-dropout+localization_shape+latency+track_instability
+        outcome: braking_share
+        test: bootstrap
+        predicted_sign: 0
+      - id: Q3.8
+        plus: E-v2-channel-rng
+        minus: B-v2-gated
+        cell: coalition-dropout+localization_shape+latency+track_instability
+        outcome: not_at_fault_contact_rate
+        test: bootstrap
+        predicted_sign: 0
+      - id: Q3.9
+        plus: E-v2-channel-rng
+        minus: B-v2-gated
+        cell: coalition-dropout+localization_shape+latency+track_instability
+        outcome: missed_interventions
+        test: bootstrap
+        predicted_sign: 0
+      - id: Q3.10
+        plus: E-v2-channel-rng
+        minus: B-v2-gated
+        cell: coalition-dropout+localization_shape+latency+track_instability
+        outcome: false_interventions
+        test: bootstrap
+        predicted_sign: 0
