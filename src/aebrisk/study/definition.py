@@ -47,7 +47,7 @@ ORACLE_CELL = "oracle_aeb"
 
 #: A nuPlan log is named by the drive's start time and vehicle, then the
 #: segment's range; the drive is everything up to and including the vehicle.
-_LOG_NAME = re.compile(r"^(\d{4}(?:\.\d{2}){5}_veh-\d+)_\d+_\d+(?:\.db)?$")
+_LOG_NAME = re.compile(r"(\d{4}(?:\.\d{2}){5}_veh-\d+)_\d+_\d+(?:\.db)?")
 
 Sha256 = Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
 Version = Annotated[str, Field(pattern=r"^\d+\.\d+\.\d+$")]
@@ -294,7 +294,7 @@ def token_log_map(eligibility: Path, manifest: Path) -> Mapping[str, str]:
 def drive_of(log_name: str) -> str:
     """The drive a log is a segment of: its name up to and including the vehicle id."""
 
-    match = _LOG_NAME.match(log_name)
+    match = _LOG_NAME.fullmatch(log_name)
     if match is None:
         raise ValueError(f"{log_name!r} is not a nuPlan log name")
     return match.group(1)

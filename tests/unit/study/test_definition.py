@@ -514,3 +514,10 @@ def test_drive_of_keeps_the_log_name_up_to_the_vehicle_id(log_name: str) -> None
 def test_drive_of_refuses_a_name_that_is_not_a_log(log_name: str) -> None:
     with pytest.raises(ValueError, match="is not a nuPlan log name"):
         drive_of(log_name)
+
+
+def test_drive_of_refuses_a_log_name_followed_by_a_line_break() -> None:
+    """The whole string must be a log name; a trailing line break is not one."""
+
+    with pytest.raises(ValueError, match="is not a nuPlan log name"):
+        drive_of("2021.06.07.12.01.13_veh-47_00730_00915.db\n")
