@@ -96,11 +96,15 @@ def refuse_frozen_output(output_dir: Path, repository_root: Path) -> None:
 
 
 def append_run_log(path: Path, line: str, now: Callable[[], datetime] = _utc_now) -> None:
-    """Append one line to an arm's run log, stamped with the UTC time it is written."""
+    """Append one line to an arm's run log, stamped with the UTC time it is written.
+
+    A line break inside `line`, such as one in the exception an invalid token's
+    reason quotes, becomes a space, so every line of the log carries a stamp.
+    """
 
     stamp = now().astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
     with path.open("a", encoding="utf-8", newline="\n") as handle:
-        handle.write(f"{stamp} {line}\n")
+        handle.write(f"{stamp} {' '.join(line.splitlines())}\n")
 
 
 def _committed_sha256(*parts: str) -> str:

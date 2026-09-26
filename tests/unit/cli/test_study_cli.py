@@ -465,6 +465,42 @@ def test_a_run_log_line_is_stamped_with_the_current_utc_time_by_default(tmp_path
     assert before <= datetime.strptime(match.group(1), "%Y-%m-%dT%H:%M:%S.%f") <= after
 
 
+def test_a_run_log_line_that_spans_lines_is_written_as_one(tmp_path: Path) -> None:
+    """A reader that splits the log into lines finds one stamped line per call."""
+
+    from aebrisk.cli.study import append_run_log
+
+    path = tmp_path / "run.log"
+    stamp = datetime(2026, 9, 27, 4, 5, 6, 7, tzinfo=timezone.utc)
+
+    append_run_log(path, "one\ntwo\r\nthree\rfour\u2028five", now=lambda: stamp)
+
+    assert path.read_bytes() == b"2026-09-27T04:05:06.000007Z one two three four five\n"
+
+
+def test_an_invalid_token_whose_reason_spans_lines_keeps_one_run_log_line(
+    workspace: Workspace, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The reason quotes the simulator's exception, whose message may span lines."""
+
+    from aebrisk.simulation.synthetic import SyntheticLeadScenario
+
+    def fail(*arguments: object) -> None:
+        raise ValueError("the first line\nthe second line")
+
+    monkeypatch.setattr(SyntheticLeadScenario, "simulate", fail)
+    output = workspace.root / "arms" / "E-v2-channel-rng"
+
+    result = study_simulate(workspace, "E-v2-channel-rng", output)
+
+    assert result.exit_code == 0, result.output
+    lines = (output / "run.log").read_text(encoding="utf-8").splitlines()
+    assert all(RUN_LOG_LINE.fullmatch(line) for line in lines), lines
+    assert f"{TOKEN} lead_or_stopping INVALID " in lines[2]
+    assert lines[2].endswith(": the first line the second line")
+    assert len(lines) == 4
+
+
 # --------------------------------------------------------------------------
 # A formal run
 # --------------------------------------------------------------------------
