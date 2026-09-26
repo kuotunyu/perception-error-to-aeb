@@ -347,3 +347,229 @@ class PolicyV2SummaryV1(_Strict):
                 f"reference {self.reference!r} and exploratory {self.exploratory}"
             )
         return self
+
+
+# --------------------------------------------------------------------------
+# The post-hoc addendum
+#
+# `docs/posthoc/nuplan_aeb_v2-addendum/addendum-plan.md` fixes what the addendum
+# summary holds: the outcome of its reproduction gate, intervals from a
+# family-stratified log-cluster bootstrap for the released Shapley values and
+# configuration contrasts, and a descriptive set. It estimates and describes; it
+# has no field for a p-value, a test decision or a ranking.
+# --------------------------------------------------------------------------
+
+ATTRIBUTION_ADDENDUM_SCHEMA_VERSION: Literal["aeb-attribution-addendum/v1"] = (
+    "aeb-attribution-addendum/v1"
+)
+
+#: The two released games, in the order the addendum prints them.
+AddendumGame = Literal["intervention_duration_s", "collision_indicator"]
+ADDENDUM_GAMES: tuple[AddendumGame, ...] = ("intervention_duration_s", "collision_indicator")
+
+#: The sentence the addendum plan fixes for the collision game, word for word.
+COLLISION_GAME_SENTENCE = (
+    "Under v1, the lower collision indicator of the configurations with localization error "
+    "coincides with braking for most of their measured exposure; it should not be read as a "
+    "safety benefit."
+)
+
+#: The outcomes a configuration contrast is taken on.
+ContrastMetric = Literal["collision_indicator", "braking_share", "not_at_fault_contact_rate"]
+
+Level = Annotated[float, Field(gt=0.0, lt=1.0)]
+
+
+class AddendumIntervalV1(_Strict):
+    """A two-sided percentile interval of the bootstrap draws, at one level."""
+
+    confidence: Level
+    low: FiniteFloat
+    high: FiniteFloat
+
+    @model_validator(mode="after")
+    def validate_order(self) -> AddendumIntervalV1:
+        if self.low > self.high:
+            raise ValueError("low must not exceed high")
+        return self
+
+
+class AddendumEstimateV1(_Strict):
+    """A post-hoc estimate and its intervals.
+
+    `computed_before_plan` is true for a quantity that the scratch analyses
+    listed in section 1 of the addendum plan computed before the plan was
+    written.
+    """
+
+    estimate: FiniteFloat
+    intervals: tuple[AddendumIntervalV1, ...] = Field(min_length=1)
+    computed_before_plan: StrictBool
+
+
+class AddendumDifferenceV1(AddendumEstimateV1):
+    """The `plus` value minus the `minus` value, resampled token by token."""
+
+    plus: Name
+    minus: Name
+
+
+class AddendumContrastV1(AddendumDifferenceV1):
+    """One configuration minus another on one outcome."""
+
+    metric: ContrastMetric
+
+
+class AddendumGameV1(_Strict):
+    """One released game: its Shapley values and their pairwise differences.
+
+    The six localization-and-shape differences carry a simultaneous interval
+    and a 95% one; every other interval is 95%. The collision game carries the
+    fixed sentence in `caution`, and the duration game none.
+    """
+
+    game: AddendumGame
+    shapley_values: dict[str, AddendumEstimateV1]
+    localization_shape_differences: tuple[AddendumDifferenceV1, ...]
+    other_differences: tuple[AddendumDifferenceV1, ...]
+    caution: Optional[str]
+
+    @model_validator(mode="after")
+    def validate_caution(self) -> AddendumGameV1:
+        expected = COLLISION_GAME_SENTENCE if self.game == "collision_indicator" else None
+        if self.caution != expected:
+            raise ValueError(
+                f"the {self.game} game must carry the caution {expected!r}, got {self.caution!r}"
+            )
+        return self
+
+
+class AddendumProportionV1(_Strict):
+    """A count of tokens out of the tokens, with its exact Clopper-Pearson interval.
+
+    It is descriptive: the tokens of one log are correlated, so the interval is
+    too narrow.
+    """
+
+    events: Count
+    tokens: PositiveCount
+    confidence: Level
+    low: FiniteFloat
+    high: FiniteFloat
+
+    @model_validator(mode="after")
+    def validate_events(self) -> AddendumProportionV1:
+        if self.events > self.tokens:
+            raise ValueError(f"events cannot exceed tokens, got {self.events} of {self.tokens}")
+        return self
+
+
+class AddendumOracleCollisionsV1(_Strict):
+    """The released oracle's avoided and induced collisions, beside its not-at-fault contacts."""
+
+    avoided: AddendumProportionV1
+    induced: AddendumProportionV1
+    oracle_aeb_contacts_not_at_fault: Count
+    computed_before_plan: StrictBool
+
+
+class AddendumActivationRateV1(_Strict):
+    """Brake activations of one configuration per simulated hour, with both of its terms."""
+
+    configuration_id: Name
+    brake_activations: Count
+    simulated_seconds: Annotated[float, Field(gt=0.0, allow_inf_nan=False)]
+    per_hour: Annotated[float, Field(ge=0.0, allow_inf_nan=False)]
+    computed_before_plan: StrictBool
+
+
+class AddendumZeroEventV1(_Strict):
+    """A configuration without a counted collision, overall and in each family."""
+
+    configuration_id: Name
+    overall: AddendumProportionV1
+    by_family: dict[str, AddendumProportionV1]
+    computed_before_plan: StrictBool
+
+
+class AddendumDistributionV1(_Strict):
+    """The count, median and quartiles of some values, with numpy's linear interpolation."""
+
+    count: Count
+    median: Optional[FiniteFloat]
+    lower_quartile: Optional[FiniteFloat]
+    upper_quartile: Optional[FiniteFloat]
+
+    @model_validator(mode="after")
+    def validate_values(self) -> AddendumDistributionV1:
+        values = (self.lower_quartile, self.median, self.upper_quartile)
+        if any((value is None) != (self.count == 0) for value in values):
+            raise ValueError(
+                "a distribution has a median and quartiles exactly when it has values, got "
+                f"count {self.count} and {values}"
+            )
+        return self
+
+
+class AddendumOnsetDelaysV1(_Strict):
+    """The matched onset delays of one configuration, against the oracle."""
+
+    configuration_id: Name
+    matched_onset_delays_s: AddendumDistributionV1
+    computed_before_plan: StrictBool
+
+
+class AddendumStopsAndSpeedsV1(_Strict):
+    """First stop distances where the ego stopped, and its own speed at counted collisions."""
+
+    configuration_id: Name
+    first_stop_distance_m: AddendumDistributionV1
+    ego_speed_at_collision_mps: AddendumDistributionV1
+    computed_before_plan: StrictBool
+
+
+class AddendumBootstrapV1(_Strict):
+    """The resampling every addendum interval is read from; one draw serves them all."""
+
+    cluster: Literal["family-log"]
+    clusters: PositiveCount
+    resamples: PositiveCount
+    seed: Count
+
+
+class AttributionAddendumV1(_Strict):
+    """The addendum summary, and the outcome of the reproduction gate that preceded it.
+
+    `protocol_sha256` and `cohort_manifest_sha256` are the released records'
+    protocol and cohort membership hashes, under the names the claims audit
+    reads. `released_output_hashes_sha256` is the SHA-256 of the list the
+    released records were held to.
+    """
+
+    schema_version: Literal["aeb-attribution-addendum/v1"]
+    protocol_sha256: Sha256
+    cohort_manifest_sha256: Sha256
+    cohort_size: Count
+    common_valid_tokens: Count
+    released_output_hashes_sha256: Sha256
+    reproduction_gate: StudyGateV1
+    bootstrap: AddendumBootstrapV1
+    games: tuple[AddendumGameV1, ...]
+    configuration_contrasts: tuple[AddendumContrastV1, ...]
+    oracle_collisions: AddendumOracleCollisionsV1
+    brake_activations: tuple[AddendumActivationRateV1, ...]
+    zero_event_configurations: tuple[AddendumZeroEventV1, ...]
+    matched_onset_delays: tuple[AddendumOnsetDelaysV1, ...]
+    stops_and_collision_speeds: tuple[AddendumStopsAndSpeedsV1, ...]
+
+    @model_validator(mode="after")
+    def validate_games(self) -> AttributionAddendumV1:
+        """The collision game follows the duration game, so its caution follows that line."""
+
+        games = tuple(game.game for game in self.games)
+        if games != ADDENDUM_GAMES:
+            raise ValueError(
+                "games must be the duration game and then the collision game, "
+                f"{list(ADDENDUM_GAMES)}, got {list(games)}"
+            )
+        return self

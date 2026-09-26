@@ -308,3 +308,30 @@ def test_the_study_hashes_both_policies_the_error_configuration_and_the_formal_m
     assert {name: recorded[name] for name in released} == {
         name: RELEASED_SHA256[f"configs/{name}"] for name in released
     }
+
+
+# --------------------------------------------------------------------------
+# The addendum
+# --------------------------------------------------------------------------
+
+
+def test_the_addendum_pins_the_hash_list_sha256_its_plan_and_the_study_file_state() -> None:
+    """The addendum refuses any other list, so its pin is the value its plan states."""
+
+    from aebrisk.study.addendum import RELEASED_OUTPUT_HASHES_SHA256 as PINNED
+
+    stated = re.findall(
+        r"`output-hashes\.json`, SHA-256 `([0-9a-f]{64})`",
+        ADDENDUM_PLAN.read_text(encoding="utf-8"),
+    )
+
+    assert stated == [PINNED]
+    assert committed_study().released_output_hashes_sha256 == PINNED
+
+
+def test_the_addendum_collision_game_sentence_is_the_one_its_plan_fixes() -> None:
+    from aebrisk.artifacts.study_documents import COLLISION_GAME_SENTENCE
+
+    plan = ADDENDUM_PLAN.read_text(encoding="utf-8")
+
+    assert f'with this fixed sentence: "{COLLISION_GAME_SENTENCE}"' in plan
