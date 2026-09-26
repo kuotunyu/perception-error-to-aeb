@@ -15,8 +15,8 @@ from typing import Any
 import numpy as np
 import pytest
 
+import aebrisk.simulation.step_loop as step_loop
 from aebrisk.observation.models import TrackState
-from aebrisk.simulation import step_loop
 from aebrisk.simulation.common_cohort import ExperimentConfiguration
 
 CHANNELS = ("dropout", "localization_shape", "latency", "track_instability")

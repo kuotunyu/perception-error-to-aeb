@@ -13,8 +13,8 @@ from pathlib import Path
 
 import pytest
 
+import aebrisk.errors.channels as channels
 from aebrisk.committed_config import read_committed_config
-from aebrisk.errors import channels
 from aebrisk.errors.pipeline import ErrorConfiguration, load_error_config
 
 CHANNELS = ("dropout", "localization_shape", "latency", "track_instability")
