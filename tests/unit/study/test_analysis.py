@@ -94,6 +94,7 @@ from aebrisk.study.analysis import (
     reproduce_study_cells,
     token_outcome,
 )
+from aebrisk.study.definition import drive_of
 from aebrisk.study.gates import GateResult, gates_document, load_gates
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -1713,3 +1714,111 @@ def test_the_summary_ties_the_exploratory_label_to_the_reference(
         PolicyV2SummaryV1.model_validate({**document, "exploratory": True})
     with pytest.raises(ValidationError, match="low"):
         StudyIntervalV1(confidence=0.95, low=1.0, high=0.0)
+
+
+def test_each_analysis_resamples_the_clusters_the_plan_names(
+    planted_tree: Tree, planted_summary: PolicyV2SummaryV1
+) -> None:
+    """The primary family resamples (family, log) clusters, and each other analysis its own.
+
+    The (family, drive) sensitivity resamples drives within families, the
+    whole-log sensitivity resamples logs in one stratum, and the per-family
+    contrasts resample the logs of one family. Each expected interval is drawn
+    here from the cohort's own maps, so a draw of the wrong unit is caught.
+    """
+
+    outcomes = {
+        arm: arm_outcomes(load_arm(planted_tree.arms_root / arm, STUDY_CELLS, TOKENS))
+        for arm in (A, B)
+    }
+    drives = {token: drive_of(log) for token, log in LOG_OF.items()}
+    weights = {
+        "family-log": cluster_bootstrap_weights(TOKENS, FAMILY_OF, LOG_OF, resamples=RESAMPLES),
+        "family-drive": cluster_bootstrap_weights(TOKENS, FAMILY_OF, drives, resamples=RESAMPLES),
+        "log": cluster_bootstrap_weights(
+            TOKENS, dict.fromkeys(TOKENS, "all"), LOG_OF, resamples=RESAMPLES
+        ),
+        **{
+            family: cluster_bootstrap_weights(tokens, FAMILY_OF, LOG_OF, resamples=RESAMPLES)
+            for family, tokens in TOKENS_BY_FAMILY.items()
+        },
+    }
+    results = hypotheses(planted_summary)
+    sensitivity = {
+        (row.hypothesis, row.analysis): row.contrast for row in planted_summary.sensitivity
+    }
+    by_family = {
+        (row.hypothesis, row.contrast.family): row.contrast
+        for row in planted_summary.descriptive_contrasts
+        if row.analysis == "primary_by_family"
+    }
+
+    def expected(name: str, resampled: str, test: StudyTest, step: Optional[int]) -> Any:
+        hypothesis = results[name]
+        cell = hypothesis.contrast.terms[0].cell
+        return contrast(
+            weights[resampled],
+            outcomes,
+            ArmCell(B, cell),
+            ArmCell(A, cell),
+            hypothesis.contrast.outcome,
+            test,
+            LOG_OF,
+            None if step is None else 5,
+            step,
+        )
+
+    def intervals(reported: Any) -> tuple[Any, Any, Any]:
+        return (reported.interval, reported.simultaneous_interval, reported.holm_step_interval)
+
+    for name in ("H1", "H2", "H3", "H4", "H5"):
+        step = results[name].holm_step
+        test = results[name].contrast.test
+        primary = expected(name, "family-log", test, step)
+        assert intervals(results[name].contrast) == intervals(primary)
+        assert results[name].contrast.p_value == primary.p_value
+        drive = expected(name, "family-drive", test, step)
+        assert intervals(sensitivity[(name, "family_drive_clusters")]) == intervals(drive)
+        for family in TOKENS_BY_FAMILY:
+            assert by_family[(name, family)].interval == expected(name, family, test, None).interval
+    for name in ("H1", "H2", "H3"):
+        step = results[name].holm_step
+        whole_log = expected(name, "log", "bootstrap", step)
+        assert intervals(sensitivity[(name, "whole_log_bootstrap")]) == intervals(whole_log)
+        assert sensitivity[(name, "whole_log_bootstrap")].p_value == whole_log.p_value
+    for (name, _), reported in sensitivity.items():
+        if reported.holm_step_interval is not None:
+            assert reported.holm_step_interval.confidence == holm_step_confidence(
+                5, results[name].holm_step
+            )
+    assert results["H2"].holm_step == 2
+    spread = {
+        (row.low, row.high)
+        for row in (
+            results["H2"].contrast.interval,
+            sensitivity[("H2", "family_drive_clusters")].interval,
+            sensitivity[("H2", "whole_log_bootstrap")].interval,
+        )
+        if row is not None
+    }
+    assert len(spread) == 3
+
+
+def test_every_tested_collision_contrast_flips_whole_logs(
+    planted_summary: PolicyV2SummaryV1,
+) -> None:
+    """A tested collision-indicator contrast flips logs; every other takes the bootstrap p."""
+
+    tested = [
+        *(result.contrast for result in planted_summary.hypotheses),
+        *(row.contrast for row in planted_summary.secondary),
+    ]
+    collisions = [row for row in tested if row.outcome == "collision_indicator"]
+
+    assert len(collisions) == 2 + 2 + 5 + 2 + 2
+    assert all((row.test, row.test_unit) == ("sign_flip", "log") for row in collisions)
+    assert all(
+        (row.test, row.test_unit) == ("bootstrap", None)
+        for row in tested
+        if row.outcome != "collision_indicator"
+    )
