@@ -296,3 +296,15 @@ def test_the_study_hypothesis_families_are_the_plans() -> None:
     assert contrasts(study, "Q2") == q2_expected
     assert len(q3_expected) == 10
     assert contrasts(study, "Q3-check") == q3_expected
+
+
+def test_the_study_hashes_both_policies_the_error_configuration_and_the_formal_matrix() -> None:
+    """Every config an arm reads is named, and the released three at their released bytes."""
+
+    recorded = committed_study().input_sha256
+    released = ("aeb/policy_v1.yaml", "errors/formal_v1.yaml", "experiments/formal_v1.yaml")
+
+    assert sorted(recorded) == sorted((*released, "aeb/policy_v2.yaml"))
+    assert {name: recorded[name] for name in released} == {
+        name: RELEASED_SHA256[f"configs/{name}"] for name in released
+    }
