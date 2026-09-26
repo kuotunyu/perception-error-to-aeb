@@ -133,6 +133,19 @@ def test_the_random_flips_follow_their_seed() -> None:
     assert by_default == protocol
 
 
+def test_the_drawn_p_value_at_the_protocol_seed_is_pinned() -> None:
+    """The seed is cited with the p-value, so the draw it names is fixed as well.
+
+    At the protocol seed, 7,246 of the 100,000 drawn sign patterns of the
+    twenty-one logs reach the observed sum, so p = 7,247 / 100,001. Computed
+    once with NumPy 1.23.4, drawing each sign as an 8-bit integer from PCG64.
+    """
+
+    inference = load_inference_module()
+
+    assert inference.sign_flip_p_value(TWENTY_ONE_LOGS) == 7247 / 100_001
+
+
 def test_random_flips_include_the_observed_pattern() -> None:
     """With one flip that cannot reach the observed sum, p is 1 / 2, not 0."""
 
@@ -164,6 +177,30 @@ def test_numpy_integer_differences_are_accepted() -> None:
     differences = [np.int64(1), np.int32(1), 1, np.int8(1)]
 
     assert inference.sign_flip_p_value(differences) == 0.125
+
+
+def test_the_enumeration_keeps_integer_sums_beyond_float_precision() -> None:
+    """Ties stay exact where a float would round: 2^53 + 1 is not a float64.
+
+    Observed |(2^53 + 1) + 1| = 2^53 + 2. The four sums are 2^53 + 2, -2^53,
+    2^53 and -2^53 - 2, so two of them reach it. Summed as floats, 2^53 + 1
+    rounds to 2^53 and none would.
+    """
+
+    inference = load_inference_module()
+
+    assert inference.sign_flip_p_value([2**53 + 1, 1]) == 0.5
+
+
+def test_a_difference_outside_64_bit_integers_is_refused() -> None:
+    """Differences are held as 64-bit integers, so one beyond int64 is refused."""
+
+    inference = load_inference_module()
+
+    with pytest.raises(
+        ValueError, match=r"^the absolute log differences must sum to at most 2\*\*63 - 1, got "
+    ):
+        inference.sign_flip_p_value([2**63])
 
 
 @pytest.mark.parametrize("bad_value", [0.5, 1.0, True, "1", None, np.float64(1.0), np.bool_(True)])
@@ -414,6 +451,17 @@ def test_344_events_in_344_tokens_mirror_the_zero_case() -> None:
 
     assert abs(low - 0.025 ** (1 / 344)) <= 1e-15
     assert high == 1.0
+
+
+def test_one_event_in_344_tokens_gives_the_closed_form_lower_bound() -> None:
+    """For one event the lower bound is 1 - 0.975^(1/n), above zero, not the zero-event 0."""
+
+    inference = load_inference_module()
+
+    low, _ = inference.clopper_pearson(1, 344)
+
+    assert low > 0.0
+    assert abs(low - (1 - 0.975 ** (1 / 344))) <= 1e-15
 
 
 def test_clopper_pearson_matches_a_literal_scipy_reference() -> None:

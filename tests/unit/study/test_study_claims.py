@@ -792,6 +792,25 @@ def test_duplicate_claim_ids_are_refused(repository: Path) -> None:
         build_study_claims(STUDY_EVIDENCE, repository)
 
 
+def test_a_duplicate_claim_id_refusal_names_the_first_repeated_id(repository: Path) -> None:
+    """A repeated row repeats every id it holds; the refusal names the first in sorted order."""
+
+    write_study(repository)
+    first = min(
+        claim.claim_id
+        for claim in build_study_claims(STUDY_EVIDENCE, repository).claims
+        if claim.artifact_path == POLICY_EVIDENCE and claim.metric_path.startswith("/levels/0/")
+    )
+    write_study(
+        repository, policy=policy_evidence(levels=[level(ARM_B, ORACLE), level(ARM_B, ORACLE)])
+    )
+
+    with pytest.raises(ValueError) as refusal:
+        build_study_claims(STUDY_EVIDENCE, repository)
+
+    assert str(refusal.value) == f"the evidence gives more than one number the claim id {first}"
+
+
 @pytest.mark.parametrize(
     ("policy", "attempt"),
     [
