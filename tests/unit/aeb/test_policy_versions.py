@@ -11,7 +11,9 @@ controller that ran.
 
 from __future__ import annotations
 
+import locale
 from collections.abc import Iterator
+from pathlib import Path
 from types import ModuleType
 from typing import Any
 
@@ -294,3 +296,43 @@ def test_a_policy_v2_file_that_fails_validation_is_refused(
     with pytest.raises(ValueError, match=r"^target_selection predicted_overlap must be "):
         state_machine.policy_for("v2")
     assert reads == [("aeb", "policy_v2.yaml")]
+
+
+def policy_file_with_a_non_ascii_comment(directory: Path) -> Path:
+    """The committed policy v2, preceded by a comment that only UTF-8 decodes."""
+
+    path = directory / "policy.yaml"
+    text = "# Seuils réglés avant toute exécution\n" + read_committed_config(
+        "aeb", "policy_v2.yaml"
+    )
+    path.write_bytes(text.encode("utf-8"))
+    return path
+
+
+def test_load_policy_reads_the_file_at_the_path_it_is_given(tmp_path: Path) -> None:
+    """A path names the file to read; the committed policy v1 is only the default."""
+
+    state_machine = load_state_machine_module()
+
+    policy = state_machine.load_policy(policy_file_with_a_non_ascii_comment(tmp_path))
+
+    assert policy == committed_document("policy_v2.yaml")
+
+
+def test_load_policy_decodes_utf_8_whatever_the_process_locale(tmp_path: Path) -> None:
+    """The policy file is UTF-8 by contract, so an ASCII locale must not change what is read.
+
+    Under the C locale the default text encoding is ASCII, and a reader that fell
+    back to it would fail on the first non-ASCII byte of the file.
+    """
+
+    state_machine = load_state_machine_module()
+    path = policy_file_with_a_non_ascii_comment(tmp_path)
+    saved = locale.setlocale(locale.LC_CTYPE)
+    locale.setlocale(locale.LC_CTYPE, "C")
+    try:
+        policy = state_machine.load_policy(path)
+    finally:
+        locale.setlocale(locale.LC_CTYPE, saved)
+
+    assert policy == committed_document("policy_v2.yaml")
