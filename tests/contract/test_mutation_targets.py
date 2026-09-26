@@ -96,7 +96,8 @@ def test_every_source_file_reaches_the_mutation_tree_exactly_once() -> None:
             entry for entry in listed if covers(entry, PurePosixPath(path.relative_to(ROOT)))
         ]
         for path in sorted((ROOT / SOURCE).rglob("*"))
-        if path.is_file() and "__pycache__" not in path.parts
+        # mutmut writes a .meta file beside each source file it mutates.
+        if path.is_file() and "__pycache__" not in path.parts and path.suffix != ".meta"
     }
 
     assert reached
