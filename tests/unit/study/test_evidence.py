@@ -15,6 +15,7 @@ from __future__ import annotations
 import dataclasses
 import json
 import os
+import re
 import subprocess
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -527,6 +528,12 @@ def nothing_written(directory: Path) -> bool:
     return not directory.exists() or not any(directory.iterdir())
 
 
+def refused_exactly(message: str) -> Any:
+    """Expect a `ValueError` whose message is `message`, word for word and nothing more."""
+
+    return pytest.raises(ValueError, match=f"^{re.escape(message)}$")
+
+
 # --------------------------------------------------------------------------
 # The models
 # --------------------------------------------------------------------------
@@ -969,6 +976,19 @@ def test_an_earlier_gate_file_named_otherwise_is_refused(study: Study, name: str
     assert nothing_written(study.output_dir)
 
 
+def test_the_refusal_of_an_earlier_gate_file_named_otherwise_names_both_forms(
+    study: Study,
+) -> None:
+    earlier = study.gate_file("gates.json")
+
+    with refused_exactly(
+        "an earlier attempt's gate file is named attempt-<n>.gates.json or "
+        "attempt-<n>.gates-A.json, got gates.json"
+    ):
+        study.write(gates=study.gate_file("attempt-2.gates.json"), earlier_gates=(earlier,))
+    assert nothing_written(study.output_dir)
+
+
 @pytest.mark.parametrize(
     ("main", "earlier"),
     [
@@ -1135,6 +1155,38 @@ def test_no_summary_without_not_completed_is_refused(study: Study) -> None:
     assert nothing_written(study.output_dir)
 
 
+def test_the_refusals_of_a_summary_that_contradicts_the_completion_say_what_to_name(
+    study: Study,
+) -> None:
+    with refused_exactly("a study reported not completed has no summary; name none"):
+        study.write(not_completed=True, summary_path=study.summary)
+    with refused_exactly("the evidence of a completed study copies its summary; name it"):
+        study.write(summary_path=None)
+    assert nothing_written(study.output_dir)
+
+
+def test_a_study_is_completed_unless_it_is_reported_not_completed(study: Study) -> None:
+    """Named with a summary and nothing more, the study writer publishes a completed study."""
+
+    written = write_study_evidence(
+        summary_path=study.summary,
+        gates_path=study.gates,
+        g0_path=study.g0,
+        arms_root=study.arms_root,
+        preregistration_pr=PREREGISTRATION_PR,
+        preregistration_commit=PREREGISTRATION_COMMIT,
+        preregistration_merged_at=MERGED_AT,
+        output_dir=study.output_dir,
+    )
+
+    assert [path.name for path in written] == [
+        SUMMARY_FILE,
+        POLICY_V2_EVIDENCE_FILE,
+        GATES_FILE,
+        REPRODUCTION_FILE,
+    ]
+
+
 # --------------------------------------------------------------------------
 # The study writer: refusals
 # --------------------------------------------------------------------------
@@ -1229,6 +1281,17 @@ def test_an_arm_that_cannot_be_recorded_is_refused(
     assert nothing_written(study.output_dir)
 
 
+def test_a_run_log_whose_first_line_alone_lacks_a_time_is_refused(study: Study) -> None:
+    """The last line's time does not stand in for the first line's."""
+
+    run_log = study.arms_root / "C-v1-kalman" / "run.log"
+    run_log.write_text(f"started without a time\n{finished(2)} run complete\n", encoding="utf-8")
+
+    with refused_exactly(f"the first and last lines of {run_log} must begin with a UTC time"):
+        study.write()
+    assert nothing_written(study.output_dir)
+
+
 @pytest.mark.parametrize(
     "updates",
     [
@@ -1298,6 +1361,32 @@ def test_an_earlier_gate_file_of_another_study_file_or_reference_is_published(
     study.write(gates=study.gate_file("attempt-2.gates.json"), earlier_gates=(earlier,))
 
     assert study.published("gates-attempt-1.json")["study_sha256"] == "6" * 64
+
+
+def test_the_refusal_of_a_document_of_another_study_names_the_document(study: Study) -> None:
+    """Each refusal says which document differs from the gate file, and in which fields."""
+
+    rewrite_summary(study, study_sha256="6" * 64)
+    with refused_exactly("the summary and the gate file differ in ['study_sha256']"):
+        study.write()
+
+    g4 = write_json(
+        study.root / "g4.json",
+        gates_payload(arms_checked=[], gates=[gate("G4")], protocol_sha256="a" * 64),
+    )
+    with refused_exactly("the G4 file and the gate file differ in ['protocol_sha256']"):
+        study.write(not_completed=True, g4=g4)
+
+    earlier = study.gate_file("attempt-1.gates.json", cohort_manifest_sha256="b" * 64)
+    with refused_exactly(
+        "the gate file attempt-1.gates.json and the gate file differ in ['cohort_manifest_sha256']"
+    ):
+        study.write(
+            not_completed=True,
+            gates=study.gate_file("attempt-2.gates.json"),
+            earlier_gates=(earlier,),
+        )
+    assert nothing_written(study.output_dir)
 
 
 @pytest.mark.parametrize(
@@ -1612,3 +1701,33 @@ def test_an_unknown_commit_is_refused_rather_than_called_no_ancestor(
 ) -> None:
     with pytest.raises(ValueError, match="could not compare"):
         is_ancestor(history["path"], "f" * 40, history["second"])
+
+
+def test_the_refusal_carries_gits_message_with_bytes_that_are_not_utf8_replaced(
+    history: Mapping[str, Any],
+) -> None:
+    """Git repeats a name it cannot resolve byte for byte, here one byte that is not UTF-8.
+
+    The name is how Python holds an argument whose bytes are not UTF-8, the
+    Latin-1 spelling of "café". The refusal must still be the refusal, with
+    that byte replaced in Git's message rather than failing to decode it.
+    """
+
+    name = "caf\udce9"
+    second = history["second"]
+    git = subprocess.run(
+        ["git", "merge-base", "--is-ancestor", name, second],
+        cwd=history["path"],
+        capture_output=True,
+        check=False,
+        timeout=30,
+    )
+    assert git.returncode not in (0, 1)
+    assert b"caf\xe9" in git.stderr
+
+    with pytest.raises(ValueError) as refusal:
+        is_ancestor(history["path"], name, second)
+
+    detail = git.stderr.decode("utf-8", errors="replace").strip()
+    assert "caf�" in detail
+    assert str(refusal.value) == f"git could not compare {name} with {second}: {detail}"
