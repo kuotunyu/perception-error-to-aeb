@@ -71,7 +71,7 @@ not evidence of a pass.
 
 | Result | Required shape |
 | --- | --- |
-| Shapley value | `` `metric_key` = exact_value ``, one metric per line, claim from `shapley.json` |
+| Shapley value | `` `metric_key` = exact_value ``, one metric per line, claim from `shapley.json` or, in the addendum's registry, `attribution-addendum-evidence.json` |
 | Shorter display | `` `metric_key` = rounded_value `` with `<!-- claim: <id>; rounded: N -->`, exact value kept elsewhere in the document |
 | Cohort | `` `common_valid_tokens` = exact_value `` plus its claim marker |
 | `oracle_aeb` collisions | Bound `collisions` and `contacts_not_at_fault` values plus both markers |

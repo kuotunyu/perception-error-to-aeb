@@ -977,6 +977,34 @@ def test_released_evidence_of_another_cohort_is_refused(repository: Path) -> Non
         build_addendum_claims(ADDENDUM_EVIDENCE, repository)
 
 
+def test_a_line_that_binds_a_number_of_each_game_is_refused(repository: Path) -> None:
+    """The two games are separate estimands, so a results line states numbers of one game only."""
+
+    write_addendum(repository)
+    claims = write_registry(repository, build_addendum_claims(ADDENDUM_EVIDENCE, repository))
+    duration = f"{ADDENDUM_PREFIX}shapley.intervention_duration_s.dropout.estimate"
+    collision = (
+        f"{ADDENDUM_PREFIX}difference.collision_indicator.localization_shape-minus-dropout.estimate"
+    )
+    page = repository / "results.md"
+    page.write_text(
+        "In the duration game dropout's Shapley value is `estimate` = 0.01 "
+        f"<!-- claim: {duration} -->.\n"
+        "In the collision game localization exceeds dropout by `estimate` = 0.03125 "
+        f"<!-- claim: {collision} -->.\n"
+        f"Together: `estimate` = 0.01 <!-- claim: {duration} --> and `estimate` = 0.03125 "
+        f"<!-- claim: {collision} -->.\n",
+        encoding="utf-8",
+    )
+
+    violations, _ = validate_attribution(claims, repository, None, [page])
+
+    assert violations == (
+        "results.md:3: collision_indicator and intervention_duration_s are separate estimands; "
+        "state them on separate result lines and never sum, compare or rank them",
+    )
+
+
 @pytest.mark.parametrize(
     ("write", "build", "line"),
     [

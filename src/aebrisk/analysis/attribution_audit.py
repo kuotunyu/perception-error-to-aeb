@@ -107,6 +107,22 @@ def _claim_metric(claim: ClaimV1) -> str:
     return tokens[-1]
 
 
+def _estimand(claim: ClaimV1, repository_root: Path) -> str:
+    """What a claim's number estimates: its metric key, or the game of an addendum Shapley number.
+
+    The addendum binds each Shapley value, difference and bound of a game under
+    a key such as `estimate`, so the game names the estimand it belongs to.
+    """
+
+    tokens = [token for token in claim.metric_path.split("/") if token]
+    if Path(claim.artifact_path).name == ADDENDUM_SHAPLEY_SOURCE and tokens[:1] == ["games"]:
+        document = _json_document(repository_root / claim.artifact_path)
+        game = _resolve_json_pointer(document, "/" + "/".join(tokens[:2]))
+        if isinstance(game, dict) and isinstance(game.get("game"), str):
+            return str(game["game"])
+    return _claim_metric(claim)
+
+
 def _result_numbers(text: str) -> tuple[Decimal, ...]:
     """Ignore a literal distance denominator when no numeric rate is stated."""
 
@@ -195,8 +211,8 @@ def _structural_violations(
                 f"{common_valid_tokens}"
             )
 
-    claim_metrics = {_claim_metric(claim) for claim in claims}
-    if {"collision_indicator", "intervention_duration_s"} <= claim_metrics:
+    estimands = {_estimand(claim, repository_root) for claim in claims}
+    if {"collision_indicator", "intervention_duration_s"} <= estimands:
         violations.append(
             f"{source}: collision_indicator and intervention_duration_s are separate estimands; "
             "state them on separate result lines and never sum, compare or rank them"

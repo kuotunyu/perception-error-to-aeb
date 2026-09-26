@@ -1371,3 +1371,64 @@ def test_the_skill_reads_the_cohort_from_the_registrys_evidence() -> None:
 
     assert "Read it from the registry's evidence that carries `common_valid_tokens`" in text
     assert "Read it from `shapley.json`" not in text
+
+
+def test_an_addendum_shapley_number_estimates_its_game_beside_a_released_value(
+    workspace: dict[str, Path],
+) -> None:
+    """A released collision value and a duration-game number mix two estimands on one line."""
+
+    released = _renamed(CLAIMS[1], f"{ADDENDUM_PREFIX}released.collision_indicator-values-dropout")
+    duration = _renamed(
+        ADDENDUM_SHAPLEY,
+        f"{ADDENDUM_PREFIX}shapley.intervention_duration_s.dropout.estimate",
+        metric_path="/games/0/shapley_values/dropout/estimate",
+        text="Shapley value of dropout in the intervention_duration_s game: estimate is -0.0022.",
+    )
+    _registry(workspace, [released, duration])
+    shapley_values = {"dropout": {"estimate": -0.0022}}
+    _evidence(
+        workspace["root"],
+        ADDENDUM_PATH,
+        common_valid_tokens=344,
+        games=[
+            {"game": "intervention_duration_s", "shapley_values": shapley_values},
+            {"game": "collision_indicator", "shapley_values": shapley_values},
+        ],
+    )
+    separate = _write(
+        workspace["root"],
+        "separate.md",
+        "Dropout's Shapley `collision_indicator` = -0.0021802325581395357 "
+        f"<!-- claim: {released['claim_id']} -->\n"
+        f"Dropout's Shapley `estimate` = -0.0022 <!-- claim: {duration['claim_id']} -->\n",
+    )
+    mixed = _write(
+        workspace["root"],
+        "mixed.md",
+        "Dropout's Shapley `collision_indicator` = -0.0021802325581395357 "
+        f"<!-- claim: {released['claim_id']} --> and `estimate` = -0.0022 "
+        f"<!-- claim: {duration['claim_id']} -->\n",
+    )
+
+    violations, _ = _validate(workspace, documents=(separate,))
+
+    assert violations == ()
+
+    violations, _ = _validate(workspace, documents=(mixed,))
+
+    assert violations == (
+        "mixed.md:1: collision_indicator and intervention_duration_s are separate estimands; "
+        "state them on separate result lines and never sum, compare or rank them",
+    )
+
+
+def test_the_skill_names_the_addendum_evidence_as_a_shapley_source() -> None:
+    """The quick reference names both sources the addendum's registry accepts."""
+
+    text = " ".join(SKILL_DOC.read_text(encoding="utf-8").split())
+
+    assert (
+        "claim from `shapley.json` or, in the addendum's registry, "
+        "`attribution-addendum-evidence.json`" in text
+    )
