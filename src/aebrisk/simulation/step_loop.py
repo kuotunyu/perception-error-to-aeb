@@ -62,7 +62,7 @@ from aebrisk.aeb.threat import (
     separation_at_least,
 )
 from aebrisk.errors.channels import ScenarioChannels
-from aebrisk.errors.pipeline import ErrorConfiguration, ErrorKey, apply_error_pipeline
+from aebrisk.errors.pipeline import ErrorConfiguration, apply_error_pipeline, error_key_for
 from aebrisk.observation.models import TrackState, WorldFrame
 from aebrisk.simulation.common_cohort import ExperimentConfiguration
 from aebrisk.simulation.route_follower import build_nominal_plan, pose_at_distance, route_length_m
@@ -83,13 +83,14 @@ COLLIDING_MASS_KG = 1500.0
 STOPPED_SPEED_MPS = 0.01
 
 #: The channel the error key names. Every random channel (dropout,
-#: localization_shape, track_instability) derives its draws from this one key,
-#: and the key carries this channel's severity, so those draws change when the
-#: dropout severity changes; latency is deterministic. Two configurations that
-#: differ only in dropout therefore do not share the other channels' noise
-#: realisation. The released study ran this way and the simulation contract
-#: states it as a known modelling choice; naming another channel here would
-#: change every draw.
+#: localization_shape, track_instability) derives its draws from this one key;
+#: latency is deterministic. Under the released `dropout-keyed` scheme the key
+#: carries this channel's severity, so those draws change when the dropout
+#: severity changes, and two configurations that differ only in dropout do not
+#: share the other channels' noise realisation. The released study ran this way
+#: and the simulation contract states it as a known modelling choice. Under
+#: `channel-independent` the key carries severity zero in every configuration.
+#: Naming another channel here would change every draw.
 KEY_CHANNEL = "dropout"
 
 
@@ -211,12 +212,13 @@ def run_steps(
         configuration_id=configuration.configuration_id,
         severity_by_channel=configuration.severity_by_channel,
     )
-    key = ErrorKey(
-        scenario_token=token,
+    key = error_key_for(
+        token=token,
         channel=KEY_CHANNEL,
-        severity=configuration.severity_by_channel[KEY_CHANNEL],
+        severity_by_channel=configuration.severity_by_channel,
         replicate=replicate,
         protocol_hash=protocol_hash,
+        rng_scheme=configuration.rng_scheme,
     )
     # Bound ONCE for the whole run. Dropout keeps its draw record and
     # fragmentation its track memory across steps, so rebuilding per step would

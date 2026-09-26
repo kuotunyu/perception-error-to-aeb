@@ -91,6 +91,46 @@ class ErrorKey:
             raise ValueError("protocol_hash must be a 64-character SHA-256 digest")
 
 
+def error_key_for(
+    *,
+    token: str,
+    channel: str,
+    severity_by_channel: Mapping[str, str],
+    replicate: int,
+    protocol_hash: str,
+    rng_scheme: str = "dropout-keyed",
+) -> ErrorKey:
+    """Build the one root key every random channel of a run derives its draws from.
+
+    Under `dropout-keyed`, the released scheme, the key carries the severity the
+    configuration gives `channel`, so every channel's draws change when that
+    severity does. Under `channel-independent` it carries severity zero in every
+    configuration, so no channel's draws depend on any channel's severity; where
+    `channel`'s own severity is zero the two schemes build the same key. The step
+    loop and the replay both build their key here, so a replay redraws the
+    observations of the run it shows.
+    """
+
+    if rng_scheme == "dropout-keyed":
+        severity = severity_by_channel[channel]
+    elif rng_scheme == "channel-independent":
+        severity = "zero"
+    else:
+        # Falling back to the released key would file a run under a scheme it
+        # did not use.
+        raise ValueError(
+            "rng_scheme must be one of ('dropout-keyed', 'channel-independent'), "
+            f"got {rng_scheme!r}"
+        )
+    return ErrorKey(
+        scenario_token=token,
+        channel=channel,
+        severity=severity,
+        replicate=replicate,
+        protocol_hash=protocol_hash,
+    )
+
+
 @dataclass(frozen=True)
 class ErrorConfiguration:
     """One point in the experiment matrix: a severity for every channel."""
