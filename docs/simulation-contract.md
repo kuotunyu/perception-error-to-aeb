@@ -407,8 +407,8 @@ The mutation audit of the policy v2 study tooling mutates eleven
 generated mutant stays in the denominator. Each survivor in the table has a
 concrete reason it cannot change an accepted result in the pinned environment.
 Suffixes are the exact mutmut 3.3.1 identifiers at the audited commit
-`AUDITED_COMMIT`. Rows for functions unchanged since the v1.0.0 audit carry its
-reasons; rows for changed functions were checked again on the current code. The
+`59e823f` ([mutation audit](verification/mutation-audit.md#study-tooling-audit)).
+Rows for functions unchanged since the v1.0.0 audit carry its reasons; rows for changed functions were checked again on the current code. The
 audit image measures the release runtime, Python 3.9.19 with preferred encoding
 `UTF-8`, filesystem encoding `utf-8` and `sys.flags.utf8_mode == 0`, and pins
 NumPy 1.23.4 and pydantic 2.13.5. The rows on encodings, dtypes and dump modes
