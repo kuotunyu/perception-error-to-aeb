@@ -1059,6 +1059,51 @@ def test_the_sign_flip_settings_reach_the_test() -> None:
     assert result.p_value != sign_flip_p_value([3, 3, 1])
 
 
+def test_the_flip_seed_is_the_seed_of_the_drawn_patterns(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Three logs and fifty flips leave p only a few values, so a draw from another
+    seed often gives the same p. The arguments the draw receives are checked instead."""
+
+    received: list[dict[str, Any]] = []
+
+    def recording(*args: Any, **kwargs: Any) -> float:
+        received.append(kwargs)
+        return sign_flip_p_value(*args, **kwargs)
+
+    monkeypatch.setattr("aebrisk.study.analysis.sign_flip_p_value", recording)
+    minus = cells_of({ORACLE: [outcome(collisions=0)] * 4})
+    plus = cells_of(
+        {
+            ORACLE: [
+                outcome(collisions=3),
+                outcome(collisions=1),
+                outcome(collisions=2),
+                outcome(collisions=1),
+            ]
+        }
+    )
+
+    result = contrast(
+        hand_weights(),
+        {A: minus, B: plus},
+        ArmCell(B, ORACLE),
+        ArmCell(A, ORACLE),
+        "collision_indicator",
+        "sign_flip",
+        HAND_LOG,
+        None,
+        None,
+        enumerate_up_to=1,
+        random_flips=50,
+        flip_seed=7,
+    )
+
+    (arguments,) = received
+    assert arguments == {"enumerate_up_to": 1, "random_flips": 50, "seed": 7}
+    assert result.p_value == sign_flip_p_value(
+        [3, 3, 1], enumerate_up_to=1, random_flips=50, seed=7
+    )
+
+
 def test_a_difference_in_differences_combines_four_terms_in_each_draw() -> None:
     minus = cells_of({NONE: [outcome(collisions=0)] * 4, ORACLE: [outcome(collisions=1)] * 4})
     plus = cells_of(
