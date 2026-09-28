@@ -35,13 +35,22 @@ VERIFY_STAGES: tuple[str, ...] = (
     "docs_links",
 )
 
-#: Every document kind published under docs/evidence, by its schema_version.
-#: A document whose version is not listed fails the gate instead of passing unread.
+#: Every document kind published under the directories of PUBLISHED_DOCUMENT_ROOTS,
+#: by its schema_version. A document whose version is not listed fails the gate
+#: instead of passing unread.
 EVIDENCE_MODELS: dict[str, type[BaseModel]] = {
     **DOCUMENT_MODELS,
     "aeb-cohort-manifest/v1": CohortManifestV1,
     "aeb-cohort-eligibility/v1": CohortEligibilityV1,
 }
+
+#: Where published JSON documents live: the released evidence, the policy v2
+#: study and the post-hoc addendum. Every JSON file under them is read.
+PUBLISHED_DOCUMENT_ROOTS: tuple[tuple[str, ...], ...] = (
+    ("docs", "evidence"),
+    ("docs", "studies"),
+    ("docs", "posthoc"),
+)
 
 StageRunner = Callable[[str, Sequence[str], Path], int]
 _MARKDOWN_LINK = re.compile(r"!?\[[^]]*\]\((?P<target><[^>]+>|[^)\s]+)")
@@ -105,7 +114,7 @@ def verify_repository(repo_root: Path, runner: StageRunner = subprocess_runner) 
 
 
 def verify_schema_contracts(repo_root: Path) -> int:
-    """Parse schemas and validate every published evidence document against its model."""
+    """Parse schemas and validate every published document against its model."""
 
     invalid: list[Path] = []
     for path in sorted((repo_root / "schemas").glob("**/*.json")):
@@ -116,7 +125,12 @@ def verify_schema_contracts(repo_root: Path) -> int:
 
     invalid_evidence: list[Path] = []
     unregistered_evidence: list[Path] = []
-    for path in sorted((repo_root / "docs" / "evidence").glob("**/*.json")):
+    published = (
+        path
+        for parts in PUBLISHED_DOCUMENT_ROOTS
+        for path in repo_root.joinpath(*parts).glob("**/*.json")
+    )
+    for path in sorted(published):
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
             version = payload.get("schema_version") if isinstance(payload, dict) else None

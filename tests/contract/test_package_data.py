@@ -24,6 +24,7 @@ PACKAGED_CONFIGS = (
     "aeb/policy_v1.yaml",
     "errors/formal_v1.yaml",
     "experiments/formal_v1.yaml",
+    "aeb/policy_v2.yaml",
 )
 BUILD_INPUTS = ("pyproject.toml", "README.md", "LICENSE", "src")
 SMOKE_MARKER = "the installed package read its configs and report template"
@@ -40,6 +41,7 @@ from aebrisk.errors import pipeline
 installed = Path(sys.argv[1]).resolve() / "aebrisk"
 assert Path(aebrisk.__file__).resolve().parent == installed, aebrisk.__file__
 assert state_machine.load_policy()["schema_version"] == "aeb-policy/v1"
+assert state_machine.policy_for("v2")["schema_version"] == "aeb-policy/v2"
 assert pipeline.load_error_config()["severities"] == ["zero", "low", "medium", "high"]
 assert factorial.load_experiment_matrix()["schema_version"] == "aeb-experiment-matrix/v1"
 template = resources.files("aebrisk.report").joinpath("templates").joinpath("index.html.j2")

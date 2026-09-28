@@ -27,7 +27,7 @@ from aebrisk.artifacts.results import SCENARIO_FAMILIES, AEBScenarioResultV2
 from aebrisk.attribution.factorial import formal_configurations
 from aebrisk.cohort.manifest import CohortManifestV1, load_manifest
 from aebrisk.errors.channels import ScenarioChannels
-from aebrisk.errors.pipeline import ErrorConfiguration, ErrorKey, apply_error_pipeline
+from aebrisk.errors.pipeline import ErrorConfiguration, apply_error_pipeline, error_key_for
 from aebrisk.nuplan_adapter.database import resolve_installation
 from aebrisk.nuplan_adapter.nuplan_scenario import MAP_SPEED_LIMIT_MPS
 from aebrisk.observation.models import TrackState, WorldFrame
@@ -131,12 +131,13 @@ def _observed_tracks(
         configuration_id=configuration.configuration_id,
         severity_by_channel=configuration.severity_by_channel,
     )
-    key = ErrorKey(
-        scenario_token=token,
+    key = error_key_for(
+        token=token,
         channel=KEY_CHANNEL,
-        severity=configuration.severity_by_channel[KEY_CHANNEL],
+        severity_by_channel=configuration.severity_by_channel,
         replicate=0,
         protocol_hash=protocol_hash,
+        rng_scheme=configuration.rng_scheme,
     )
     bound = ScenarioChannels(error_configuration, dt_s=dt_s)
     history: list[WorldFrame] = []

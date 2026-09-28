@@ -1,0 +1,622 @@
+{
+  "$defs": {
+    "AddendumActivationRateV1": {
+      "additionalProperties": false,
+      "description": "Brake activations of one configuration per simulated hour, with both of its terms.",
+      "properties": {
+        "brake_activations": {
+          "minimum": 0,
+          "title": "Brake Activations",
+          "type": "integer"
+        },
+        "computed_before_plan": {
+          "title": "Computed Before Plan",
+          "type": "boolean"
+        },
+        "configuration_id": {
+          "minLength": 1,
+          "title": "Configuration Id",
+          "type": "string"
+        },
+        "per_hour": {
+          "minimum": 0.0,
+          "title": "Per Hour",
+          "type": "number"
+        },
+        "simulated_seconds": {
+          "exclusiveMinimum": 0.0,
+          "title": "Simulated Seconds",
+          "type": "number"
+        }
+      },
+      "required": [
+        "configuration_id",
+        "brake_activations",
+        "simulated_seconds",
+        "per_hour",
+        "computed_before_plan"
+      ],
+      "title": "AddendumActivationRateV1",
+      "type": "object"
+    },
+    "AddendumBootstrapV1": {
+      "additionalProperties": false,
+      "description": "The resampling every addendum interval is read from; one draw serves them all.",
+      "properties": {
+        "cluster": {
+          "const": "family-log",
+          "title": "Cluster",
+          "type": "string"
+        },
+        "clusters": {
+          "minimum": 1,
+          "title": "Clusters",
+          "type": "integer"
+        },
+        "resamples": {
+          "minimum": 1,
+          "title": "Resamples",
+          "type": "integer"
+        },
+        "seed": {
+          "minimum": 0,
+          "title": "Seed",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "cluster",
+        "clusters",
+        "resamples",
+        "seed"
+      ],
+      "title": "AddendumBootstrapV1",
+      "type": "object"
+    },
+    "AddendumContrastV1": {
+      "additionalProperties": false,
+      "description": "One configuration minus another on one outcome.",
+      "properties": {
+        "computed_before_plan": {
+          "title": "Computed Before Plan",
+          "type": "boolean"
+        },
+        "estimate": {
+          "title": "Estimate",
+          "type": "number"
+        },
+        "intervals": {
+          "items": {
+            "$ref": "#/$defs/AddendumIntervalV1"
+          },
+          "minItems": 1,
+          "title": "Intervals",
+          "type": "array"
+        },
+        "metric": {
+          "enum": [
+            "collision_indicator",
+            "braking_share",
+            "not_at_fault_contact_rate"
+          ],
+          "title": "Metric",
+          "type": "string"
+        },
+        "minus": {
+          "minLength": 1,
+          "title": "Minus",
+          "type": "string"
+        },
+        "plus": {
+          "minLength": 1,
+          "title": "Plus",
+          "type": "string"
+        }
+      },
+      "required": [
+        "estimate",
+        "intervals",
+        "computed_before_plan",
+        "plus",
+        "minus",
+        "metric"
+      ],
+      "title": "AddendumContrastV1",
+      "type": "object"
+    },
+    "AddendumDifferenceV1": {
+      "additionalProperties": false,
+      "description": "The `plus` value minus the `minus` value, resampled token by token.",
+      "properties": {
+        "computed_before_plan": {
+          "title": "Computed Before Plan",
+          "type": "boolean"
+        },
+        "estimate": {
+          "title": "Estimate",
+          "type": "number"
+        },
+        "intervals": {
+          "items": {
+            "$ref": "#/$defs/AddendumIntervalV1"
+          },
+          "minItems": 1,
+          "title": "Intervals",
+          "type": "array"
+        },
+        "minus": {
+          "minLength": 1,
+          "title": "Minus",
+          "type": "string"
+        },
+        "plus": {
+          "minLength": 1,
+          "title": "Plus",
+          "type": "string"
+        }
+      },
+      "required": [
+        "estimate",
+        "intervals",
+        "computed_before_plan",
+        "plus",
+        "minus"
+      ],
+      "title": "AddendumDifferenceV1",
+      "type": "object"
+    },
+    "AddendumDistributionV1": {
+      "additionalProperties": false,
+      "description": "The count, median and quartiles of some values, with numpy's linear interpolation.",
+      "properties": {
+        "count": {
+          "minimum": 0,
+          "title": "Count",
+          "type": "integer"
+        },
+        "lower_quartile": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Lower Quartile"
+        },
+        "median": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Median"
+        },
+        "upper_quartile": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Upper Quartile"
+        }
+      },
+      "required": [
+        "count",
+        "median",
+        "lower_quartile",
+        "upper_quartile"
+      ],
+      "title": "AddendumDistributionV1",
+      "type": "object"
+    },
+    "AddendumEstimateV1": {
+      "additionalProperties": false,
+      "description": "A post-hoc estimate and its intervals.\n\n`computed_before_plan` is true for a quantity that the scratch analyses\nlisted in section 1 of the addendum plan computed before the plan was\nwritten.",
+      "properties": {
+        "computed_before_plan": {
+          "title": "Computed Before Plan",
+          "type": "boolean"
+        },
+        "estimate": {
+          "title": "Estimate",
+          "type": "number"
+        },
+        "intervals": {
+          "items": {
+            "$ref": "#/$defs/AddendumIntervalV1"
+          },
+          "minItems": 1,
+          "title": "Intervals",
+          "type": "array"
+        }
+      },
+      "required": [
+        "estimate",
+        "intervals",
+        "computed_before_plan"
+      ],
+      "title": "AddendumEstimateV1",
+      "type": "object"
+    },
+    "AddendumGameV1": {
+      "additionalProperties": false,
+      "description": "One released game: its Shapley values and their pairwise differences.\n\nThe six localization-and-shape differences carry a simultaneous interval\nand a 95% one; every other interval is 95%. The collision game carries the\nfixed sentence in `caution`, and the duration game none.",
+      "properties": {
+        "caution": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Caution"
+        },
+        "game": {
+          "enum": [
+            "intervention_duration_s",
+            "collision_indicator"
+          ],
+          "title": "Game",
+          "type": "string"
+        },
+        "localization_shape_differences": {
+          "items": {
+            "$ref": "#/$defs/AddendumDifferenceV1"
+          },
+          "title": "Localization Shape Differences",
+          "type": "array"
+        },
+        "other_differences": {
+          "items": {
+            "$ref": "#/$defs/AddendumDifferenceV1"
+          },
+          "title": "Other Differences",
+          "type": "array"
+        },
+        "shapley_values": {
+          "additionalProperties": {
+            "$ref": "#/$defs/AddendumEstimateV1"
+          },
+          "title": "Shapley Values",
+          "type": "object"
+        }
+      },
+      "required": [
+        "game",
+        "shapley_values",
+        "localization_shape_differences",
+        "other_differences",
+        "caution"
+      ],
+      "title": "AddendumGameV1",
+      "type": "object"
+    },
+    "AddendumIntervalV1": {
+      "additionalProperties": false,
+      "description": "A two-sided percentile interval of the bootstrap draws, at one level.",
+      "properties": {
+        "confidence": {
+          "exclusiveMaximum": 1.0,
+          "exclusiveMinimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "high": {
+          "title": "High",
+          "type": "number"
+        },
+        "low": {
+          "title": "Low",
+          "type": "number"
+        }
+      },
+      "required": [
+        "confidence",
+        "low",
+        "high"
+      ],
+      "title": "AddendumIntervalV1",
+      "type": "object"
+    },
+    "AddendumOnsetDelaysV1": {
+      "additionalProperties": false,
+      "description": "The matched onset delays of one configuration, against the oracle.",
+      "properties": {
+        "computed_before_plan": {
+          "title": "Computed Before Plan",
+          "type": "boolean"
+        },
+        "configuration_id": {
+          "minLength": 1,
+          "title": "Configuration Id",
+          "type": "string"
+        },
+        "matched_onset_delays_s": {
+          "$ref": "#/$defs/AddendumDistributionV1"
+        }
+      },
+      "required": [
+        "configuration_id",
+        "matched_onset_delays_s",
+        "computed_before_plan"
+      ],
+      "title": "AddendumOnsetDelaysV1",
+      "type": "object"
+    },
+    "AddendumOracleCollisionsV1": {
+      "additionalProperties": false,
+      "description": "The released oracle's avoided and induced collisions, beside its not-at-fault contacts.",
+      "properties": {
+        "avoided": {
+          "$ref": "#/$defs/AddendumProportionV1"
+        },
+        "computed_before_plan": {
+          "title": "Computed Before Plan",
+          "type": "boolean"
+        },
+        "induced": {
+          "$ref": "#/$defs/AddendumProportionV1"
+        },
+        "oracle_aeb_contacts_not_at_fault": {
+          "minimum": 0,
+          "title": "Oracle Aeb Contacts Not At Fault",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "avoided",
+        "induced",
+        "oracle_aeb_contacts_not_at_fault",
+        "computed_before_plan"
+      ],
+      "title": "AddendumOracleCollisionsV1",
+      "type": "object"
+    },
+    "AddendumProportionV1": {
+      "additionalProperties": false,
+      "description": "A count of tokens out of the tokens, with its exact Clopper-Pearson interval.\n\nIt is descriptive: the tokens of one log are correlated, so the interval is\ntoo narrow.",
+      "properties": {
+        "confidence": {
+          "exclusiveMaximum": 1.0,
+          "exclusiveMinimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "events": {
+          "minimum": 0,
+          "title": "Events",
+          "type": "integer"
+        },
+        "high": {
+          "title": "High",
+          "type": "number"
+        },
+        "low": {
+          "title": "Low",
+          "type": "number"
+        },
+        "tokens": {
+          "minimum": 1,
+          "title": "Tokens",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "events",
+        "tokens",
+        "confidence",
+        "low",
+        "high"
+      ],
+      "title": "AddendumProportionV1",
+      "type": "object"
+    },
+    "AddendumStopsAndSpeedsV1": {
+      "additionalProperties": false,
+      "description": "First stop distances where the ego stopped, and its own speed at counted collisions.",
+      "properties": {
+        "computed_before_plan": {
+          "title": "Computed Before Plan",
+          "type": "boolean"
+        },
+        "configuration_id": {
+          "minLength": 1,
+          "title": "Configuration Id",
+          "type": "string"
+        },
+        "ego_speed_at_collision_mps": {
+          "$ref": "#/$defs/AddendumDistributionV1"
+        },
+        "first_stop_distance_m": {
+          "$ref": "#/$defs/AddendumDistributionV1"
+        }
+      },
+      "required": [
+        "configuration_id",
+        "first_stop_distance_m",
+        "ego_speed_at_collision_mps",
+        "computed_before_plan"
+      ],
+      "title": "AddendumStopsAndSpeedsV1",
+      "type": "object"
+    },
+    "AddendumZeroEventV1": {
+      "additionalProperties": false,
+      "description": "A configuration without a counted collision, overall and in each family.",
+      "properties": {
+        "by_family": {
+          "additionalProperties": {
+            "$ref": "#/$defs/AddendumProportionV1"
+          },
+          "title": "By Family",
+          "type": "object"
+        },
+        "computed_before_plan": {
+          "title": "Computed Before Plan",
+          "type": "boolean"
+        },
+        "configuration_id": {
+          "minLength": 1,
+          "title": "Configuration Id",
+          "type": "string"
+        },
+        "overall": {
+          "$ref": "#/$defs/AddendumProportionV1"
+        }
+      },
+      "required": [
+        "configuration_id",
+        "overall",
+        "by_family",
+        "computed_before_plan"
+      ],
+      "title": "AddendumZeroEventV1",
+      "type": "object"
+    },
+    "StudyGateV1": {
+      "additionalProperties": false,
+      "description": "One gate's published outcome.",
+      "properties": {
+        "counts": {
+          "additionalProperties": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "title": "Counts",
+          "type": "object"
+        },
+        "gate": {
+          "minLength": 1,
+          "title": "Gate",
+          "type": "string"
+        },
+        "passed": {
+          "title": "Passed",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "gate",
+        "passed",
+        "counts"
+      ],
+      "title": "StudyGateV1",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "The addendum summary, and the outcome of the reproduction gate that preceded it.\n\n`protocol_sha256` and `cohort_manifest_sha256` are the released records'\nprotocol and cohort membership hashes, under the names the claims audit\nreads. `released_output_hashes_sha256` is the SHA-256 of the list the\nreleased records were held to.",
+  "properties": {
+    "bootstrap": {
+      "$ref": "#/$defs/AddendumBootstrapV1"
+    },
+    "brake_activations": {
+      "items": {
+        "$ref": "#/$defs/AddendumActivationRateV1"
+      },
+      "title": "Brake Activations",
+      "type": "array"
+    },
+    "cohort_manifest_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Cohort Manifest Sha256",
+      "type": "string"
+    },
+    "cohort_size": {
+      "minimum": 0,
+      "title": "Cohort Size",
+      "type": "integer"
+    },
+    "common_valid_tokens": {
+      "minimum": 0,
+      "title": "Common Valid Tokens",
+      "type": "integer"
+    },
+    "configuration_contrasts": {
+      "items": {
+        "$ref": "#/$defs/AddendumContrastV1"
+      },
+      "title": "Configuration Contrasts",
+      "type": "array"
+    },
+    "games": {
+      "items": {
+        "$ref": "#/$defs/AddendumGameV1"
+      },
+      "title": "Games",
+      "type": "array"
+    },
+    "matched_onset_delays": {
+      "items": {
+        "$ref": "#/$defs/AddendumOnsetDelaysV1"
+      },
+      "title": "Matched Onset Delays",
+      "type": "array"
+    },
+    "oracle_collisions": {
+      "$ref": "#/$defs/AddendumOracleCollisionsV1"
+    },
+    "protocol_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Protocol Sha256",
+      "type": "string"
+    },
+    "released_output_hashes_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Released Output Hashes Sha256",
+      "type": "string"
+    },
+    "reproduction_gate": {
+      "$ref": "#/$defs/StudyGateV1"
+    },
+    "schema_version": {
+      "const": "aeb-attribution-addendum/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "stops_and_collision_speeds": {
+      "items": {
+        "$ref": "#/$defs/AddendumStopsAndSpeedsV1"
+      },
+      "title": "Stops And Collision Speeds",
+      "type": "array"
+    },
+    "zero_event_configurations": {
+      "items": {
+        "$ref": "#/$defs/AddendumZeroEventV1"
+      },
+      "title": "Zero Event Configurations",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "protocol_sha256",
+    "cohort_manifest_sha256",
+    "cohort_size",
+    "common_valid_tokens",
+    "released_output_hashes_sha256",
+    "reproduction_gate",
+    "bootstrap",
+    "games",
+    "configuration_contrasts",
+    "oracle_collisions",
+    "brake_activations",
+    "zero_event_configurations",
+    "matched_onset_delays",
+    "stops_and_collision_speeds"
+  ],
+  "title": "AttributionAddendumV1",
+  "type": "object"
+}

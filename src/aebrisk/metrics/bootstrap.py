@@ -24,7 +24,7 @@ interval depend on how many draws happened to run before it.
 from __future__ import annotations
 
 import math
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Optional
 
@@ -159,3 +159,195 @@ def paired_scenario_bootstrap(
         )
         for index, name in enumerate(configurations)
     }
+
+
+# --------------------------------------------------------------------------
+# The family-stratified log-cluster bootstrap
+#
+# The interval above resamples tokens, and it stays what reproduces the
+# released intervals. Tokens from one nuPlan log share vehicle, place and time,
+# so the policy v2 study and the post-hoc addendum resample whole (family, log)
+# clusters instead. They also need more than one percentile per configuration:
+# contrasts between cells, ratios of sums and p-values, all read from the same
+# draws. The draws are therefore produced once, as token multiplicities, and
+# every statistic over a draw is a weighted sum over the tokens.
+# --------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class BootstrapWeights:
+    """How many times each token was drawn, in each draw.
+
+    ``weights[d, i]`` is the multiplicity of ``tokens[i]`` in draw ``d``. A
+    draw's mean is then ``weights[d] . values / weights[d].sum()`` and its ratio
+    of sums is ``weights[d] . numerator / weights[d] . denominator``. The array
+    is copied and made read-only: every contrast reads the same draws, and none
+    may change them for the next.
+    """
+
+    tokens: tuple[str, ...]
+    weights: np.ndarray
+
+    def __post_init__(self) -> None:
+        if not self.tokens:
+            raise ValueError("there are no tokens to resample")
+        if len(set(self.tokens)) != len(self.tokens):
+            repeated = sorted({token for token in self.tokens if self.tokens.count(token) > 1})
+            raise ValueError(
+                f"tokens repeat: {repeated}; a token listed twice would weigh double in every draw"
+            )
+        weights = np.array(self.weights)
+        if weights.ndim != 2 or weights.shape[0] < 1 or weights.shape[1] != len(self.tokens):
+            raise ValueError(
+                f"weights must be a draws x tokens array with {len(self.tokens)} columns and at "
+                f"least one draw, got shape {weights.shape}"
+            )
+        if not np.issubdtype(weights.dtype, np.integer) or bool((weights < 0).any()):
+            raise ValueError("weights must be non-negative integer multiplicities")
+        if bool((weights.sum(axis=1) == 0).any()):
+            raise ValueError("every draw must carry at least one token")
+        weights.setflags(write=False)
+        object.__setattr__(self, "weights", weights)
+
+
+def cluster_bootstrap_weights(
+    tokens: Sequence[str],
+    family_by_token: Mapping[str, str],
+    cluster_by_token: Mapping[str, str],
+    resamples: int = DEFAULT_RESAMPLES,
+    seed: int = DEFAULT_SEED,
+) -> BootstrapWeights:
+    """Resample (family, cluster) groups with replacement within each family.
+
+    A cluster is every token that shares a family and a cluster name, so a log
+    with tokens in two families is two clusters, one in each. Each draw takes,
+    within each family, as many clusters as the family has, and a drawn cluster
+    carries all of its tokens. The tokens are sorted first; then, in every draw,
+    the families are visited in sorted order and each family's clusters are
+    indexed in sorted order, so the draws depend only on the cohort and the
+    seed. Giving every token the same family and logs as clusters yields the
+    unstratified whole-log bootstrap.
+    """
+
+    if isinstance(resamples, bool) or not isinstance(resamples, int) or resamples < 1:
+        raise ValueError(f"resamples must be a positive integer, got {resamples!r}")
+    ordered = tuple(sorted(tokens))
+    if not ordered:
+        raise ValueError("there are no tokens to resample")
+    missing = sorted(
+        token for token in ordered if token not in family_by_token or token not in cluster_by_token
+    )
+    if missing:
+        raise ValueError(
+            f"no family or cluster for tokens {missing}; leaving them out or giving them a "
+            "default would silently change every draw"
+        )
+
+    positions_by_cluster: dict[tuple[str, str], list[int]] = {}
+    for position, token in enumerate(ordered):
+        key = (family_by_token[token], cluster_by_token[token])
+        positions_by_cluster.setdefault(key, []).append(position)
+
+    # Sorted by (family, cluster), so the families below arrive in sorted order.
+    clusters = sorted(positions_by_cluster)
+    cluster_of_token = np.empty(len(ordered), dtype=np.intp)
+    by_family: dict[str, list[int]] = {}
+    for index, key in enumerate(clusters):
+        cluster_of_token[positions_by_cluster[key]] = index
+        by_family.setdefault(key[0], []).append(index)
+    strata = [np.asarray(indices) for indices in by_family.values()]
+
+    generator = np.random.Generator(np.random.PCG64(seed))
+    counts = np.empty((resamples, len(clusters)), dtype=np.int64)
+    for draw in range(resamples):
+        picked = np.concatenate(
+            [generator.choice(stratum, size=len(stratum), replace=True) for stratum in strata]
+        )
+        counts[draw] = np.bincount(picked, minlength=len(clusters))
+    return BootstrapWeights(tokens=ordered, weights=counts[:, cluster_of_token])
+
+
+def _token_column(weights: BootstrapWeights, values: Mapping[str, float], name: str) -> np.ndarray:
+    missing = sorted(set(weights.tokens) - set(values))
+    unexpected = sorted(set(values) - set(weights.tokens))
+    if missing or unexpected:
+        raise ValueError(
+            f"{name} must hold exactly the resampled tokens; missing {missing}, "
+            f"unexpected {unexpected}"
+        )
+    for token in weights.tokens:
+        value = values[token]
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not math.isfinite(value)
+        ):
+            raise ValueError(f"{name} for {token!r} must be a finite number")
+    return np.array([values[token] for token in weights.tokens], dtype=np.float64)
+
+
+def _weighted_sums(weights: BootstrapWeights, column: np.ndarray) -> np.ndarray:
+    # An elementwise product and numpy's own summation rather than a matrix
+    # product, whose BLAS summation order can differ between machines.
+    return (weights.weights * column).sum(axis=1)
+
+
+def weighted_mean(weights: BootstrapWeights, values: Mapping[str, float]) -> np.ndarray:
+    """The mean of a per-token value over each draw's tokens, one entry per draw."""
+
+    column = _token_column(weights, values, "values")
+    return _weighted_sums(weights, column) / weights.weights.sum(axis=1)
+
+
+def weighted_ratio(
+    weights: BootstrapWeights,
+    numerator: Mapping[str, float],
+    denominator: Mapping[str, float],
+) -> np.ndarray:
+    """A ratio of sums over each draw's tokens, one entry per draw.
+
+    Rates are ratios of sums, as the released rates are: exposure depends on
+    the policy, so a mean of per-token ratios would weight a short run like a
+    long one.
+    """
+
+    top = _weighted_sums(weights, _token_column(weights, numerator, "numerator"))
+    bottom = _weighted_sums(weights, _token_column(weights, denominator, "denominator"))
+    if bool((bottom <= 0.0).any()):
+        raise ValueError("the denominator must sum to a positive value in every draw")
+    return top / bottom
+
+
+def _check_open_unit(name: str, value: float) -> None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not 0.0 < value < 1.0:
+        raise ValueError(f"{name} must be a number strictly between 0 and 1, got {value!r}")
+
+
+def _finite_draws(values: np.ndarray) -> np.ndarray:
+    draws = np.asarray(values, dtype=np.float64)
+    if draws.ndim != 1 or draws.size == 0 or not bool(np.isfinite(draws).all()):
+        raise ValueError("draws must be a non-empty one-dimensional array of finite numbers")
+    return draws
+
+
+def percentile_interval(values: np.ndarray, confidence: float) -> tuple[float, float]:
+    """The two-sided percentile interval of the draws, as the released interval computes it."""
+
+    _check_open_unit("confidence", confidence)
+    draws = _finite_draws(values)
+    tail = 100.0 * (1.0 - confidence) / 2.0
+    return float(np.percentile(draws, tail)), float(np.percentile(draws, 100.0 - tail))
+
+
+def bootstrap_p_value(contrast_draws: np.ndarray) -> float:
+    """The two-sided cluster-bootstrap p of a contrast.
+
+    p = min(1, 2 min(#{draws <= 0} + 1, #{draws >= 0} + 1) / (draws + 1)). A
+    draw of exactly zero counts on both sides. The smallest value it can take
+    with 5,000 draws is 2 / 5,001.
+    """
+
+    draws = _finite_draws(contrast_draws)
+    at_or_below = int(np.count_nonzero(draws <= 0.0)) + 1
+    at_or_above = int(np.count_nonzero(draws >= 0.0)) + 1
+    return min(1.0, 2.0 * min(at_or_below, at_or_above) / (draws.size + 1))

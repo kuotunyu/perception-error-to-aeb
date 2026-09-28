@@ -52,16 +52,17 @@ import numpy as np
 import numpy.typing as npt
 
 from aebrisk.aeb.controller import limit_acceleration
-from aebrisk.aeb.state_machine import AEBCommand, AEBMemory, AEBState, update_aeb
+from aebrisk.aeb.state_machine import AEBCommand, AEBMemory, AEBState, policy_for, update_aeb
 from aebrisk.aeb.threat import (
     EgoKinematicState,
     assess_threat,
+    collision_course_candidates,
     oriented_box_polygon,
     polygon_clearance,
     separation_at_least,
 )
 from aebrisk.errors.channels import ScenarioChannels
-from aebrisk.errors.pipeline import ErrorConfiguration, ErrorKey, apply_error_pipeline
+from aebrisk.errors.pipeline import ErrorConfiguration, apply_error_pipeline, error_key_for
 from aebrisk.observation.models import TrackState, WorldFrame
 from aebrisk.simulation.common_cohort import ExperimentConfiguration
 from aebrisk.simulation.route_follower import build_nominal_plan, pose_at_distance, route_length_m
@@ -82,13 +83,14 @@ COLLIDING_MASS_KG = 1500.0
 STOPPED_SPEED_MPS = 0.01
 
 #: The channel the error key names. Every random channel (dropout,
-#: localization_shape, track_instability) derives its draws from this one key,
-#: and the key carries this channel's severity, so those draws change when the
-#: dropout severity changes; latency is deterministic. Two configurations that
-#: differ only in dropout therefore do not share the other channels' noise
-#: realisation. The released study ran this way and the simulation contract
-#: states it as a known modelling choice; naming another channel here would
-#: change every draw.
+#: localization_shape, track_instability) derives its draws from this one key;
+#: latency is deterministic. Under the released `dropout-keyed` scheme the key
+#: carries this channel's severity, so those draws change when the dropout
+#: severity changes, and two configurations that differ only in dropout do not
+#: share the other channels' noise realisation. The released study ran this way
+#: and the simulation contract states it as a known modelling choice. Under
+#: `channel-independent` the key carries severity zero in every configuration.
+#: Naming another channel here would change every draw.
 KEY_CHANNEL = "dropout"
 
 
@@ -189,30 +191,48 @@ def run_steps(
     dt_s: float,
     map_speed_limit_mps: Optional[float],
 ) -> StepLoopOutcome:
-    """Drive one configuration of one scenario, and report what happened."""
+    """Drive one configuration of one scenario, and report what happened.
+
+    The AEB runs the committed policy the configuration names. Under policy v1,
+    the default, every visible track is a candidate, as in every released run;
+    under policy v2 only the tracks its target selection admits are. The
+    minimum time to collision is measured over every visible track either way:
+    the policy decides what the AEB may brake for, not what the run measured.
+    """
 
     if steps < 1:
         raise ValueError(f"steps must be at least one, got {steps}")
     if dt_s <= 0.0 or not math.isfinite(dt_s):
         raise ValueError(f"dt_s must be finite and positive, got {dt_s!r}")
 
+    policy = policy_for(configuration.aeb_policy)
     total_route_m = route_length_m(route_xy)
 
     error_configuration = ErrorConfiguration(
         configuration_id=configuration.configuration_id,
         severity_by_channel=configuration.severity_by_channel,
     )
-    key = ErrorKey(
-        scenario_token=token,
+    key = error_key_for(
+        token=token,
         channel=KEY_CHANNEL,
-        severity=configuration.severity_by_channel[KEY_CHANNEL],
+        severity_by_channel=configuration.severity_by_channel,
         replicate=replicate,
         protocol_hash=protocol_hash,
+        rng_scheme=configuration.rng_scheme,
     )
     # Bound ONCE for the whole run. Dropout keeps its draw record and
     # fragmentation its track memory across steps, so rebuilding per step would
-    # redraw every choice and no track would ever stay lost for its delay.
-    bound = BIND_CHANNELS(error_configuration, dt_s=dt_s)
+    # redraw every choice and no track would ever stay lost for its delay. The
+    # velocity estimator is named only when it is not the released finite
+    # difference, so the released binding is unchanged.
+    if configuration.velocity_estimator == "finite-difference":
+        bound = BIND_CHANNELS(error_configuration, dt_s=dt_s)
+    else:
+        bound = BIND_CHANNELS(
+            error_configuration,
+            dt_s=dt_s,
+            velocity_estimator=configuration.velocity_estimator,
+        )
 
     history: list[WorldFrame] = []
     states: list[AEBState] = []
@@ -284,13 +304,19 @@ def run_steps(
             acceleration_mps2=applied,
         )
 
-        threats = tuple(assess_threat(ego, track) for track in observed if track.visible)
+        visible = tuple(track for track in observed if track.visible)
+        threats = tuple(assess_threat(ego, track) for track in visible)
         for threat in threats:
             if threat.ttc_s is not None:
                 min_ttc = threat.ttc_s if min_ttc is None else min(min_ttc, threat.ttc_s)
 
         if configuration.aeb_enabled:
-            memory, command = update_aeb(memory, threats, dt_s=dt_s)
+            # Policy v1 has no target selection, and the assessments come back
+            # as they are; policy v2's gate keeps only the admitted ones.
+            candidates = collision_course_candidates(
+                ego, visible, threats, policy.get("target_selection")
+            )
+            memory, command = update_aeb(memory, candidates, dt_s=dt_s, policy=policy)
             commands.append(command)
             states.append(command.state)
         else:

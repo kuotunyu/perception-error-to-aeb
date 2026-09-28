@@ -23,6 +23,7 @@ import math
 from types import ModuleType
 from typing import Any
 
+import numpy as np
 import pytest
 
 
@@ -305,6 +306,32 @@ def test_overlapping_boxes_have_no_clearance() -> None:
     second = threat.oriented_box_polygon((1.0, 0.0), 0.0, (4.0, 2.0))
 
     assert threat.polygon_clearance(first, second) == 0.0
+
+
+def test_clearance_is_reproduced_to_the_last_bit() -> None:
+    """Recorded minimum clearances are compared byte for byte, so the arithmetic is fixed.
+
+    Arm A of the policy v2 study must reproduce the released records exactly,
+    and every recorded `min_clearance_m` comes from this function. The second
+    polygon is the 4 m by 2 m box yawed 0.3 rad at (4, -2). Its clearance from
+    the ego box is 0.5463769024482852 m, the float nearest the exact distance
+    between the two sets of corners; measuring each edge from its other end
+    changes the last bit.
+    """
+
+    threat = load_threat_module()
+    ego = np.array([[-2.0, -1.0], [2.0, -1.0], [2.0, 1.0], [-2.0, 1.0]])
+    body = np.array(
+        [
+            [2.384847228410128, -3.546376902448285],
+            [6.206193184912552, -2.364296075802927],
+            [5.615152771589872, -0.45362309755171504],
+            [1.7938068150874487, -1.635703924197073],
+        ]
+    )
+
+    assert threat.polygon_clearance(ego, body) == 0.5463769024482852
+    assert threat.polygon_clearance(body, ego) == 0.5463769024482852
 
 
 # --------------------------------------------------------------------------

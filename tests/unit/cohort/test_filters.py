@@ -149,6 +149,17 @@ def test_a_scenario_with_no_measured_time_to_collision_is_refused() -> None:
     assert filters.passes_prefilter(make_candidate(filters, oracle_min_ttc_within_4s=None)) is False
 
 
+def test_a_scenario_with_no_measured_time_to_collision_is_refused_by_name() -> None:
+    """The eligibility record states this rule word for word, as it states the others."""
+
+    filters = load_filters_module()
+
+    assert (
+        filters.prefilter_refusal(make_candidate(filters, oracle_min_ttc_within_4s=None))
+        == "no observed object is on a collision course within 4 s"
+    )
+
+
 def test_a_time_to_collision_exactly_at_the_limit_is_refused() -> None:
     """The bound is strict: six seconds is not close, and the plan fixes this."""
 

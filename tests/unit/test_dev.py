@@ -368,3 +368,65 @@ def test_module_entrypoint_is_wired_to_the_application(
         runpy.run_path(str(Path(app_module.__file__)), run_name="__main__")
 
     assert raised.value.code == 0
+
+
+def gate_file_payload(**updates: object) -> dict[str, object]:
+    """A published gate file of the policy v2 study, one of the documents under docs/studies."""
+
+    payload: dict[str, object] = {
+        "schema_version": "aeb-study-gates/v1",
+        "study_sha256": "5" * 64,
+        "arms_checked": ["A-v1-replication"],
+        "protocol_sha256": "a" * 64,
+        "cohort_manifest_sha256": "b" * 64,
+        "reference": "released",
+        "exploratory": False,
+        "gates": [{"gate": "G1", "passed": True, "counts": {"arms": 1}}],
+    }
+    payload.update(updates)
+    return payload
+
+
+def write_published(repo_root: Path, relative: str, payload: object) -> None:
+    path = repo_root / relative
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
+def test_schema_contracts_validates_the_study_and_addendum_documents(tmp_path: Path) -> None:
+    """The results pull requests commit registered documents under docs/studies and docs/posthoc."""
+
+    write_published(tmp_path, "docs/studies/aeb-policy-v2/evidence/gates.json", gate_file_payload())
+    write_published(
+        tmp_path,
+        "docs/posthoc/nuplan_aeb_v2-addendum/evidence/gates.json",
+        gate_file_payload(reference="arm-a", exploratory=True),
+    )
+
+    assert dev.verify_schema_contracts(tmp_path) == 0
+
+
+@pytest.mark.parametrize(
+    "directory", ["docs/studies/aeb-policy-v2/evidence", "docs/posthoc/nuplan_aeb_v2-addendum"]
+)
+def test_schema_contracts_reports_an_invalid_study_or_addendum_document(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], directory: str
+) -> None:
+    write_published(tmp_path, f"{directory}/gates.json", gate_file_payload(exploratory=True))
+
+    assert dev.verify_schema_contracts(tmp_path) == 1
+    assert f"invalid evidence document: {directory}/gates.json" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    "directory", ["docs/studies/aeb-policy-v2/evidence", "docs/posthoc/nuplan_aeb_v2-addendum"]
+)
+def test_schema_contracts_refuses_an_unregistered_study_or_addendum_document(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], directory: str
+) -> None:
+    """A g0.json is read by the evidence writer and never committed on its own."""
+
+    write_published(tmp_path, f"{directory}/g0.json", {"schema_version": "aeb-study-g0/v1"})
+
+    assert dev.verify_schema_contracts(tmp_path) == 1
+    assert f"unregistered evidence document: {directory}/g0.json" in capsys.readouterr().err

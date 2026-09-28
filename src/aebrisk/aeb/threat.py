@@ -39,8 +39,9 @@ made a single cohort candidate cost 37 seconds and the freeze cost days.
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Optional
 
 import numpy as np
 import numpy.typing as npt
@@ -463,4 +464,62 @@ def select_highest_required_deceleration(
     return min(
         threats,
         key=lambda threat: (-threat.required_deceleration_mps2, threat.track_id),
+    )
+
+
+def signed_longitudinal_separation_m(ego_state: EgoKinematicState, track: TrackState) -> float:
+    """How far the track's centre lies ahead of the ego's, along the ego's heading.
+
+    Negative is behind. This is the projection `_longitudinal_gap` takes the
+    absolute value of before subtracting the two bodies' reach; the sign it
+    drops is what tells a body ahead of the ego from one behind it.
+    """
+
+    cos, sin = math.cos(ego_state.yaw_rad), math.sin(ego_state.yaw_rad)
+    return (track.center_xy_m[0] - ego_state.center_xy_m[0]) * cos + (
+        track.center_xy_m[1] - ego_state.center_xy_m[1]
+    ) * sin
+
+
+def collision_course_candidates(
+    ego_state: EgoKinematicState,
+    tracks: Sequence[TrackState],
+    threats: tuple[ThreatAssessment, ...],
+    target_selection: Optional[Mapping[str, Any]],
+) -> tuple[ThreatAssessment, ...]:
+    """The assessments the AEB may select among, under a policy's target selection.
+
+    `threats[i]` must be the assessment of `tracks[i]`: the gate judges each
+    assessment by its own track's position, and one body judged by another's
+    position would be admitted or dropped for the wrong reason. Inputs that do
+    not line up are refused whatever the policy.
+
+    Without a target selection, which is policy v1, every assessment is a
+    candidate and `threats` itself is returned. With one, which is policy v2's
+    validated `target_selection`, a body is a candidate only when its assessment
+    predicts an overlap and its signed separation along the ego's heading is at
+    least the configured minimum, the minimum itself included. The assessments
+    are not recomputed and keep their order.
+    """
+
+    if len(tracks) != len(threats):
+        raise ValueError(
+            "collision_course_candidates needs one threat assessment per track, got "
+            f"{len(tracks)} tracks and {len(threats)} assessments"
+        )
+    for index, (track, threat) in enumerate(zip(tracks, threats)):
+        if threat.track_id != track.track_id:
+            raise ValueError(
+                f"threat assessment {index} describes track {threat.track_id!r}, not "
+                f"{track.track_id!r}; the gate would judge one body by another's position"
+            )
+    if target_selection is None:
+        return threats
+
+    minimum_m = target_selection["not_behind"]["minimum_signed_separation_m"]
+    return tuple(
+        threat
+        for track, threat in zip(tracks, threats)
+        if threat.predicted_overlap
+        and signed_longitudinal_separation_m(ego_state, track) >= minimum_m
     )

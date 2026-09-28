@@ -949,3 +949,137 @@ def test_fault_rule_boundaries_in_translated_rotated_coordinates(
     )
 
     assert module.ego_at_fault(pose, yaw, ego_speed, track) is expected
+
+
+# --------------------------------------------------------------------------
+# The policy the configuration names
+# --------------------------------------------------------------------------
+
+
+def diagonal_lead(step: int) -> tuple[int, tuple[TrackState, ...]]:
+    """A stationary body 30 m up a route that runs at 45 degrees."""
+
+    coordinate = 30.0 / math.sqrt(2.0)
+    timestamp_us = FIRST_TIMESTAMP_US + step * round(DT_S * 1_000_000)
+    return timestamp_us, (
+        TrackState(
+            track_id="diagonal-lead",
+            category="vehicle",
+            center_xy_m=(coordinate, coordinate),
+            yaw_rad=math.pi / 4.0,
+            size_lw_m=EGO_SIZE,
+            velocity_xy_mps=(0.0, 0.0),
+            visible=True,
+            source_timestamp_us=timestamp_us,
+            covariance_xy=(0.0, 0.0, 0.0, 0.0),
+        ),
+    )
+
+
+def with_policy(version: str) -> ExperimentConfiguration:
+    """The default AEB-on oracle configuration, naming its policy explicitly."""
+
+    return ExperimentConfiguration(
+        configuration_id="oracle_aeb",
+        aeb_enabled=True,
+        observation_mode="oracle",
+        severity_by_channel=dict.fromkeys(CHANNELS, "zero"),
+        replicate_count=1,
+        aeb_policy=version,
+    )
+
+
+def test_the_default_configuration_is_the_v1_policy() -> None:
+    """A configuration that names no policy runs the released controller, to the bit.
+
+    Every released cell names no policy. Four scenarios with the AEB on, where
+    the released loop brakes, turns along the route, skips a far body's
+    geometry and is closed on from behind, give the same outcome whether the
+    policy is left out or named as v1.
+    """
+
+    module = load_step_loop_module()
+    rotated_route = np.array([[0.0, 0.0], [100.0, 100.0]], dtype=np.float64)
+
+    def rotated(config: ExperimentConfiguration) -> Any:
+        return module.run_steps(
+            token=TOKEN,
+            route_xy=rotated_route,
+            frame_at_step=diagonal_lead,
+            steps=30,
+            initial_speed_mps=10.0,
+            ego_size_lw_m=EGO_SIZE,
+            configuration=config,
+            replicate=0,
+            protocol_hash=PROTOCOL_HASH,
+            dt_s=DT_S,
+            map_speed_limit_mps=None,
+        )
+
+    scenarios: dict[str, Any] = {
+        "lead_at(60)": lambda config: run(module, lead_at(60.0), config=config),
+        "rotated route": rotated,
+        "far body": lambda config: run(
+            module, bodies((60.0, 0.0), (200.0, 80.0)), config=config, steps=60
+        ),
+        "approaching from behind": lambda config: run(
+            module,
+            steps=40,
+            initial_speed_mps=0.0,
+            config=config,
+            source=approaching_from_behind(),
+        ),
+    }
+
+    assert configuration().aeb_policy == "v1"
+    for name, scenario in scenarios.items():
+        default = scenario(configuration())
+        named = scenario(with_policy("v1"))
+        assert named == default, name
+    assert AEBState.PARTIAL in run(module, lead_at(60.0), config=with_policy("v1")).states
+
+
+def test_min_ttc_is_measured_over_every_visible_track_under_v2() -> None:
+    """The gate decides what the AEB may select, not what the run measured.
+
+    A car closing from behind is predicted to overlap in 0.6 s, but it is behind,
+    so under policy v2 it is not a candidate, and the AEB brakes for the in-path
+    lead, whose time to collision is 1.6 s. The minimum time to collision still
+    reports the car behind, as policy v1's run of the same frame does: the metric
+    is taken over every visible track under either policy.
+    """
+
+    module = load_step_loop_module()
+
+    def frame(step: int) -> tuple[int, tuple[TrackState, ...]]:
+        timestamp_us = FIRST_TIMESTAMP_US + step * round(DT_S * 1_000_000)
+
+        def body(track_id: str, x_m: float, speed_mps: float, visible: bool = True) -> TrackState:
+            return TrackState(
+                track_id=track_id,
+                category="vehicle",
+                center_xy_m=(x_m, 0.0),
+                yaw_rad=0.0,
+                size_lw_m=EGO_SIZE,
+                velocity_xy_mps=(speed_mps, 0.0),
+                visible=visible,
+                source_timestamp_us=timestamp_us,
+                covariance_xy=(0.0, 0.0, 0.0, 0.0),
+            )
+
+        return timestamp_us, (
+            body("lead-1", 20.0, 0.0),
+            body("closing-from-behind", -10.0, 20.0),
+            # Hidden bodies are assessed under neither policy.
+            body("hidden-closer", 12.0, -20.0, visible=False),
+        )
+
+    v1 = run(module, config=with_policy("v1"), steps=1, source=frame)
+    v2 = run(module, config=with_policy("v2"), steps=1, source=frame)
+
+    lead_alone = run(module, lead_at(20.0), config=with_policy("v2"), steps=1)
+
+    assert v2.commands[0].selected_track_id == "lead-1"
+    assert v2.commands[0].state is AEBState.PARTIAL
+    assert lead_alone.min_ttc_s == pytest.approx(1.6)
+    assert v2.min_ttc_s == v1.min_ttc_s == pytest.approx(0.6)

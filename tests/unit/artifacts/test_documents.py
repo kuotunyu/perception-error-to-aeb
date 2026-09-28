@@ -55,6 +55,12 @@ def test_every_published_version_has_one_registered_model() -> None:
         "aeb-shapley/v1",
         "aeb-exclusions/v1",
         "aeb-family-interventions/v1",
+        "aeb-study-gates/v1",
+        "aeb-policy-v2-summary/v1",
+        "aeb-attribution-addendum/v1",
+        "aeb-policy-v2-evidence/v1",
+        "aeb-study-reproduction/v1",
+        "aeb-attribution-addendum-evidence/v1",
     )
     assert tuple(documents.DOCUMENT_MODELS) == documents.SCHEMA_VERSIONS
 

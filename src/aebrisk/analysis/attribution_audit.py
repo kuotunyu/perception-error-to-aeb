@@ -62,6 +62,19 @@ COHORT_SIZE = re.compile(
 )
 FENCE_PREFIXES = ("```", "~~~")
 
+#: The claim-id prefixes of the two later registries, each published beside its
+#: own results page: the policy v2 study's and the post-hoc addendum's. The
+#: released registry uses neither, and a later part's registry uses only its own.
+STUDY_CLAIM_PREFIX = "p3.study.policy-v2."
+ADDENDUM_CLAIM_PREFIX = "p3.posthoc.v1-addendum."
+PART_CLAIM_PREFIXES: tuple[str, ...] = (STUDY_CLAIM_PREFIX, ADDENDUM_CLAIM_PREFIX)
+#: Where a Shapley number may come from: the released values and, in the
+#: addendum's registry only, the addendum's derived evidence.
+RELEASED_SHAPLEY_SOURCE = "shapley.json"
+ADDENDUM_SHAPLEY_SOURCE = "attribution-addendum-evidence.json"
+#: A published gate file of the study, whose counts are keyed by cell or by comparison.
+GATE_FILE = re.compile(r"gates(?:-attempt-[1-9][0-9]*)?\.json")
+
 #: Where a statement came from, its text without markers, and each marker's
 #: claim ID with its declared rounding (``None`` for an exact binding).
 _Statement = tuple[str, str, tuple[tuple[str, Optional[int]], ...]]
@@ -84,9 +97,30 @@ def _claim_metric(claim: ClaimV1) -> str:
     """Return the stable metric key required in a constrained result binding."""
 
     tokens = [token for token in claim.metric_path.split("/") if token]
-    if Path(claim.artifact_path).name == "shapley.json" and tokens[:1] == ["metrics"]:
+    name = Path(claim.artifact_path).name
+    if name == RELEASED_SHAPLEY_SOURCE and tokens[:1] == ["metrics"]:
         return tokens[1]
+    if GATE_FILE.fullmatch(name) and tokens[2:3] == ["counts"]:
+        # A gate counts per cell or per comparison, and a cell such as
+        # `dropout-medium` is no metric key, so the key is spelled with underscores.
+        return re.sub(r"[^a-z0-9_]", "_", tokens[-1].lower())
     return tokens[-1]
+
+
+def _estimand(claim: ClaimV1, repository_root: Path) -> str:
+    """What a claim's number estimates: its metric key, or the game of an addendum Shapley number.
+
+    The addendum binds each Shapley value, difference and bound of a game under
+    a key such as `estimate`, so the game names the estimand it belongs to.
+    """
+
+    tokens = [token for token in claim.metric_path.split("/") if token]
+    if Path(claim.artifact_path).name == ADDENDUM_SHAPLEY_SOURCE and tokens[:1] == ["games"]:
+        document = _json_document(repository_root / claim.artifact_path)
+        game = _resolve_json_pointer(document, "/" + "/".join(tokens[:2]))
+        if isinstance(game, dict) and isinstance(game.get("game"), str):
+            return str(game["game"])
+    return _claim_metric(claim)
 
 
 def _result_numbers(text: str) -> tuple[Decimal, ...]:
@@ -95,22 +129,67 @@ def _result_numbers(text: str) -> tuple[Decimal, ...]:
     return _text_numbers(UNAVAILABLE_PER_100_KM.sub("", text))
 
 
-def _common_valid_tokens(registry: dict[str, ClaimV1], repository_root: Path) -> int:
-    relative = next(
-        claim.artifact_path
-        for claim in registry.values()
-        if Path(claim.artifact_path).name == "shapley.json"
-    )
-    document = _json_document(repository_root / relative)
-    return int(document["common_valid_tokens"])  # type: ignore[index]
+def _common_valid_tokens(registry: dict[str, ClaimV1], repository_root: Path) -> Optional[int]:
+    """The common-valid cohort that every registry artifact stating one agrees on.
+
+    It is `None` when no artifact states one, as in a registry of gate
+    diagnostics alone, and then no page bound to the registry may state a cohort.
+    """
+
+    stated: dict[str, int] = {}
+    for relative in sorted({claim.artifact_path for claim in registry.values()}):
+        document = _json_document(repository_root / relative)
+        if isinstance(document, dict) and "common_valid_tokens" in document:
+            stated[relative] = int(document["common_valid_tokens"])
+    if len(set(stated.values())) > 1:
+        raise ValueError(f"the registry's artifacts state different common-valid cohorts: {stated}")
+    return next(iter(stated.values()), None)
+
+
+def _registry_part(claims: tuple[ClaimV1, ...]) -> tuple[Optional[str], list[str]]:
+    """The prefix of the later part whose registry this is, `None` for any other, and its faults.
+
+    A later part's registry is one whose ids begin with that part's prefix, and
+    every id in it must. A registry that mixes prefixes is refused and read as
+    no part's, so the released Shapley rule applies to it.
+    """
+
+    ids = [claim.claim_id for claim in claims]
+    violations = [
+        f"claim id {claim_id} appears {count} times"
+        for claim_id, count in sorted(Counter(ids).items())
+        if count > 1
+    ]
+    parts = [
+        prefix
+        for prefix in PART_CLAIM_PREFIXES
+        if any(claim_id.startswith(prefix) for claim_id in ids)
+    ]
+    if len(parts) > 1:
+        violations.append(
+            f"claim ids begin with both {STUDY_CLAIM_PREFIX} and {ADDENDUM_CLAIM_PREFIX}; "
+            "the study and the addendum each keep their own registry"
+        )
+        return None, violations
+    if not parts:
+        return None, violations
+    outside = sorted({claim_id for claim_id in ids if not claim_id.startswith(parts[0])})
+    if outside:
+        violations.append(
+            f"every claim id of a registry that uses {parts[0]} must begin with it; "
+            f"ids that do not: {len(outside)}, such as {outside[0]}"
+        )
+        return None, violations
+    return parts[0], violations
 
 
 def _structural_violations(
     source: str,
     text: str,
     claims: tuple[ClaimV1, ...],
-    common_valid_tokens: int,
+    common_valid_tokens: Optional[int],
     repository_root: Path,
+    shapley_sources: tuple[str, ...],
 ) -> list[str]:
     lower = text.lower()
     violations: list[str] = []
@@ -121,22 +200,31 @@ def _structural_violations(
 
     for match in COHORT_SIZE.finditer(text):
         stated = int(match.group(1))
-        if stated != common_valid_tokens:
+        if common_valid_tokens is None:
+            violations.append(
+                f"{source}: stated cohort {stated}, but no evidence of this registry records a "
+                "common-valid cohort"
+            )
+        elif stated != common_valid_tokens:
             violations.append(
                 f"{source}: stated cohort {stated}, but the common-valid cohort is "
                 f"{common_valid_tokens}"
             )
 
-    claim_metrics = {_claim_metric(claim) for claim in claims}
-    if {"collision_indicator", "intervention_duration_s"} <= claim_metrics:
+    estimands = {_estimand(claim, repository_root) for claim in claims}
+    if {"collision_indicator", "intervention_duration_s"} <= estimands:
         violations.append(
             f"{source}: collision_indicator and intervention_duration_s are separate estimands; "
             "state them on separate result lines and never sum, compare or rank them"
         )
 
     attribution = "shapley" in lower or "attribut" in lower
-    if attribution and any(Path(claim.artifact_path).name != "shapley.json" for claim in claims):
-        violations.append(f"{source}: every Shapley number must trace to shapley.json")
+    if attribution and any(
+        Path(claim.artifact_path).name not in shapley_sources for claim in claims
+    ):
+        violations.append(
+            f"{source}: every Shapley number must trace to {' or '.join(shapley_sources)}"
+        )
 
     oracle_collision_claims = [
         claim
@@ -184,7 +272,8 @@ def _check_statement(
     roundings: tuple[Optional[int], ...],
     registry: dict[str, ClaimV1],
     repository_root: Path,
-    common_valid_tokens: int,
+    common_valid_tokens: Optional[int],
+    shapley_sources: tuple[str, ...],
 ) -> tuple[list[str], list[dict[str, Any]]]:
     violations: list[str] = []
     claims: list[ClaimV1] = []
@@ -211,7 +300,9 @@ def _check_statement(
         traces.append(trace)
 
     violations.extend(
-        _structural_violations(source, text, tuple(claims), common_valid_tokens, repository_root)
+        _structural_violations(
+            source, text, tuple(claims), common_valid_tokens, repository_root, shapley_sources
+        )
     )
     bindings = tuple(BINDING.finditer(text))
     if len(bindings) != len(claim_ids):
@@ -340,6 +431,11 @@ def validate_attribution(
     violations = [
         f"registry: {violation}" for violation in audit_claims(claims_path, repository_root)
     ]
+    part, faults = _registry_part(registry_model.claims)
+    violations.extend(f"registry: {fault}" for fault in faults)
+    shapley_sources = (RELEASED_SHAPLEY_SOURCE,) + (
+        (ADDENDUM_SHAPLEY_SOURCE,) if part == ADDENDUM_CLAIM_PREFIX else ()
+    )
     common_valid_tokens = _common_valid_tokens(registry, repository_root)
     statements: list[_Statement] = []
     if proposal_path is not None:
@@ -364,11 +460,20 @@ def validate_attribution(
                 f"{source}: result needs text and claim_ids; no <!-- claim: ... --> marker"
             )
             violations.extend(
-                _structural_violations(source, text, (), common_valid_tokens, repository_root)
+                _structural_violations(
+                    source, text, (), common_valid_tokens, repository_root, shapley_sources
+                )
             )
             continue
         found, traced = _check_statement(
-            source, text, claim_ids, roundings, registry, repository_root, common_valid_tokens
+            source,
+            text,
+            claim_ids,
+            roundings,
+            registry,
+            repository_root,
+            common_valid_tokens,
+            shapley_sources,
         )
         violations.extend(found)
         traces.extend(traced)

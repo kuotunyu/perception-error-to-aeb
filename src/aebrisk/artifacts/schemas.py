@@ -26,6 +26,14 @@ from aebrisk.artifacts.envelope import PortfolioArtifactEnvelopeV1
 from aebrisk.artifacts.family_interventions import FamilyInterventionsV1
 from aebrisk.artifacts.results import AEBScenarioResultV1, AEBScenarioResultV2
 from aebrisk.artifacts.run_record import RunRecordV1
+from aebrisk.artifacts.study_documents import (
+    AttributionAddendumEvidenceV1,
+    AttributionAddendumV1,
+    PolicyV2EvidenceV1,
+    PolicyV2SummaryV1,
+    StudyGatesV1,
+    StudyReproductionV1,
+)
 
 #: Every committed schema, paired with the model it is generated from.
 SCHEMA_MODELS: tuple[tuple[str, type[BaseModel]], ...] = (
@@ -38,6 +46,12 @@ SCHEMA_MODELS: tuple[tuple[str, type[BaseModel]], ...] = (
     ("aeb_shapley_v1", AEBShapleyV1),
     ("aeb_exclusions_v1", AEBExclusionsV1),
     ("aeb_family_interventions_v1", FamilyInterventionsV1),
+    ("aeb_study_gates_v1", StudyGatesV1),
+    ("aeb_policy_v2_summary_v1", PolicyV2SummaryV1),
+    ("aeb_attribution_addendum_v1", AttributionAddendumV1),
+    ("aeb_policy_v2_evidence_v1", PolicyV2EvidenceV1),
+    ("aeb_study_reproduction_v1", StudyReproductionV1),
+    ("aeb_attribution_addendum_evidence_v1", AttributionAddendumEvidenceV1),
 )
 
 

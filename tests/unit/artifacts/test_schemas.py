@@ -42,6 +42,12 @@ def test_every_committed_schema_has_a_model() -> None:
         "aeb_shapley_v1",
         "aeb_exclusions_v1",
         "aeb_family_interventions_v1",
+        "aeb_study_gates_v1",
+        "aeb_policy_v2_summary_v1",
+        "aeb_attribution_addendum_v1",
+        "aeb_policy_v2_evidence_v1",
+        "aeb_study_reproduction_v1",
+        "aeb_attribution_addendum_evidence_v1",
     ]
 
 
@@ -90,13 +96,19 @@ def test_writing_schemas_produces_the_declared_files(tmp_path: Path) -> None:
     written = schemas.write_schemas(tmp_path)
 
     assert sorted(path.name for path in written) == [
+        "aeb_attribution_addendum_evidence_v1.json",
+        "aeb_attribution_addendum_v1.json",
         "aeb_evaluation_v1.json",
         "aeb_exclusions_v1.json",
         "aeb_family_interventions_v1.json",
         "aeb_intervals_v1.json",
+        "aeb_policy_v2_evidence_v1.json",
+        "aeb_policy_v2_summary_v1.json",
         "aeb_result_v1.json",
         "aeb_result_v2.json",
         "aeb_shapley_v1.json",
+        "aeb_study_gates_v1.json",
+        "aeb_study_reproduction_v1.json",
         "portfolio_artifact_envelope_v1.json",
         "run_record_v1.json",
     ]

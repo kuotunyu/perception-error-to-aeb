@@ -422,3 +422,642 @@ def test_a_confidence_that_is_not_a_number_is_refused(bad_value: object) -> None
             resamples=50,
             confidence=bad_value,  # type: ignore[arg-type]
         )
+
+
+# --------------------------------------------------------------------------
+# The family-stratified log-cluster bootstrap
+#
+# The study resamples (family, log) clusters within each family, and every
+# contrast reads the same draws. The draws are therefore returned once, as a
+# draws x tokens array of multiplicities, so that any mean or ratio of sums
+# over a draw is a weighted sum over the tokens.
+# --------------------------------------------------------------------------
+
+
+#: token: (family, log). Three clusters in "lead" and four in "crossing";
+#: log-c has tokens in both families, so it forms one cluster in each.
+CLUSTERED_LAYOUT = {
+    "t-01": ("lead", "log-a"),
+    "t-02": ("lead", "log-a"),
+    "t-03": ("lead", "log-a"),
+    "t-04": ("lead", "log-b"),
+    "t-05": ("lead", "log-c"),
+    "t-06": ("lead", "log-c"),
+    "t-07": ("crossing", "log-c"),
+    "t-08": ("crossing", "log-d"),
+    "t-09": ("crossing", "log-e"),
+    "t-10": ("crossing", "log-e"),
+    "t-11": ("crossing", "log-f"),
+}
+
+
+def clustered_family() -> dict[str, str]:
+    return {token: family for token, (family, _) in CLUSTERED_LAYOUT.items()}
+
+
+def clustered_log() -> dict[str, str]:
+    return {token: log for token, (_, log) in CLUSTERED_LAYOUT.items()}
+
+
+def cluster_multiplicities(
+    tokens: tuple[str, ...], weights: object, cluster_of: dict
+) -> list[dict]:
+    """Per draw, how often each cluster was drawn, read from its first token's weight."""
+
+    import numpy as np
+
+    by_draw: list[dict] = []
+    for row in np.asarray(weights):
+        seen: dict = {}
+        for position, token in enumerate(tokens):
+            seen.setdefault(cluster_of[token], int(row[position]))
+        by_draw.append(seen)
+    return by_draw
+
+
+def test_each_draw_resamples_as_many_clusters_per_family_as_the_family_has() -> None:
+    """Within each family the draw has the family's own number of clusters."""
+
+    bootstrap = load_bootstrap_module()
+
+    drawn = bootstrap.cluster_bootstrap_weights(
+        list(CLUSTERED_LAYOUT), clustered_family(), clustered_log(), resamples=300, seed=5
+    )
+
+    for row in cluster_multiplicities(drawn.tokens, drawn.weights, CLUSTERED_LAYOUT):
+        per_family = {"lead": 0, "crossing": 0}
+        for (family, _), multiplicity in row.items():
+            per_family[family] += multiplicity
+        assert per_family == {"lead": 3, "crossing": 4}
+
+
+def test_the_draws_actually_resample() -> None:
+    """Identity weights would pass every count above, so the draws must vary."""
+
+    bootstrap = load_bootstrap_module()
+
+    drawn = bootstrap.cluster_bootstrap_weights(
+        list(CLUSTERED_LAYOUT), clustered_family(), clustered_log(), resamples=300, seed=5
+    )
+
+    assert int(drawn.weights.max()) > 1
+    assert int(drawn.weights.min()) == 0
+    assert len({tuple(row) for row in drawn.weights.tolist()}) > 1
+
+
+def test_with_a_single_stratum_each_draw_has_as_many_clusters_as_there_are() -> None:
+    """One stratum and logs as clusters gives the unstratified whole-log bootstrap.
+
+    log-c is then one cluster of three tokens, whatever their families.
+    """
+
+    bootstrap = load_bootstrap_module()
+    one_stratum = dict.fromkeys(CLUSTERED_LAYOUT, "all")
+    logs = clustered_log()
+
+    drawn = bootstrap.cluster_bootstrap_weights(
+        list(CLUSTERED_LAYOUT), one_stratum, logs, resamples=300, seed=5
+    )
+
+    for row in cluster_multiplicities(drawn.tokens, drawn.weights, logs):
+        assert sum(row.values()) == 6
+    position = {token: index for index, token in enumerate(drawn.tokens)}
+    for row in drawn.weights:
+        assert row[position["t-05"]] == row[position["t-06"]] == row[position["t-07"]]
+
+
+def test_a_clusters_tokens_always_move_together() -> None:
+    """A drawn cluster carries all its tokens; a token never moves alone."""
+
+    bootstrap = load_bootstrap_module()
+
+    drawn = bootstrap.cluster_bootstrap_weights(
+        list(CLUSTERED_LAYOUT), clustered_family(), clustered_log(), resamples=300, seed=5
+    )
+
+    position = {token: index for index, token in enumerate(drawn.tokens)}
+    for row in drawn.weights:
+        assert row[position["t-01"]] == row[position["t-02"]] == row[position["t-03"]]
+        assert row[position["t-05"]] == row[position["t-06"]]
+        assert row[position["t-09"]] == row[position["t-10"]]
+    # log-c is two clusters, one per family, so its tokens in different
+    # families are drawn independently.
+    assert any(row[position["t-05"]] != row[position["t-07"]] for row in drawn.weights)
+
+
+def test_hand_controlled_cluster_draws_give_hand_calculated_weights(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Families are drawn in sorted order, and clusters in sorted order within each."""
+
+    bootstrap = load_bootstrap_module()
+    picks = iter(([0, 0, 2, 2], [2, 2, 1]))
+
+    class FixedGenerator:
+        def __init__(self, _bit_generator: object) -> None:
+            pass
+
+        def choice(self, source: object, *, size: int, replace: bool = True) -> object:
+            array = bootstrap.np.asarray(source)
+            assert size == len(array)
+            assert replace is True
+            return array[next(picks)]
+
+    monkeypatch.setattr(bootstrap.np.random, "Generator", FixedGenerator)
+
+    drawn = bootstrap.cluster_bootstrap_weights(
+        list(reversed(CLUSTERED_LAYOUT)), clustered_family(), clustered_log(), resamples=1
+    )
+
+    # "crossing" sorts first: its log-c twice and log-e twice. Then "lead": its
+    # log-c twice and log-b once. log-a, log-d and log-f are not drawn.
+    assert drawn.tokens == tuple(sorted(CLUSTERED_LAYOUT))
+    assert drawn.weights.tolist() == [[0, 0, 0, 1, 2, 2, 2, 0, 2, 2, 0]]
+
+
+def test_the_same_seed_gives_the_same_weights() -> None:
+    """The draws are cited by their seed, as the released intervals are."""
+
+    import numpy as np
+
+    bootstrap = load_bootstrap_module()
+
+    first = bootstrap.cluster_bootstrap_weights(
+        list(CLUSTERED_LAYOUT), clustered_family(), clustered_log(), resamples=200, seed=7
+    )
+    second = bootstrap.cluster_bootstrap_weights(
+        list(CLUSTERED_LAYOUT), clustered_family(), clustered_log(), resamples=200, seed=7
+    )
+
+    assert first.tokens == second.tokens
+    assert np.array_equal(first.weights, second.weights)
+
+
+def test_a_different_seed_gives_different_weights() -> None:
+    """The pair to the test above; constant weights would satisfy it alone."""
+
+    import numpy as np
+
+    bootstrap = load_bootstrap_module()
+
+    first = bootstrap.cluster_bootstrap_weights(
+        list(CLUSTERED_LAYOUT), clustered_family(), clustered_log(), resamples=200, seed=7
+    )
+    second = bootstrap.cluster_bootstrap_weights(
+        list(CLUSTERED_LAYOUT), clustered_family(), clustered_log(), resamples=200, seed=8
+    )
+
+    assert not np.array_equal(first.weights, second.weights)
+
+
+def test_the_order_of_the_tokens_does_not_change_the_draws() -> None:
+    """Tokens are sorted first, so a reordered cohort cites the same draws."""
+
+    import numpy as np
+
+    bootstrap = load_bootstrap_module()
+
+    forward = bootstrap.cluster_bootstrap_weights(
+        list(CLUSTERED_LAYOUT), clustered_family(), clustered_log(), resamples=100
+    )
+    backward = bootstrap.cluster_bootstrap_weights(
+        list(reversed(CLUSTERED_LAYOUT)), clustered_family(), clustered_log(), resamples=100
+    )
+
+    assert forward.tokens == tuple(sorted(CLUSTERED_LAYOUT))
+    assert backward.tokens == forward.tokens
+    assert np.array_equal(forward.weights, backward.weights)
+    assert forward.weights.shape == (100, len(CLUSTERED_LAYOUT))
+    assert np.issubdtype(forward.weights.dtype, np.integer)
+
+
+def test_cluster_weights_default_to_the_protocol_values() -> None:
+    """5,000 draws from seed 20260831, as the study's statistics section states."""
+
+    import numpy as np
+
+    bootstrap = load_bootstrap_module()
+
+    by_default = bootstrap.cluster_bootstrap_weights(
+        list(CLUSTERED_LAYOUT), clustered_family(), clustered_log()
+    )
+    explicit = bootstrap.cluster_bootstrap_weights(
+        list(CLUSTERED_LAYOUT),
+        clustered_family(),
+        clustered_log(),
+        resamples=5000,
+        seed=20260831,
+    )
+
+    assert by_default.weights.shape == (5000, len(CLUSTERED_LAYOUT))
+    assert np.array_equal(by_default.weights, explicit.weights)
+
+
+def test_cluster_weights_do_not_touch_the_global_random_state() -> None:
+    """A shared stream would make the draws depend on what ran before them."""
+
+    import numpy as np
+
+    bootstrap = load_bootstrap_module()
+    np.random.seed(4242)
+    before = np.random.random()
+    np.random.seed(4242)
+
+    bootstrap.cluster_bootstrap_weights(
+        list(CLUSTERED_LAYOUT), clustered_family(), clustered_log(), resamples=50
+    )
+
+    assert np.random.random() == before
+
+
+@pytest.mark.parametrize("mapping", ["family", "cluster"])
+def test_a_token_with_no_family_or_cluster_is_refused(mapping: str) -> None:
+    """A default stratum or cluster would silently change every draw."""
+
+    bootstrap = load_bootstrap_module()
+    family = clustered_family()
+    log = clustered_log()
+    if mapping == "family":
+        del family["t-04"]
+    else:
+        del log["t-04"]
+
+    with pytest.raises(ValueError, match=r"^no family or cluster for tokens \['t-04'\]; "):
+        bootstrap.cluster_bootstrap_weights(list(CLUSTERED_LAYOUT), family, log, resamples=10)
+
+
+def test_cluster_weights_refuse_an_empty_cohort() -> None:
+    """There is nothing to resample."""
+
+    bootstrap = load_bootstrap_module()
+
+    with pytest.raises(ValueError, match=r"^there are no tokens to resample$"):
+        bootstrap.cluster_bootstrap_weights([], {}, {}, resamples=10)
+
+
+def test_cluster_weights_refuse_a_repeated_token() -> None:
+    """A token listed twice would weigh double in every draw."""
+
+    bootstrap = load_bootstrap_module()
+
+    with pytest.raises(ValueError, match=r"^tokens repeat: \['t-01'\]; "):
+        bootstrap.cluster_bootstrap_weights(
+            [*CLUSTERED_LAYOUT, "t-01"], clustered_family(), clustered_log(), resamples=10
+        )
+
+
+@pytest.mark.parametrize("bad_value", [0, -1, 2.5, True])
+def test_cluster_weights_refuse_an_impossible_resample_count(bad_value: object) -> None:
+    """Zero draws give no interval and no p-value."""
+
+    bootstrap = load_bootstrap_module()
+
+    with pytest.raises(ValueError, match=r"^resamples must be a positive integer, got "):
+        bootstrap.cluster_bootstrap_weights(
+            list(CLUSTERED_LAYOUT),
+            clustered_family(),
+            clustered_log(),
+            resamples=bad_value,
+        )
+
+
+# --------------------------------------------------------------------------
+# The weights as a type
+# --------------------------------------------------------------------------
+
+
+def test_the_weights_are_frozen_and_read_only() -> None:
+    """They are shared by every contrast, so no contrast may change them."""
+
+    import dataclasses
+
+    import numpy as np
+
+    bootstrap = load_bootstrap_module()
+    source = np.array([[1, 2], [3, 0]])
+    weights = bootstrap.BootstrapWeights(tokens=("a", "b"), weights=source)
+
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        weights.tokens = ("c", "d")
+    with pytest.raises(ValueError, match=r"read-only"):
+        weights.weights[0, 0] = 5
+    source[0, 0] = 5
+    assert weights.weights.tolist() == [[1, 2], [3, 0]]
+
+
+@pytest.mark.parametrize("shape", [(2,), (1, 3), (2, 0), (1, 1, 2), (0, 2)])
+def test_weights_of_the_wrong_shape_are_refused(shape: tuple[int, ...]) -> None:
+    """One row per draw and one column per token, with at least one draw."""
+
+    bootstrap = load_bootstrap_module()
+    weights = bootstrap.np.ones(shape, dtype=int)
+
+    with pytest.raises(
+        ValueError, match=r"^weights must be a draws x tokens array with 2 columns and at least "
+    ):
+        bootstrap.BootstrapWeights(tokens=("a", "b"), weights=weights)
+
+
+def test_weights_with_no_token_are_refused() -> None:
+    """There is nothing to average."""
+
+    bootstrap = load_bootstrap_module()
+
+    with pytest.raises(ValueError, match=r"^there are no tokens to resample$"):
+        bootstrap.BootstrapWeights(tokens=(), weights=bootstrap.np.zeros((1, 0), dtype=int))
+
+
+@pytest.mark.parametrize("array", [[[1.0, 1.0]], [[2, -1]], [[True, True]]])
+def test_weights_that_are_not_multiplicities_are_refused(array: list[list[object]]) -> None:
+    """A multiplicity counts how often a token was drawn."""
+
+    bootstrap = load_bootstrap_module()
+
+    with pytest.raises(ValueError, match=r"^weights must be non-negative integer multiplicities$"):
+        bootstrap.BootstrapWeights(tokens=("a", "b"), weights=bootstrap.np.array(array))
+
+
+def test_a_draw_that_carries_no_token_is_refused() -> None:
+    """Its mean would divide by zero."""
+
+    bootstrap = load_bootstrap_module()
+
+    with pytest.raises(ValueError, match=r"^every draw must carry at least one token$"):
+        bootstrap.BootstrapWeights(tokens=("a", "b"), weights=bootstrap.np.array([[1, 1], [0, 0]]))
+
+
+# --------------------------------------------------------------------------
+# Means and ratios of sums over the draws
+# --------------------------------------------------------------------------
+
+
+def hand_weights() -> object:
+    """Draw 1 is the cohort, draw 2 is token a three times, draw 3 is b, b and c."""
+
+    bootstrap = load_bootstrap_module()
+    return bootstrap.BootstrapWeights(
+        tokens=("a", "b", "c"),
+        weights=bootstrap.np.array([[1, 1, 1], [3, 0, 0], [0, 2, 1]]),
+    )
+
+
+def test_a_weighted_mean_is_the_mean_over_each_draws_tokens() -> None:
+    """Every token of the draw counts once per time it was drawn."""
+
+    bootstrap = load_bootstrap_module()
+
+    means = bootstrap.weighted_mean(hand_weights(), {"a": 0.0, "b": 3.0, "c": 6})
+
+    assert means.tolist() == pytest.approx([3.0, 0.0, 4.0])
+
+
+def test_a_weighted_ratio_is_a_ratio_of_sums_not_a_mean_of_ratios() -> None:
+    """Rates are normalised by the drawn exposure, as the released rates are."""
+
+    bootstrap = load_bootstrap_module()
+    numerator = {"a": 1.0, "b": 2.0, "c": 3.0}
+    denominator = {"a": 1.0, "b": 1.0, "c": 4.0}
+
+    ratios = bootstrap.weighted_ratio(hand_weights(), numerator, denominator)
+
+    # Draw 1: 6 / 6. Draw 2: 3 / 3. Draw 3: (2 + 2 + 3) / (1 + 1 + 4). The mean
+    # of the per-token ratios in draw 1 would be 1.25.
+    assert ratios.tolist() == pytest.approx([1.0, 1.0, 7.0 / 6.0])
+
+
+@pytest.mark.parametrize(
+    "values, message",
+    [
+        (
+            {"a": 1.0, "b": 2.0},
+            r"^values must hold exactly the resampled tokens; missing \['c'\], unexpected \[\]$",
+        ),
+        (
+            {"a": 1.0, "b": 2.0, "c": 3.0, "d": 4.0},
+            r"^values must hold exactly the resampled tokens; missing \[\], unexpected \['d'\]$",
+        ),
+        ({"a": 1.0, "b": float("nan"), "c": 3.0}, r"^values for 'b' must be a finite number$"),
+        ({"a": 1.0, "b": float("inf"), "c": 3.0}, r"^values for 'b' must be a finite number$"),
+        ({"a": 1.0, "b": True, "c": 3.0}, r"^values for 'b' must be a finite number$"),
+        ({"a": 1.0, "b": "2", "c": 3.0}, r"^values for 'b' must be a finite number$"),
+    ],
+)
+def test_a_weighted_mean_refuses_values_that_do_not_fit_the_draws(
+    values: dict[str, object], message: str
+) -> None:
+    """A gap or an extra token means the cohort was not the one resampled."""
+
+    bootstrap = load_bootstrap_module()
+
+    with pytest.raises(ValueError, match=message):
+        bootstrap.weighted_mean(hand_weights(), values)
+
+
+def test_a_weighted_ratio_checks_both_of_its_terms() -> None:
+    """Each term is named in the refusal."""
+
+    bootstrap = load_bootstrap_module()
+    complete = {"a": 1.0, "b": 1.0, "c": 1.0}
+
+    with pytest.raises(ValueError, match=r"^numerator for 'a' must be a finite number$"):
+        bootstrap.weighted_ratio(hand_weights(), {**complete, "a": float("nan")}, complete)
+    with pytest.raises(ValueError, match=r"^denominator must hold exactly the resampled tokens"):
+        bootstrap.weighted_ratio(hand_weights(), complete, {"a": 1.0})
+
+
+def test_a_ratio_whose_denominator_sums_to_zero_in_a_draw_is_refused() -> None:
+    """Draw 2 holds only token a, whose exposure here is zero."""
+
+    bootstrap = load_bootstrap_module()
+
+    with pytest.raises(
+        ValueError, match=r"^the denominator must sum to a positive value in every draw$"
+    ):
+        bootstrap.weighted_ratio(
+            hand_weights(), {"a": 1.0, "b": 1.0, "c": 1.0}, {"a": 0.0, "b": 1.0, "c": 1.0}
+        )
+
+
+# --------------------------------------------------------------------------
+# Percentile intervals and bootstrap p-values over draws
+# --------------------------------------------------------------------------
+
+
+def test_a_percentile_interval_matches_the_released_endpoints() -> None:
+    """The five means of the released hand-calculated case, in another order."""
+
+    bootstrap = load_bootstrap_module()
+
+    low, high = bootstrap.percentile_interval(bootstrap.np.array([9.0, 3.5, 0.0, 4.0, 1.0]), 0.6)
+
+    assert low == pytest.approx(0.8)
+    assert high == pytest.approx(5.0)
+    assert type(low) is float
+    assert type(high) is float
+
+
+def test_a_percentile_interval_uses_the_requested_confidence() -> None:
+    """At 90% the tails are the 5th and 95th percentiles of 0..100."""
+
+    bootstrap = load_bootstrap_module()
+    draws = bootstrap.np.arange(101, dtype=float)
+
+    assert bootstrap.percentile_interval(draws, 0.9) == pytest.approx((5.0, 95.0))
+    assert bootstrap.percentile_interval(draws, 0.99) == pytest.approx((0.5, 99.5))
+
+
+@pytest.mark.parametrize("bad_value", [0.0, 1.0, -0.1, 1.5, float("nan"), "0.95", True, None])
+def test_a_percentile_interval_refuses_an_impossible_confidence(bad_value: object) -> None:
+    """A confidence of one is the whole real line; of zero, a point."""
+
+    bootstrap = load_bootstrap_module()
+
+    with pytest.raises(
+        ValueError, match=r"^confidence must be a number strictly between 0 and 1, got "
+    ):
+        bootstrap.percentile_interval(bootstrap.np.array([1.0, 2.0]), bad_value)
+
+
+@pytest.mark.parametrize("draws", [[], [[1.0, 2.0]], [1.0, float("nan")], [float("inf")]])
+def test_draws_that_are_empty_or_not_finite_are_refused(draws: list[object]) -> None:
+    """One NaN would make every percentile NaN with no indication why."""
+
+    bootstrap = load_bootstrap_module()
+    array = bootstrap.np.array(draws, dtype=float)
+
+    with pytest.raises(
+        ValueError, match=r"^draws must be a non-empty one-dimensional array of finite numbers$"
+    ):
+        bootstrap.percentile_interval(array, 0.95)
+    with pytest.raises(
+        ValueError, match=r"^draws must be a non-empty one-dimensional array of finite numbers$"
+    ):
+        bootstrap.bootstrap_p_value(array)
+
+
+def test_the_smallest_bootstrap_p_value_is_two_in_five_thousand_and_one() -> None:
+    """Every draw on one side gives 2 / (5,000 + 1), whichever side it is."""
+
+    bootstrap = load_bootstrap_module()
+
+    assert bootstrap.bootstrap_p_value(bootstrap.np.full(5000, 0.3)) == 2 / 5001
+    assert bootstrap.bootstrap_p_value(bootstrap.np.full(5000, -0.3)) == 2 / 5001
+
+
+def test_the_bootstrap_p_value_counts_draws_at_zero_on_both_sides() -> None:
+    """p = min(1, 2 min(#{d <= 0} + 1, #{d >= 0} + 1) / (B + 1)), by hand."""
+
+    bootstrap = load_bootstrap_module()
+    np = bootstrap.np
+
+    one_below = np.array([-1.0] + [1.0] * 9)
+    two_at_zero = np.array([0.0, 0.0] + [1.0] * 8)
+    two_at_zero_below = np.array([0.0, 0.0] + [-1.0] * 8)
+
+    assert bootstrap.bootstrap_p_value(one_below) == 4 / 11
+    assert bootstrap.bootstrap_p_value(two_at_zero) == 6 / 11
+    assert bootstrap.bootstrap_p_value(two_at_zero_below) == 6 / 11
+    assert type(bootstrap.bootstrap_p_value(one_below)) is float
+
+
+def test_the_bootstrap_p_value_is_at_most_one() -> None:
+    """Balanced draws would give more than one without the cap."""
+
+    bootstrap = load_bootstrap_module()
+
+    assert bootstrap.bootstrap_p_value(bootstrap.np.array([-2.0, -1.0, 0.0, 1.0, 2.0])) == 1.0
+    assert bootstrap.bootstrap_p_value(bootstrap.np.array([-1.0, 1.0, 1.0])) == 1.0
+
+
+# --------------------------------------------------------------------------
+# Numbers enter every statistic as float64
+#
+# The tokens' metrics, the per-token values of a draw and the draws of a
+# contrast are all converted to float64 on entry. An integer or single-precision
+# input is therefore the same number as its float64 copy, and a sum that is too
+# large for int64 cannot wrap around to the other sign.
+# --------------------------------------------------------------------------
+
+
+def test_a_very_large_integer_metric_gives_the_interval_of_its_float_value() -> None:
+    """Integers past the int64 range would otherwise be averaged exactly, not as floats.
+
+    2**64 + 2049 rounds up to 2**64 + 4096 as a float, so the float mean of the
+    three metrics lies above the rounded exact mean.
+    """
+
+    bootstrap = load_bootstrap_module()
+    exact = {"s-1": 2**64 + 2049, "s-2": 2**64 + 2049, "s-3": 2**64}
+    as_integers = {token: {"cfg": value} for token, value in exact.items()}
+    as_floats = {token: {"cfg": float(value)} for token, value in exact.items()}
+
+    from_integers = bootstrap.paired_scenario_bootstrap(as_integers, resamples=20, seed=1)
+    from_floats = bootstrap.paired_scenario_bootstrap(as_floats, resamples=20, seed=1)
+
+    assert from_integers == from_floats
+    assert from_integers["cfg"].estimate == float(2**64 + 4096)
+
+
+def test_large_integer_values_are_summed_as_floats_and_cannot_wrap_around() -> None:
+    """Twice 2**62 is past the int64 range; an integer sum would turn negative."""
+
+    bootstrap = load_bootstrap_module()
+    weights = bootstrap.BootstrapWeights(
+        tokens=("a", "b"), weights=bootstrap.np.array([[2, 0], [1, 1]])
+    )
+    large = {"a": 2**62, "b": 0}
+
+    assert bootstrap.weighted_mean(weights, large).tolist() == [2.0**62, 2.0**61]
+    assert bootstrap.weighted_ratio(weights, large, {"a": 1, "b": 1}).tolist() == [
+        2.0**62,
+        2.0**61,
+    ]
+
+
+def test_single_precision_draws_give_the_interval_of_their_float64_copy() -> None:
+    """Interpolating between float32 draws in float32 would move the endpoints."""
+
+    bootstrap = load_bootstrap_module()
+    np = bootstrap.np
+    single = np.array([0.1, 0.7, 0.3, 0.9], dtype=np.float32)
+    boxed = np.array([-0.5, 1.5, 2.5, 4.0], dtype=object)
+
+    assert bootstrap.percentile_interval(single, 0.9) == bootstrap.percentile_interval(
+        single.astype(np.float64), 0.9
+    )
+    assert bootstrap.percentile_interval(boxed, 0.9) == bootstrap.percentile_interval(
+        boxed.astype(np.float64), 0.9
+    )
+    assert bootstrap.bootstrap_p_value(boxed) == 0.8
+
+
+def test_a_positive_denominator_below_one_is_accepted() -> None:
+    """Exposure in hours or kilometres can sum to less than one in a draw."""
+
+    bootstrap = load_bootstrap_module()
+    numerator = {"a": 0.5, "b": 0.25, "c": 0.125}
+    denominator = {"a": 0.25, "b": 0.125, "c": 0.25}
+
+    ratios = bootstrap.weighted_ratio(hand_weights(), numerator, denominator)
+
+    # Draw 1: 0.875 / 0.625. Draw 2: 1.5 / 0.75. Draw 3: (0.5 + 0.125) / (0.25 + 0.25).
+    assert ratios.tolist() == pytest.approx([1.4, 2.0, 1.25])
+
+
+def test_the_refusal_of_a_token_with_no_family_or_cluster_gives_the_whole_reason() -> None:
+    """The refusal names the tokens and says why none of them is given a default."""
+
+    import re
+
+    bootstrap = load_bootstrap_module()
+    family = clustered_family()
+    del family["t-04"]
+    message = (
+        "no family or cluster for tokens ['t-04']; leaving them out or giving them a "
+        "default would silently change every draw"
+    )
+
+    with pytest.raises(ValueError, match=f"^{re.escape(message)}$"):
+        bootstrap.cluster_bootstrap_weights(
+            list(CLUSTERED_LAYOUT), family, clustered_log(), resamples=10
+        )
