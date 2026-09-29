@@ -17,11 +17,12 @@ from pathlib import Path
 
 import pytest
 import yaml
+from typer.testing import CliRunner
 
 from aebrisk.analysis.attribution_audit import NUMBER, validate_attribution
-from aebrisk.analysis.claims import audit_claims, load_registry
+from aebrisk.analysis.claims import audit_claims
 from aebrisk.artifacts.study_documents import COLLISION_GAME_SENTENCE
-from aebrisk.study.claims import build_addendum_claims
+from aebrisk.cli.app import app
 from aebrisk.study.evidence import write_addendum_evidence
 from aebrisk.study.gates import committed_cohort_tokens, refuse_token_strings
 
@@ -56,8 +57,48 @@ def test_the_committed_evidence_is_derived_from_the_summary_byte_for_byte(
         assert path.read_bytes() == (EVIDENCE / path.name).read_bytes(), path.name
 
 
-def test_the_committed_registry_is_exactly_the_generated_registry() -> None:
-    assert load_registry(REGISTRY) == build_addendum_claims(EVIDENCE.relative_to(ROOT), ROOT)
+def generated_registry(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> bytes:
+    """The bytes `study claims --part addendum` writes from the committed evidence."""
+
+    monkeypatch.chdir(ROOT)
+    output = tmp_path / "claims.yaml"
+    result = CliRunner().invoke(
+        app,
+        [
+            "study",
+            "claims",
+            "--part",
+            "addendum",
+            "--evidence-dir",
+            EVIDENCE.relative_to(ROOT).as_posix(),
+            "--output",
+            str(output),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    return output.read_bytes()
+
+
+def is_the_generated_registry(path: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> bool:
+    return path.read_bytes() == generated_registry(tmp_path, monkeypatch)
+
+
+def test_the_committed_registry_is_exactly_the_generated_registry(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    assert is_the_generated_registry(REGISTRY, tmp_path, monkeypatch)
+
+
+def test_a_registry_with_an_added_comment_is_not_the_generated_registry(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A comment is public text that no audit reads, so the bytes must match too."""
+
+    commented = tmp_path / "commented" / "claims.yaml"
+    commented.parent.mkdir()
+    commented.write_bytes(b"# an added comment\n" + REGISTRY.read_bytes())
+
+    assert not is_the_generated_registry(commented, tmp_path, monkeypatch)
 
 
 def test_the_committed_registry_audits_clean() -> None:
