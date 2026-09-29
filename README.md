@@ -100,7 +100,7 @@ Shapley 的 intervention-duration game 中，同一 channel 的觀察平均貢�
 
 這些量測與 SOTIF、AEB 測試規程、安全績效指標及既有研究的對應關係，見[與標準及既有研究的關係](docs/experiment-card.md#relation-to-standards-and-prior-work)；該段僅供對照，不主張符合任何標準。
 
-protocol 要求的 maximum horizon 是 15 秒上限；到碰撞、路徑結束、資料結束或上限即停止，所以表中逐設定列實測曝光。logged actors 不會對 ego 反應。本版沒有 sensor pixels、地圖畫面、nuBoard log、每距離碰撞率，也只測一種固定 AEB policy。每 100 km 碰撞率為未提供。
+protocol 要求的 maximum horizon 是 15 秒上限；到碰撞、路徑結束、資料結束或上限即停止，所以表中逐設定列實測曝光。logged actors 不會對 ego 反應。v1.0.0 的評估沒有 sensor pixels、地圖畫面、nuBoard log、每距離碰撞率，也只測一種固定 AEB policy。每 100 km 碰撞率為未提供。
 
 ## 重現
 

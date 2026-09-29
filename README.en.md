@@ -105,7 +105,7 @@ How these measurements relate to SOTIF, AEB test protocols, safety performance i
 
 The protocol requests a maximum horizon of 15 seconds.
 
-A collision, route end, data end, or that ceiling can stop a run, so measured exposure is reported per configuration above. Logged actors do not react to the ego. This release has no sensor pixels, map view, nuBoard log, per-distance rate, or policy comparison beyond one fixed AEB controller. The collisions per 100 km rate is unavailable.
+A collision, route end, data end, or that ceiling can stop a run, so measured exposure is reported per configuration above. Logged actors do not react to the ego. The v1.0.0 evaluation has no sensor pixels, map view, nuBoard log, per-distance rate, or policy comparison beyond one fixed AEB controller. The collisions per 100 km rate is unavailable.
 
 ## Reproduce
 
