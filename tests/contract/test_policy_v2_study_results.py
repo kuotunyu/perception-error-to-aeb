@@ -258,6 +258,38 @@ def test_the_answer_states_the_label_and_the_fixed_sentences_the_summary_chose()
     assert re.search(r"\bsafer\b|\bfixes\b", text, flags=re.IGNORECASE) is None
 
 
+def slug(name: str) -> str:
+    """An arm or cell name as the claim identifiers spell it."""
+
+    return re.sub(r"[^a-z0-9_]+", "-", name.lower())
+
+
+def test_every_zero_event_cell_prints_its_clopper_pearson_bounds_overall_and_per_family() -> None:
+    """Section 6 of the analysis plan gives a zero-event cell's bound overall and per family."""
+
+    text = RESULTS.read_text(encoding="utf-8")
+    levels = summary().levels
+    zero_event = [
+        (level.arm, level.cell)
+        for level in levels
+        if level.family is None and level.collision_tokens == 0
+    ]
+
+    assert zero_event
+    for arm, cell in zero_event:
+        rows = [level for level in levels if (level.arm, level.cell) == (arm, cell)]
+        assert len(rows) == 5
+        for row in rows:
+            prefix = ".".join(
+                part
+                for part in ("p3.study.policy-v2.levels", slug(arm), slug(cell), row.family)
+                if part
+            )
+            for field in ("low", "high"):
+                marker = f"<!-- claim: {prefix}.collision_clopper_pearson-{field};"
+                assert marker in text, (prefix, field)
+
+
 def test_the_answer_gives_the_h5_qualifier_its_own_rule_not_holms() -> None:
     """The qualifier follows H5's unadjusted p and the sign of its estimate, whatever Holm says."""
 
