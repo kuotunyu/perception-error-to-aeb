@@ -96,7 +96,7 @@ Shapley 的 intervention-duration game 中，同一 channel 的觀察平均貢�
 
 發布後檢查煞車結果時，找出了固定控制器與 tracker 中影響這些數字的幾項特性：AEB 會對必要減速度最高的追蹤物件煞車，不論該物件是否在 ego 的路徑上；名義控制器不會為其他用路人減速；oracle 以外的設定中，追蹤速度來自觀測位置的差分，因此定位雜訊會影響接近速度。在已發布的結果中，計入碰撞最少的設定，正是煞車時間占實測曝光比例最高的設定。詳見[已知的控制器與建模選擇](docs/simulation-contract.md#known-controller-and-modelling-choices)與[如何解讀煞車數字](docs/experiment-card.md#reading-the-braking-numbers)。
 
-一項預先註冊的後續研究把 AEB 的目標限制為位於預測碰撞路徑上的物件，在同一 cohort 上重跑，並分別檢驗速度估計與誤差抽樣的 keying，結果見 [docs/studies/aeb-policy-v2/](docs/studies/aeb-policy-v2/results.md)。
+一項預先註冊的後續研究把 AEB 的目標限制為位於預測碰撞路徑上、且不在 ego 後方的物件，在同一 cohort 上重跑，並分別檢驗速度估計與誤差抽樣的 keying，結果見 [docs/studies/aeb-policy-v2/](docs/studies/aeb-policy-v2/results.md)。
 
 這些量測與 SOTIF、AEB 測試規程、安全績效指標及既有研究的對應關係，見[與標準及既有研究的關係](docs/experiment-card.md#relation-to-standards-and-prior-work)；該段僅供對照，不主張符合任何標準。
 
