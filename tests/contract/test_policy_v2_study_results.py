@@ -290,6 +290,31 @@ def test_every_zero_event_cell_prints_its_clopper_pearson_bounds_overall_and_per
                 assert marker in text, (prefix, field)
 
 
+def test_the_limits_carry_the_plans_selection_coupling_paragraph_and_boundary_sentence() -> None:
+    """Section 11 of the analysis plan lists what "What this does not show" includes.
+
+    The page spells the plan's "4 s" in words, because on a line that names
+    the cohort every digit must bind to a claim, and no claim holds the window.
+    """
+
+    plan = (STUDY / "analysis-plan.md").read_text(encoding="utf-8")
+    coupling = re.search(r"^- \*\*Selection coupling\.\*\* (.+)$", plan, flags=re.MULTILINE)
+    assert coupling is not None
+    first, *rest = coupling.group(1).split(". ")
+    text = RESULTS.read_text(encoding="utf-8")
+    section = text.split("\n## What this does not show\n", 1)[1].split("\n## ", 1)[0]
+
+    assert "within the first 4 s (`src/aebrisk/cohort/prefilter.py`)" in first
+    assert "within the first four seconds (`src/aebrisk/cohort/prefilter.py`)" in section
+    assert len(rest) == 4
+    for sentence in rest:
+        assert sentence.rstrip(".").replace("this plan", "the analysis plan") in section
+    assert (
+        "This is a simulation of non-reactive logged traffic; "
+        "it says nothing about real-world AEB performance." in section
+    )
+
+
 def test_the_answer_gives_the_h5_qualifier_its_own_rule_not_holms() -> None:
     """The qualifier follows H5's unadjusted p and the sign of its estimate, whatever Holm says."""
 
