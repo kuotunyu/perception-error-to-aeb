@@ -11,9 +11,12 @@ everything else is derived from it here without the dataset.
 from __future__ import annotations
 
 import hashlib
+import json
+import re
 from pathlib import Path
 
 import pytest
+import yaml
 
 from aebrisk.analysis.attribution_audit import NUMBER, validate_attribution
 from aebrisk.analysis.claims import audit_claims, load_registry
@@ -76,6 +79,30 @@ def test_the_registry_audit_is_not_vacuous(tmp_path: Path) -> None:
     assert "p3.posthoc.v1-addendum.bootstrap.clusters" in violations[0]
 
 
+#: Sixteen lower-case hexadecimal digits standing alone in running text, other
+#: than the digits after a decimal point.
+TOKEN_IN_TEXT = re.compile(r"(?<![0-9A-Za-z.])[0-9a-f]{16}(?![0-9A-Za-z])")
+
+
+def refuse_published_tokens(name: str, text: str, tokens: frozenset[str]) -> None:
+    """Refuse a published file that holds a cohort token or a token-shaped string.
+
+    JSON and YAML are parsed, so that every string, value or key, is checked
+    against the token's shape on its own; Markdown is searched for the shape.
+    Every file is also searched for the committed cohort's tokens.
+    """
+
+    if name.endswith(".json"):
+        refuse_token_strings(json.loads(text), tokens)
+    elif name.endswith(".yaml"):
+        refuse_token_strings(yaml.safe_load(text), tokens)
+    else:
+        found = TOKEN_IN_TEXT.search(text)
+        if found:
+            raise ValueError(f"{found.group()!r} has the shape of a scenario token")
+    refuse_token_strings(text, tokens)
+
+
 def test_no_scenario_token_appears_anywhere_in_the_addendum_directory() -> None:
     """Only aggregates are published: no token of the committed cohort, in any file here."""
 
@@ -90,7 +117,7 @@ def test_no_scenario_token_appears_anywhere_in_the_addendum_directory() -> None:
         "evidence/attribution-addendum-evidence.json",
     }
     for path in published:
-        refuse_token_strings(path.read_text(encoding="utf-8"), tokens)
+        refuse_published_tokens(path.name, path.read_text(encoding="utf-8"), tokens)
 
 
 def test_the_token_check_would_find_a_cohort_token_in_a_published_text() -> None:
@@ -99,7 +126,36 @@ def test_the_token_check_would_find_a_cohort_token_in_a_published_text() -> None
     text = DERIVED.read_text(encoding="utf-8").replace('"family-log"', f'"{token}"', 1)
 
     with pytest.raises(ValueError, match="scenario token"):
-        refuse_token_strings(text, tokens)
+        refuse_published_tokens(DERIVED.name, text, tokens)
+
+
+#: Sixteen lower-case hexadecimal digits, the shape of a scenario token, that no
+#: committed cohort file holds.
+OUTSIDE_THE_COHORT = "0123456789abcdef"
+
+
+@pytest.mark.parametrize(
+    ("path", "original"),
+    [
+        (DERIVED, '"family-log"'),
+        (REGISTRY, "p3.posthoc.v1-addendum.bootstrap.clusters"),
+        (RESULTS, "p3.posthoc.v1-addendum.bootstrap.clusters"),
+    ],
+    ids=["evidence", "registry", "results"],
+)
+def test_the_token_check_would_find_a_token_shaped_string_outside_the_cohort(
+    path: Path, original: str
+) -> None:
+    """A string of the token's shape is refused even when no cohort file lists it."""
+
+    tokens = committed_cohort_tokens(ROOT)
+    assert OUTSIDE_THE_COHORT not in tokens
+    text = path.read_text(encoding="utf-8")
+    assert original in text
+    replacement = f'"{OUTSIDE_THE_COHORT}"' if path.suffix == ".json" else OUTSIDE_THE_COHORT
+
+    with pytest.raises(ValueError, match="shape of a scenario token"):
+        refuse_published_tokens(path.name, text.replace(original, replacement, 1), tokens)
 
 
 def paragraph(text: str, start: str, end: str) -> str:
