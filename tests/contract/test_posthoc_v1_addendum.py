@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-from aebrisk.analysis.attribution_audit import validate_attribution
+from aebrisk.analysis.attribution_audit import NUMBER, validate_attribution
 from aebrisk.analysis.claims import audit_claims, load_registry
 from aebrisk.artifacts.study_documents import COLLISION_GAME_SENTENCE
 from aebrisk.study.claims import build_addendum_claims
@@ -171,3 +171,40 @@ def test_the_results_page_neither_tests_nor_ranks() -> None:
 
     for word in ("supported", "contradicted", "ranks first", "ranked"):
         assert word not in text
+
+
+#: In each README, the sentence under the Shapley values that says the released
+#: evidence has no interval, and the pointer that follows it directly.
+README_POINTERS = {
+    "README.en.md": (
+        "The evidence contains no uncertainty interval for Shapley values or configuration "
+        "differences and supports no channel ranking. ",
+        "A post-hoc addendum, not pre-registered, gives intervals for these values and "
+        "differences and makes no ranking claim: "
+        "[docs/posthoc/nuplan_aeb_v2-addendum/](docs/posthoc/nuplan_aeb_v2-addendum/results.md).",
+    ),
+    "README.md": (
+        "\u73fe\u6709\u8b49\u64da\u6c92\u6709 Shapley "
+        "\u6216\u8a2d\u5b9a\u5dee\u503c\u7684\u4fe1\u8cf4\u5340\u9593\uff0c"
+        "\u4e5f\u4e0d\u652f\u6301 channel \u6392\u540d\u3002",
+        "\u672a\u9810\u5148\u767b\u9304\u7684\u4e8b\u5f8c\u88dc\u5145\u5206\u6790"
+        "\u70ba\u9019\u4e9b\u503c\u8207\u5dee\u503c\u63d0\u4f9b\u5340\u9593\uff0c"
+        "\u4f46\u4ecd\u4e0d\u505a channel \u6392\u540d\uff1a"
+        "[docs/posthoc/nuplan_aeb_v2-addendum/](docs/posthoc/nuplan_aeb_v2-addendum/results.md)"
+        "\u3002",
+    ),
+}
+
+
+@pytest.mark.parametrize("readme", sorted(README_POINTERS))
+def test_each_readme_points_to_the_addendum_right_after_the_no_interval_sentence(
+    readme: str,
+) -> None:
+    """One sentence with no number, ending the paragraph the released sentence ends."""
+
+    released, pointer = README_POINTERS[readme]
+    text = (ROOT / readme).read_text(encoding="utf-8")
+
+    assert text.count(released + pointer + "\n") == 1
+    assert text.count("docs/posthoc/nuplan_aeb_v2-addendum/results.md") == 1
+    assert NUMBER.findall(pointer) == []
