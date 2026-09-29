@@ -99,6 +99,8 @@ The collision classifier excludes a contact when the ego is stopped, or when an 
 
 A review after the release traced these braking numbers to properties of the fixed controller and tracker: the AEB brakes for the tracked object with the highest required deceleration whether or not that object is in the ego's path, the nominal controller does not slow for other road users, and outside the oracle, tracked velocity is a finite difference of observed positions, so localization noise reaches the closing speed. In the released evaluation, the configurations with the fewest counted collisions are the ones that spend the largest share of their measured exposure braking. See [Known controller and modelling choices](docs/simulation-contract.md#known-controller-and-modelling-choices) and [Reading the braking numbers](docs/experiment-card.md#reading-the-braking-numbers).
 
+A pre-registered follow-up study, which reruns this cohort with the AEB limited to bodies on a predicted collision course and tests the velocity estimate and the keying of the error draws separately, reports its results in [docs/studies/aeb-policy-v2/](docs/studies/aeb-policy-v2/results.md).
+
 How these measurements relate to SOTIF, AEB test protocols, safety performance indicators and prior research is set out in [Relation to standards and prior work](docs/experiment-card.md#relation-to-standards-and-prior-work); it is context, not a compliance claim.
 
 The protocol requests a maximum horizon of 15 seconds.
