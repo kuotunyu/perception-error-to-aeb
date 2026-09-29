@@ -290,6 +290,23 @@ def test_every_zero_event_cell_prints_its_clopper_pearson_bounds_overall_and_per
                 assert marker in text, (prefix, field)
 
 
+def test_the_page_prints_the_analysis_commands_as_the_operator_log_records_them() -> None:
+    """The commands that wrote the evidence and the registry, exactly as they ran."""
+
+    text = RESULTS.read_text(encoding="utf-8")
+    section = text.split("\n## How the numbers were produced and checked\n", 1)[1]
+    printed = section.split("```bash\n", 1)[1].split("```", 1)[0].splitlines()
+    analysis = re.compile(r"aeb-risk study (?:analyse|evidence --part study|claims --part study) ")
+    logged = [
+        line.split(" command: ", 1)[1]
+        for line in OPERATOR_LOG.read_text(encoding="utf-8").splitlines()
+        if " command: " in line and analysis.search(line)
+    ]
+
+    assert len(logged) == 3
+    assert printed == logged
+
+
 def test_the_limits_carry_the_plans_selection_coupling_paragraph_and_boundary_sentence() -> None:
     """Section 11 of the analysis plan lists what "What this does not show" includes.
 
