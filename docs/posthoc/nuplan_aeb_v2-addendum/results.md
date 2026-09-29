@@ -201,12 +201,12 @@ Both are counted over scenario-replicates. The first stop distance is the distan
 
 ## How the numbers were produced and checked
 
-The operator ran the three commands of the addendum in the pinned container at commit `234008ab9c7142bd248dd4ef82e84b6184013a3f`, with the released records and their hash list mounted read-only under `artifacts/` ([operator procedure](../../verification/policy-v2-study.md#the-addendum)):
+The operator ran the three commands of the addendum ([operator procedure](../../verification/policy-v2-study.md#the-addendum)) in the pinned container at commit `234008ab9c7142bd248dd4ef82e84b6184013a3f`. Each ran with a compose override, kept outside the repository, that mounts the released records and their hash list read-only under `artifacts/`, and with `-T`, which allocates no terminal:
 
 ```bash
-docker compose run --rm dev uv run --frozen aeb-risk study addendum --released-root artifacts/formal/nuplan_aeb_v2 --released-hashes artifacts/d2-operations/d2-nuplan-aeb-v2-20260906T165808Z-a65ae17/output-hashes.json --evidence-dir docs/evidence/nuplan_aeb_v2 --manifest docs/evidence/nuplan_aeb_v2/cohort/evaluation.json --eligibility docs/evidence/nuplan_aeb_v2/cohort/evaluation-eligibility.json --output artifacts/posthoc/nuplan_aeb_v2-addendum/addendum-summary.json
-docker compose run --rm dev uv run --frozen aeb-risk study evidence --part addendum --addendum artifacts/posthoc/nuplan_aeb_v2-addendum/addendum-summary.json --output-dir docs/posthoc/nuplan_aeb_v2-addendum/evidence
-docker compose run --rm dev uv run --frozen aeb-risk study claims --part addendum --evidence-dir docs/posthoc/nuplan_aeb_v2-addendum/evidence --output docs/posthoc/nuplan_aeb_v2-addendum/claims.yaml
+docker compose -f compose.yaml -f <override> run --rm -T dev uv run --frozen aeb-risk study addendum --released-root artifacts/formal/nuplan_aeb_v2 --released-hashes artifacts/d2-operations/d2-nuplan-aeb-v2-20260906T165808Z-a65ae17/output-hashes.json --evidence-dir docs/evidence/nuplan_aeb_v2 --manifest docs/evidence/nuplan_aeb_v2/cohort/evaluation.json --eligibility docs/evidence/nuplan_aeb_v2/cohort/evaluation-eligibility.json --output artifacts/posthoc/nuplan_aeb_v2-addendum/addendum-summary.json
+docker compose -f compose.yaml -f <override> run --rm -T dev uv run --frozen aeb-risk study evidence --part addendum --addendum artifacts/posthoc/nuplan_aeb_v2-addendum/addendum-summary.json --output-dir docs/posthoc/nuplan_aeb_v2-addendum/evidence
+docker compose -f compose.yaml -f <override> run --rm -T dev uv run --frozen aeb-risk study claims --part addendum --evidence-dir docs/posthoc/nuplan_aeb_v2-addendum/evidence --output docs/posthoc/nuplan_aeb_v2-addendum/claims.yaml
 ```
 
 `study evidence` copies the numbers of the summary and recomputes none, and it refuses any string shaped like a scenario token. Only aggregates are published: no per-token table, token identifier or scenario list.
