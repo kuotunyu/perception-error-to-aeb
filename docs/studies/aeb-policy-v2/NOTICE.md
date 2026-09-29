@@ -2,8 +2,9 @@
 
 The JSON documents in `evidence/`, the claims registry `claims.yaml` and the
 values restated in `results.md` are compact derived material from **nuPlan
-v1.1**, created from Motional's dataset by a new closed-loop simulation of the
-released evaluation cohort. They hold aggregate measurements, intervals, test
+v1.1**, created from Motional's dataset with nuPlan devkit commit
+`e9241677997dd86bfc0bcd44817ab04fe631405b`, by a new closed-loop simulation of
+the released evaluation cohort. They hold aggregate measurements, intervals, test
 results and gate outcomes over that cohort. No database, map, sensor media,
 point cloud, raw trajectory export, per-token table, scenario token, log name
 or model artifact is included; the per-token records of the simulation stay
