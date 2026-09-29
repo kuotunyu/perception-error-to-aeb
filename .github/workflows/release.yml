@@ -11,8 +11,11 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
+      # Full history, as in CI: the contract suite compares published commits.
       - name: Check out the tagged commit
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
       - name: Match the container user to the runner
         run: |
           echo "HOST_UID=$(id -u)" >> "$GITHUB_ENV"

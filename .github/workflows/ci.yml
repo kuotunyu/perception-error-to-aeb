@@ -20,8 +20,12 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
+      # The contract suite asks Git whether the study's pre-registration merge
+      # precedes the commit each arm ran, which a shallow clone cannot answer.
       - name: Check out repository
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Match the container user to the runner
         run: |

@@ -85,6 +85,25 @@ def test_ci_builds_the_locked_container_and_runs_the_shared_gate() -> None:
     assert commands[4:] == (str(step(document, "verify", REPLAY_STATUS_STEP)["run"]),)
 
 
+@pytest.mark.parametrize(
+    ("name", "job_name", "checkout"),
+    [
+        ("ci.yml", "verify", "Check out repository"),
+        ("release.yml", "release", "Check out the tagged commit"),
+    ],
+)
+def test_the_jobs_that_run_the_contract_suite_check_out_full_history(
+    name: str, job_name: str, checkout: str
+) -> None:
+    """The study results test asks Git whether one published commit precedes another.
+
+    A shallow checkout holds only the commit it checks out, so Git could not
+    compare the pre-registration merge with the commit each arm ran.
+    """
+
+    assert step(workflow(name), job_name, checkout).get("with") == {"fetch-depth": 0}
+
+
 def test_ci_cancels_superseded_pull_request_runs_but_verifies_every_push() -> None:
     """A newer push to a pull request makes its running check moot.
 
