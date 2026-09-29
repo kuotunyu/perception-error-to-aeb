@@ -258,6 +258,43 @@ def test_the_answer_states_the_label_and_the_fixed_sentences_the_summary_chose()
     assert re.search(r"\bsafer\b|\bfixes\b", text, flags=re.IGNORECASE) is None
 
 
+def test_the_answer_gives_the_h5_qualifier_its_own_rule_not_holms() -> None:
+    """The qualifier follows H5's unadjusted p and the sign of its estimate, whatever Holm says."""
+
+    committed = summary()
+    verdict = paragraph_after(RESULTS.read_text(encoding="utf-8"), "## Answer")
+
+    assert not committed.h5_qualifier
+    assert (
+        "The label carries no qualifier: the qualifier needs H5's unadjusted sign-flip p "
+        "below the five-percent level and an estimate above zero" in verdict
+    )
+    assert re.search(r"Holm[^.]*so the label carries no qualifier", verdict) is None
+
+
+def test_the_answer_places_both_splits_and_follows_h4_with_its_intervals_and_exposure() -> None:
+    """Section 7.2: the oracle and full-coalition splits, then H4's intervals and exposure."""
+
+    verdict = paragraph_after(RESULTS.read_text(encoding="utf-8"), "## Answer")
+    h4 = "p3.study.policy-v2.hypotheses.h4.collision_indicator."
+    exposure = "p3.study.policy-v2.secondary.exposure."
+    after_h4 = verdict[verdict.index(summary().statements.h4) :]
+    h4_part = after_h4[: after_h4.index("Exposure moved with the policy")]
+
+    assert "benefit_and_harm.induced.plus-b-v2-gated-oracle_aeb." in verdict
+    assert "benefit_and_harm.avoided.plus-b-v2-gated-oracle_aeb." in verdict
+    assert "In the full coalition, the induced-collision indicator" in after_h4
+    for arm in ("0", "1"):
+        for bound in ("low", "high"):
+            assert re.search(rf"{re.escape(h4)}[^ ]*clopper_pearson-{arm}-{bound}", h4_part)
+    for outcome in ("simulated_seconds", "early_ends"):
+        for cell in (
+            "oracle_aeb",
+            "coalition-dropout-localization_shape-latency-track_instability",
+        ):
+            assert f"{exposure}{outcome}.plus-b-v2-gated-{cell}." in after_h4
+
+
 # --------------------------------------------------------------------------
 # Provenance
 # --------------------------------------------------------------------------
