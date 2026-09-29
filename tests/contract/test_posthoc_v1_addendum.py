@@ -276,8 +276,8 @@ README_POINTERS = {
     "README.en.md": (
         "The evidence contains no uncertainty interval for Shapley values or configuration "
         "differences and supports no channel ranking. ",
-        "A post-hoc addendum, not pre-registered, gives intervals for these values and "
-        "differences and makes no ranking claim: "
+        "A post-hoc addendum, not pre-registered, gives intervals for the Shapley values, "
+        "their differences and selected configuration contrasts, and makes no ranking claim: "
         "[docs/posthoc/nuplan_aeb_v2-addendum/](docs/posthoc/nuplan_aeb_v2-addendum/results.md).",
     ),
     "README.md": (
@@ -285,7 +285,8 @@ README_POINTERS = {
         "\u6216\u8a2d\u5b9a\u5dee\u503c\u7684\u4fe1\u8cf4\u5340\u9593\uff0c"
         "\u4e5f\u4e0d\u652f\u6301 channel \u6392\u540d\u3002",
         "\u672a\u9810\u5148\u767b\u9304\u7684\u4e8b\u5f8c\u88dc\u5145\u5206\u6790"
-        "\u70ba\u9019\u4e9b\u503c\u8207\u5dee\u503c\u63d0\u4f9b\u5340\u9593\uff0c"
+        "\u70ba Shapley \u503c\u3001\u5176\u5dee\u503c\u8207\u9078\u5b9a\u7684"
+        "\u8a2d\u5b9a\u5dee\u503c\u63d0\u4f9b\u5340\u9593\uff0c"
         "\u4f46\u4ecd\u4e0d\u505a channel \u6392\u540d\uff1a"
         "[docs/posthoc/nuplan_aeb_v2-addendum/](docs/posthoc/nuplan_aeb_v2-addendum/results.md)"
         "\u3002",
