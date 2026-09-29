@@ -94,3 +94,34 @@ def test_the_token_check_would_find_a_cohort_token_in_a_published_text() -> None
 
     with pytest.raises(ValueError, match="scenario token"):
         refuse_token_strings(text, tokens)
+
+
+def paragraph(text: str, start: str, end: str) -> str:
+    """The text from `start` through `end`, with its line breaks read as spaces."""
+
+    begin = text.index(start)
+    return " ".join(text[begin : text.index(end, begin) + len(end)].split())
+
+
+def test_the_addendum_is_shared_under_the_released_evidence_terms() -> None:
+    """The directory's notice uses the released evidence notice's licence wording."""
+
+    start = "This derived evidence is shared for non-commercial use under"
+    end = "Motional does not sponsor or endorse this project."
+    released = (ROOT / "docs" / "evidence" / "nuplan_aeb_v2-NOTICE.md").read_text(encoding="utf-8")
+    notice = (ADDENDUM / "NOTICE.md").read_text(encoding="utf-8")
+
+    assert paragraph(notice, start, end) == paragraph(released, start, end)
+    for published in ("`evidence/`", "`claims.yaml`", "`results.md`"):
+        assert published in notice
+
+
+def test_the_root_notice_lists_the_addendum_among_the_nuplan_derived_paths() -> None:
+    root = (ROOT / "NOTICE").read_text(encoding="utf-8")
+    derived = root[root.index("2. Material derived from nuPlan") : root.index("3. Third-party")]
+
+    assert "- docs/posthoc/nuplan_aeb_v2-addendum/:" in derived
+    assert paragraph(derived, "- docs/posthoc/nuplan_aeb_v2-addendum/", "NOTICE.md") == (
+        "- docs/posthoc/nuplan_aeb_v2-addendum/: derived evidence JSON, claims.yaml and the "
+        "values restated in results.md; see docs/posthoc/nuplan_aeb_v2-addendum/NOTICE.md"
+    )
