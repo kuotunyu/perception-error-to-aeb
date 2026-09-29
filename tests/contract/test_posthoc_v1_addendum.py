@@ -15,7 +15,9 @@ from pathlib import Path
 
 import pytest
 
+from aebrisk.analysis.attribution_audit import validate_attribution
 from aebrisk.analysis.claims import audit_claims, load_registry
+from aebrisk.artifacts.study_documents import COLLISION_GAME_SENTENCE
 from aebrisk.study.claims import build_addendum_claims
 from aebrisk.study.evidence import write_addendum_evidence
 from aebrisk.study.gates import committed_cohort_tokens, refuse_token_strings
@@ -26,6 +28,8 @@ EVIDENCE = ADDENDUM / "evidence"
 SUMMARY = EVIDENCE / "addendum-summary.json"
 DERIVED = EVIDENCE / "attribution-addendum-evidence.json"
 REGISTRY = ADDENDUM / "claims.yaml"
+RESULTS = ADDENDUM / "results.md"
+TITLE = "# Post-hoc addendum to v1.0.0 (not pre-registered; partly computed before writing)"
 
 #: The SHA-256 of the committed addendum summary, as `study addendum` wrote it.
 SUMMARY_SHA256 = "c4d812e2a35ef270fc546f101eada88108c57736519ef1422d3bc1f851f6f8cd"
@@ -79,7 +83,9 @@ def test_no_scenario_token_appears_anywhere_in_the_addendum_directory() -> None:
     published = sorted(path for path in ADDENDUM.glob("**/*") if path.is_file())
 
     assert {path.relative_to(ADDENDUM).as_posix() for path in published} >= {
+        "NOTICE.md",
         "claims.yaml",
+        "results.md",
         "evidence/addendum-summary.json",
         "evidence/attribution-addendum-evidence.json",
     }
@@ -125,3 +131,43 @@ def test_the_root_notice_lists_the_addendum_among_the_nuplan_derived_paths() -> 
         "- docs/posthoc/nuplan_aeb_v2-addendum/: derived evidence JSON, claims.yaml and the "
         "values restated in results.md; see docs/posthoc/nuplan_aeb_v2-addendum/NOTICE.md"
     )
+
+
+def test_every_number_on_the_results_page_is_bound_to_the_addendum_registry() -> None:
+    violations, status = validate_attribution(REGISTRY, ROOT, None, [RESULTS])
+
+    assert violations == ()
+    assert status["statements"]
+
+
+def test_the_results_page_with_one_changed_value_is_refused(tmp_path: Path) -> None:
+    binding = "`clusters` = 198 <!-- claim: p3.posthoc.v1-addendum.bootstrap.clusters -->"
+    text = RESULTS.read_text(encoding="utf-8")
+    assert binding in text
+    changed = tmp_path / "results.md"
+    changed.write_text(text.replace(binding, binding.replace("198", "199"), 1), "utf-8")
+
+    violations, _ = validate_attribution(REGISTRY, ROOT, None, [changed])
+
+    assert any("`clusters` says 199" in violation for violation in violations)
+
+
+def test_the_results_page_prints_the_collision_game_right_after_the_duration_game() -> None:
+    """The fixed sentence stands once, on the collision game's line."""
+
+    text = RESULTS.read_text(encoding="utf-8")
+    lines = text.splitlines()
+    (duration,) = [i for i, line in enumerate(lines) if line.startswith("- **Duration game")]
+    (collision,) = [i for i, line in enumerate(lines) if line.startswith("- **Collision game")]
+
+    assert lines[0] == TITLE
+    assert collision == duration + 1
+    assert text.count(COLLISION_GAME_SENTENCE) == 1
+    assert lines[collision].endswith(COLLISION_GAME_SENTENCE)
+
+
+def test_the_results_page_neither_tests_nor_ranks() -> None:
+    text = RESULTS.read_text(encoding="utf-8").lower()
+
+    for word in ("supported", "contradicted", "ranks first", "ranked"):
+        assert word not in text
