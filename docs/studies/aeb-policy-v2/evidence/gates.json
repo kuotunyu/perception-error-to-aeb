@@ -1,0 +1,77 @@
+{
+  "arms_checked": [
+    "A-v1-replication",
+    "B-v2-gated",
+    "C-v1-kalman",
+    "D-v2-kalman",
+    "E-v2-channel-rng"
+  ],
+  "cohort_manifest_sha256": "65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9",
+  "exploratory": false,
+  "gates": [
+    {
+      "counts": {
+        "distinct_commits": 1,
+        "distinct_container_digests": 1,
+        "documents": 12384,
+        "documents_invalid": 0,
+        "documents_missing": 0,
+        "invalid_tokens": 0,
+        "run_complete_problems": 0,
+        "run_context_problems": 0,
+        "tokens_not_in_cohort": 0,
+        "tokens_not_listed": 0,
+        "unexpected_files": 0
+      },
+      "gate": "G1",
+      "passed": true
+    },
+    {
+      "counts": {
+        "coalition-dropout+localization_shape+latency+track_instability": 0,
+        "coalition-none": 0,
+        "dropout-medium": 0,
+        "latency-medium": 0,
+        "localization_shape-medium": 0,
+        "no_aeb": 0,
+        "oracle_aeb": 0,
+        "track_instability-medium": 0
+      },
+      "gate": "G2",
+      "passed": true
+    },
+    {
+      "counts": {
+        "no_aeb:A-v1-replication:released": 0,
+        "no_aeb:B-v2-gated:A-v1-replication": 0,
+        "no_aeb:B-v2-gated:released": 0,
+        "no_aeb:C-v1-kalman:A-v1-replication": 0,
+        "no_aeb:C-v1-kalman:released": 0,
+        "no_aeb:D-v2-kalman:A-v1-replication": 0,
+        "no_aeb:D-v2-kalman:released": 0,
+        "no_aeb:E-v2-channel-rng:A-v1-replication": 0,
+        "no_aeb:E-v2-channel-rng:released": 0,
+        "oracle_aeb:A-v1-replication:released": 0,
+        "oracle_aeb:C-v1-kalman:A-v1-replication": 0,
+        "oracle_aeb:C-v1-kalman:released": 0,
+        "oracle_aeb:D-v2-kalman:B-v2-gated": 0,
+        "oracle_aeb:E-v2-channel-rng:B-v2-gated": 0
+      },
+      "gate": "G3",
+      "passed": true
+    },
+    {
+      "counts": {
+        "numpy_mismatches": 0,
+        "python_mismatches": 0,
+        "run_contexts_unreadable": 0
+      },
+      "gate": "G5",
+      "passed": true
+    }
+  ],
+  "protocol_sha256": "bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9",
+  "reference": "released",
+  "schema_version": "aeb-study-gates/v1",
+  "study_sha256": "698de14c017600d56e0f9017ee697eff0dea24f5396ec42168b6849745d64656"
+}
