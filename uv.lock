@@ -426,7 +426,7 @@ wheels = [
 
 [[package]]
 name = "perception-error-to-aeb"
-version = "1.0.0"
+version = "1.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "cachetools", marker = "sys_platform == 'linux'" },

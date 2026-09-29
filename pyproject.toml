@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "perception-error-to-aeb"
-version = "1.0.0"
+version = "1.1.0"
 description = "How perception errors propagate through a deterministic AEB on a common nuPlan cohort"
 readme = "README.md"
 requires-python = ">=3.9,<3.10"
