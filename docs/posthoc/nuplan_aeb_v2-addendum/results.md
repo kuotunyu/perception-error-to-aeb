@@ -1,8 +1,8 @@
 # Post-hoc addendum to v1.0.0 (not pre-registered; partly computed before writing)
 
-**Status: post hoc, not pre-registered, and partly computed before its plan was written.** The [addendum plan](addendum-plan.md) was merged before any number on this page was computed for publication, but after the released v1.0.0 results had been seen and after the scratch analyses that the plan lists. Nothing here is blind.
+**Status: post hoc, not pre-registered, and partly computed before its plan was written.** The [addendum plan](addendum-plan.md) was merged before any addendum number on this page was computed for publication, but after the released v1.0.0 results had been seen and after the scratch analyses that the plan lists. Nothing here is blind.
 
-- **Every number on this page is post hoc.** Items marked *computed before this plan* repeat a quantity that one of those scratch analyses had already computed from the same released records; the value shown is the one the addendum code computed in the pinned container.
+- **Every number on this page is post hoc,** except the released v1.0.0 `collisions` and `contacts_not_at_fault` of `oracle_aeb`, quoted beside the results that involve it, which come from [`evaluation.json`](../../evidence/nuplan_aeb_v2/evaluation.json). Items marked *computed before this plan* repeat a quantity that one of those scratch analyses had already computed from the same released records; the value shown is the one the addendum code computed in the pinned container.
 - **Directions were known.** The released Shapley means and configuration levels were published in v1.0.0, so the direction of every Shapley difference and configuration contrast below was known in advance.
 - **Estimation only.** No hypothesis is tested, no p-value is computed, and no ranking is declared among any channels.
 - **What it covers.** The released v1.0.0 records only, that is controller v1 as released, including its target selection that is not path-gated. It changes no released number, claim, figure, tag or release, and it says nothing about the pre-registered [policy v2 study](../../studies/aeb-policy-v2/analysis-plan.md).
@@ -50,7 +50,7 @@ For each game and each channel c among dropout, latency and track_instability, �
 
 The fixed sentence on the collision game has two reasons. Under v1, the released configurations with localization error spend most of their measured exposure braking, which includes time held in braking at standstill (see the [collisions-vs-braking figure](../../figures/collisions-vs-braking.svg)), and a contact while the ego is stopped is never counted as a collision ([simulation contract](../../simulation-contract.md#known-controller-and-modelling-choices)).
 
-## Descriptive results
+## Descriptive results (post hoc)
 
 ### Shapley values and the other differences (Shapley values computed before this plan)
 
@@ -80,7 +80,7 @@ Collision game, `collision_indicator`:
 
 ### Configuration contrasts
 
-Each contrast is paired by token. The collision indicator is per token, braking share is the share of measured exposure spent braking, and the not-at-fault contact rate is Σ `contacts_not_at_fault` ÷ Σ simulated seconds per thousand simulated seconds, over all tokens and replicates. The rate counts every contact the frozen rule excludes: the ego stopped, or a faster body behind the ego. The full coalition is `coalition-dropout+localization_shape+latency+track_instability`.
+Each contrast is paired by token. The collision indicator is per token, braking share is the share of measured exposure spent braking, and the not-at-fault contact rate is Σ `contacts_not_at_fault` ÷ Σ simulated seconds per thousand simulated seconds, over all tokens and replicates. The rate counts every contact the frozen rule excludes: the ego stopped, or a faster body behind the ego. The full coalition is `coalition-dropout+localization_shape+latency+track_instability`. The released `oracle_aeb` values quoted in the first two rows count scenario-replicates, not tokens.
 
 | Contrast | Collision indicator (computed before this plan) | Braking share (computed before this plan) | Not-at-fault contact rate |
 | --- | --- | --- | --- |
@@ -93,7 +93,7 @@ The lower collision indicator of the full coalition and of `localization_shape-m
 
 ### Collisions the released oracle AEB avoids and induces (computed before this plan)
 
-Both are taken against the same token's `no_aeb` run. On every token the avoided and the induced indicator agree across the replicates (the addendum code refuses to count them otherwise), so both are token counts, each with an exact Clopper-Pearson interval for the token-level proportion.
+Both are taken against the same token's `no_aeb` run. On every token the avoided and the induced indicator agree across the replicates (the addendum code refuses to count them otherwise), so both are token counts, each with an exact Clopper-Pearson interval for the token-level proportion. The released `collisions` and `contacts_not_at_fault` of `oracle_aeb` quoted beside them count scenario-replicates, not tokens.
 
 - `no_aeb` collisions that `oracle_aeb` avoids: `events` = 66 <!-- claim: p3.posthoc.v1-addendum.oracle_collisions.avoided-events --> of `tokens` = 344 <!-- claim: p3.posthoc.v1-addendum.oracle_collisions.avoided-tokens --> tokens, interval `low` = 0.152 <!-- claim: p3.posthoc.v1-addendum.oracle_collisions.avoided-low; rounded: 3 --> to `high` = 0.238 <!-- claim: p3.posthoc.v1-addendum.oracle_collisions.avoided-high; rounded: 3 -->; beside the released `oracle_aeb` `collisions` = 39 <!-- claim: p3.posthoc.v1-addendum.baseline.collisions.oracle_aeb -->, `contacts_not_at_fault` = 1095 <!-- claim: p3.posthoc.v1-addendum.baseline.contacts_not_at_fault.oracle_aeb -->.
 - `oracle_aeb` collisions on tokens where `no_aeb` has none: `events` = 11 <!-- claim: p3.posthoc.v1-addendum.oracle_collisions.induced-events --> of `tokens` = 344 <!-- claim: p3.posthoc.v1-addendum.oracle_collisions.induced-tokens --> tokens, interval `low` = 0.0161 <!-- claim: p3.posthoc.v1-addendum.oracle_collisions.induced-low; rounded: 4 --> to `high` = 0.0565 <!-- claim: p3.posthoc.v1-addendum.oracle_collisions.induced-high; rounded: 4 -->; beside the released `oracle_aeb` `collisions` = 39 <!-- claim: p3.posthoc.v1-addendum.baseline.collisions.oracle_aeb -->, `contacts_not_at_fault` = 1095 <!-- claim: p3.posthoc.v1-addendum.baseline.contacts_not_at_fault.oracle_aeb -->.
