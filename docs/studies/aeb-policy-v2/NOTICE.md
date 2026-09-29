@@ -11,8 +11,8 @@ or model artifact is included; the per-token records of the simulation stay
 outside the repository.
 
 `evidence/operator-log.txt` records the commands that produced this material and
-their times. It names no scenario token and no local path; the dataset root is
-written as `$NUPLAN_DATA_ROOT`.
+their times. It names no scenario token and no absolute local path; the dataset
+root is written as `$NUPLAN_DATA_ROOT`.
 
 This derived material is shared for non-commercial use under
 [Creative Commons Attribution-NonCommercial-ShareAlike 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)
