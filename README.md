@@ -63,7 +63,7 @@ Shapley 的 intervention-duration game 中，同一 channel 的觀察平均貢�
 
 </details>
 
-這兩個值使用不同單位與尺度，只是 full-minus-empty `coalition-none` 的觀察平均分解，不能相加、比較高低或解讀成顯著性。零嚴重度 tracker 仍以位置差分估計速度，因此 `coalition-none` 不是 oracle。現有證據沒有 Shapley 或設定差值的信賴區間，也不支持 channel 排名。
+這兩個值使用不同單位與尺度，只是 full-minus-empty `coalition-none` 的觀察平均分解，不能相加、比較高低或解讀成顯著性。零嚴重度 tracker 仍以位置差分估計速度，因此 `coalition-none` 不是 oracle。現有證據沒有 Shapley 或設定差值的信賴區間，也不支持 channel 排名。未預先註冊的事後補充分析為 Shapley 值、其差值與選定的設定差值提供區間，但仍不做 channel 排名：[docs/posthoc/nuplan_aeb_v2-addendum/](docs/posthoc/nuplan_aeb_v2-addendum/results.md)。
 
 `bicycle_or_vru` 的 `valid_tokens` = 44 <!-- claim: p3.family-interventions.bicycle_or_vru.oracle_aeb.valid_tokens -->，低於 protocol 的 `evaluation_per_family` = 100。<!-- claim: p3.family-interventions.evaluation_per_family --> 這兩個值只說明樣本不足，不是 efficacy claim；首頁不對該 family 的介入率提出正式結論。
 

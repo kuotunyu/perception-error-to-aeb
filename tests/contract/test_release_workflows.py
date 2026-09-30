@@ -213,7 +213,11 @@ def test_pages_audits_actual_public_text_and_skills_before_building() -> None:
         "docker compose run --rm dev uv run --frozen aeb-risk audit-claims --claims docs/claims.yaml",
         "docker compose run --rm dev uv run --frozen python .agents/skills/auditing-aeb-error-attribution/scripts/validate_attribution.py --claims docs/claims.yaml --repo-root . --document README.md --document README.en.md --document docs/release-notes/v1.0.0.md",
     )
-    assert commands[5:] == (
+    assert commands[5:7] == (
+        "docker compose run --rm dev uv run --frozen aeb-risk audit-claims --claims docs/posthoc/nuplan_aeb_v2-addendum/claims.yaml",
+        "docker compose run --rm dev uv run --frozen python .agents/skills/auditing-aeb-error-attribution/scripts/validate_attribution.py --claims docs/posthoc/nuplan_aeb_v2-addendum/claims.yaml --repo-root . --document docs/posthoc/nuplan_aeb_v2-addendum/results.md",
+    )
+    assert commands[7:] == (
         "docker compose run --rm dev uv run --frozen python -m pytest tests/contract/skills",
         "docker compose run --rm dev uv run --frozen aeb-risk figures --evidence-dir docs/evidence/nuplan_aeb_v2 --output-dir docs/figures",
         "docker compose run --rm dev uv run --frozen aeb-risk report --claims docs/claims.yaml --artifacts-dir docs/evidence/nuplan_aeb_v2 --output-dir site",
