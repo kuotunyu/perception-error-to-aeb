@@ -1,0 +1,171 @@
+2026-09-28T09:48:47.9175067Z environment build and check starts. Every docker compose run below adds -T because the session has no terminal.
+2026-09-28T09:48:51.5192652Z git status --short printed nothing
+2026-09-28T09:48:51.5212726Z HOST_UID and HOST_GID are unset
+2026-09-28T09:48:51.5520274Z SHA=234008ab9c7142bd248dd4ef82e84b6184013a3f
+2026-09-28T09:48:51.5535350Z NUPLAN_DATA_ROOT=$NUPLAN_DATA_ROOT
+2026-09-28T09:51:32.4174230Z IMAGE=sha256:98dceab6147c42fbb7def16e375910fdeb8574605693c6be3136130fb14a605a
+2026-09-28T09:52:29.9381433Z uv lock --check exited 0
+2026-09-28T10:03:04.9559464Z verify exited 0
+2026-09-28T10:03:16.1092316Z python and numpy: 3.9.19 1.23.4
+2026-09-28T10:03:16.5847516Z uv.lock sha256=6a9d8e34a0f503f6c5b295cd0705ed8f6d92cffa179de6fe41bd0b993e503cfa
+2026-09-28T10:03:23.9933007Z study file sha256: 698de14c017600d56e0f9017ee697eff0dea24f5396ec42168b6849745d64656  configs/experiments/aeb_policy_v2_study.yaml
+2026-09-28T10:03:24.3372613Z compose-config.yaml sha256=a6aa797335941b7e9d700245c0b7a36458b86049d483d15a63966e5758ade63f
+2026-09-28T10:03:24.3372613Z environment build and check done
+2026-09-28T10:03:47.3079467Z preflight, after the launch preamble passed: docker compose run --rm -T dev uv run --frozen aeb-risk study preflight --study configs/experiments/aeb_policy_v2_study.yaml --protocol configs/protocols/nuplan_aeb_v2.yaml --released-root artifacts/formal/nuplan_aeb_v2 --released-hashes artifacts/d2-operations/d2-nuplan-aeb-v2-20260906T165808Z-a65ae17/output-hashes.json --input-databases artifacts/d2-input-databases.json --manifest docs/evidence/nuplan_aeb_v2/cohort/evaluation.json --split val --output artifacts/formal/aeb_policy_v2/preflight.json
+2026-09-28T10:24:08.3208656Z preflight exited 0
+2026-09-28T10:24:08.4414863Z preflight.json sha256=074f8e30a1c70e408b806ed4c1fc3493f4e93ec3ec42a8dc83c0dadd655994ff
+2026-09-28T10:24:53.0389106Z runner starts: mode pilot, pilot-1, arms A-v1-replication, B-v2-gated, C-v1-kalman, D-v2-kalman, E-v2-channel-rng, SHA 234008ab9c7142bd248dd4ef82e84b6184013a3f, IMAGE sha256:98dceab6147c42fbb7def16e375910fdeb8574605693c6be3136130fb14a605a
+2026-09-28T10:24:53.2722733Z command: docker compose -f compose.yaml -f compose.formal-cpu.yaml run --detach --no-deps --name aeb-policy-v2-pilot-A --env AEBRISK_COMMIT=234008ab9c7142bd248dd4ef82e84b6184013a3f --env AEBRISK_IMAGE_DIGEST=sha256:98dceab6147c42fbb7def16e375910fdeb8574605693c6be3136130fb14a605a dev uv run --frozen aeb-risk study simulate --pilot --study configs/experiments/aeb_policy_v2_study.yaml --arm A-v1-replication --protocol configs/protocols/nuplan_aeb_v2.yaml --manifest docs/evidence/nuplan_aeb_v2/cohort/smoke.json --split mini --workers 6 --output-dir artifacts/pilot/aeb_policy_v2/pilot-1/A-v1-replication
+2026-09-28T10:27:39.8198432Z aeb-policy-v2-pilot-A stopped: docker wait printed 0; OOMKilled and Error: false 
+2026-09-28T10:27:41.3317057Z captured artifacts\pilot\aeb_policy_v2\pilot-1.aeb-policy-v2-pilot-A.inspect.json and .docker.log, then removed aeb-policy-v2-pilot-A
+2026-09-28T10:27:41.5550984Z command: docker compose -f compose.yaml -f compose.formal-cpu.yaml run --detach --no-deps --name aeb-policy-v2-pilot-B --env AEBRISK_COMMIT=234008ab9c7142bd248dd4ef82e84b6184013a3f --env AEBRISK_IMAGE_DIGEST=sha256:98dceab6147c42fbb7def16e375910fdeb8574605693c6be3136130fb14a605a dev uv run --frozen aeb-risk study simulate --pilot --study configs/experiments/aeb_policy_v2_study.yaml --arm B-v2-gated --protocol configs/protocols/nuplan_aeb_v2.yaml --manifest docs/evidence/nuplan_aeb_v2/cohort/smoke.json --split mini --workers 6 --output-dir artifacts/pilot/aeb_policy_v2/pilot-1/B-v2-gated
+2026-09-28T10:30:29.5303936Z aeb-policy-v2-pilot-B stopped: docker wait printed 0; OOMKilled and Error: false 
+2026-09-28T10:30:30.6151296Z captured artifacts\pilot\aeb_policy_v2\pilot-1.aeb-policy-v2-pilot-B.inspect.json and .docker.log, then removed aeb-policy-v2-pilot-B
+2026-09-28T10:30:30.8291132Z command: docker compose -f compose.yaml -f compose.formal-cpu.yaml run --detach --no-deps --name aeb-policy-v2-pilot-C --env AEBRISK_COMMIT=234008ab9c7142bd248dd4ef82e84b6184013a3f --env AEBRISK_IMAGE_DIGEST=sha256:98dceab6147c42fbb7def16e375910fdeb8574605693c6be3136130fb14a605a dev uv run --frozen aeb-risk study simulate --pilot --study configs/experiments/aeb_policy_v2_study.yaml --arm C-v1-kalman --protocol configs/protocols/nuplan_aeb_v2.yaml --manifest docs/evidence/nuplan_aeb_v2/cohort/smoke.json --split mini --workers 6 --output-dir artifacts/pilot/aeb_policy_v2/pilot-1/C-v1-kalman
+2026-09-28T10:32:39.4876885Z aeb-policy-v2-pilot-C stopped: docker wait printed 0; OOMKilled and Error: false 
+2026-09-28T10:32:40.4561066Z captured artifacts\pilot\aeb_policy_v2\pilot-1.aeb-policy-v2-pilot-C.inspect.json and .docker.log, then removed aeb-policy-v2-pilot-C
+2026-09-28T10:32:40.6766278Z command: docker compose -f compose.yaml -f compose.formal-cpu.yaml run --detach --no-deps --name aeb-policy-v2-pilot-D --env AEBRISK_COMMIT=234008ab9c7142bd248dd4ef82e84b6184013a3f --env AEBRISK_IMAGE_DIGEST=sha256:98dceab6147c42fbb7def16e375910fdeb8574605693c6be3136130fb14a605a dev uv run --frozen aeb-risk study simulate --pilot --study configs/experiments/aeb_policy_v2_study.yaml --arm D-v2-kalman --protocol configs/protocols/nuplan_aeb_v2.yaml --manifest docs/evidence/nuplan_aeb_v2/cohort/smoke.json --split mini --workers 6 --output-dir artifacts/pilot/aeb_policy_v2/pilot-1/D-v2-kalman
+2026-09-28T10:34:54.5486034Z aeb-policy-v2-pilot-D stopped: docker wait printed 0; OOMKilled and Error: false 
+2026-09-28T10:34:55.4850094Z captured artifacts\pilot\aeb_policy_v2\pilot-1.aeb-policy-v2-pilot-D.inspect.json and .docker.log, then removed aeb-policy-v2-pilot-D
+2026-09-28T10:34:55.7070988Z command: docker compose -f compose.yaml -f compose.formal-cpu.yaml run --detach --no-deps --name aeb-policy-v2-pilot-E --env AEBRISK_COMMIT=234008ab9c7142bd248dd4ef82e84b6184013a3f --env AEBRISK_IMAGE_DIGEST=sha256:98dceab6147c42fbb7def16e375910fdeb8574605693c6be3136130fb14a605a dev uv run --frozen aeb-risk study simulate --pilot --study configs/experiments/aeb_policy_v2_study.yaml --arm E-v2-channel-rng --protocol configs/protocols/nuplan_aeb_v2.yaml --manifest docs/evidence/nuplan_aeb_v2/cohort/smoke.json --split mini --workers 6 --output-dir artifacts/pilot/aeb_policy_v2/pilot-1/E-v2-channel-rng
+2026-09-28T10:36:09.8300431Z aeb-policy-v2-pilot-E stopped: docker wait printed 0; OOMKilled and Error: false 
+2026-09-28T10:36:10.7178181Z captured artifacts\pilot\aeb_policy_v2\pilot-1.aeb-policy-v2-pilot-E.inspect.json and .docker.log, then removed aeb-policy-v2-pilot-E
+2026-09-28T10:36:10.9373446Z command: docker compose run --rm -T dev uv run --frozen aeb-risk study verify --pilot --study configs/experiments/aeb_policy_v2_study.yaml --arms-root artifacts/pilot/aeb_policy_v2/pilot-1 --manifest docs/evidence/nuplan_aeb_v2/cohort/smoke.json --output artifacts/pilot/aeb_policy_v2/pilot-1.verify.json
+2026-09-28T10:36:20.3263921Z study verify --pilot exited 0
+2026-09-28T10:36:20.3263921Z runner finished: mode pilot, pilot-1
+2026-09-28T10:36:43.2119227Z G0 record: CI run 36405617360 of 234008a is completed with conclusion success (gh run view); writing g0.json from pilot-1 after the launch preamble passed
+2026-09-28T10:36:49.7628134Z write_g0.py exited 0
+2026-09-28T10:36:49.7919884Z g0.json sha256=63ee88cd8b51e581f0984a2849c482e080d90343e482d284675b027b343a4696
+2026-09-28T11:00:07.1856637Z runner starts: mode formal, attempt-1, process 42644, run-arms.ps1 sha256 10c3cbf4730adc9ba8196db3ec3dbda68ab4d2957583184cc34a7aaf76c66fb9, SHA 234008ab9c7142bd248dd4ef82e84b6184013a3f, IMAGE sha256:98dceab6147c42fbb7def16e375910fdeb8574605693c6be3136130fb14a605a
+2026-09-28T11:00:10.2365976Z Docker engine answers, server version 29.6.1
+2026-09-28T11:00:11.4034149Z launch preamble passed (HEAD, clean tree, image id)
+2026-09-28T11:00:11.4069370Z runner check only: nothing launched for attempt-1
+2026-09-28T11:00:11.7257064Z runner starts: mode pilot, pilot-1, process 43076, run-arms.ps1 sha256 10c3cbf4730adc9ba8196db3ec3dbda68ab4d2957583184cc34a7aaf76c66fb9, SHA 234008ab9c7142bd248dd4ef82e84b6184013a3f, IMAGE sha256:98dceab6147c42fbb7def16e375910fdeb8574605693c6be3136130fb14a605a
+2026-09-28T11:00:12.0572427Z Docker engine answers, server version 29.6.1
+2026-09-28T11:00:12.0651696Z runner halts: pilot-1 already has a directory or records under artifacts/pilot/aeb_policy_v2; an interrupted arm is resumed by hand
+2026-09-28T11:00:12.3691797Z runner starts: mode formal, attempt-1, process 43248, run-arms.ps1 sha256 10c3cbf4730adc9ba8196db3ec3dbda68ab4d2957583184cc34a7aaf76c66fb9, SHA 234008AB9C7142BD248DD4EF82E84B6184013A3F, IMAGE sha256:98dceab6147c42fbb7def16e375910fdeb8574605693c6be3136130fb14a605a
+2026-09-28T11:00:13.2658160Z Docker engine answers, server version 29.6.1
+2026-09-28T11:00:14.1265677Z runner halts: launch preamble: HEAD is 234008ab9c7142bd248dd4ef82e84b6184013a3f or the tree is not clean
+2026-09-28T11:00:34.2868838Z pilot-2 exercises the revised runner (checks before launch, capture checks, run.log token check, halt wording) on the smoke manifest before that runner is used for the formal arms; G0 stays the record of pilot-1
+2026-09-28T11:00:35.1986401Z runner starts: mode pilot, pilot-2, process 45968, run-arms.ps1 sha256 51ec6f9cbcc62fc5354ea459b995f49ba94342bf2b99cb30e91753da9dcc1473, SHA 234008ab9c7142bd248dd4ef82e84b6184013a3f, IMAGE sha256:98dceab6147c42fbb7def16e375910fdeb8574605693c6be3136130fb14a605a
+2026-09-28T11:00:35.6715739Z Docker engine answers, server version 29.6.1
+2026-09-28T11:00:37.9823362Z launch preamble passed (HEAD, clean tree, image id)
+2026-09-28T11:00:38.3122425Z command: docker compose -f compose.yaml -f compose.formal-cpu.yaml run --detach --no-deps --name aeb-policy-v2-pilot-A --env AEBRISK_COMMIT=234008ab9c7142bd248dd4ef82e84b6184013a3f --env AEBRISK_IMAGE_DIGEST=sha256:98dceab6147c42fbb7def16e375910fdeb8574605693c6be3136130fb14a605a dev uv run --frozen aeb-risk study simulate --pilot --study configs/experiments/aeb_policy_v2_study.yaml --arm A-v1-replication --protocol configs/protocols/nuplan_aeb_v2.yaml --manifest docs/evidence/nuplan_aeb_v2/cohort/smoke.json --split mini --workers 6 --output-dir artifacts/pilot/aeb_policy_v2/pilot-2/A-v1-replication
+2026-09-28T11:00:45.0312420Z command: docker wait aeb-policy-v2-pilot-A
+2026-09-28T11:03:55.1415982Z aeb-policy-v2-pilot-A stopped: docker wait printed 0; OOMKilled and Error: false
+2026-09-28T11:03:55.1467613Z command: docker inspect aeb-policy-v2-pilot-A > artifacts\pilot\aeb_policy_v2\pilot-2.aeb-policy-v2-pilot-A.inspect.json
+2026-09-28T11:03:55.3207318Z command: docker logs --timestamps aeb-policy-v2-pilot-A > artifacts\pilot\aeb_policy_v2\pilot-2.aeb-policy-v2-pilot-A.docker.log 2>&1
+2026-09-28T11:03:55.4889028Z command: docker rm aeb-policy-v2-pilot-A
+2026-09-28T11:03:56.1468832Z run.log of A-v1-replication: every token valid
+2026-09-28T11:03:56.3758431Z launch preamble passed (HEAD, clean tree, image id)
+2026-09-28T11:03:56.3771307Z command: docker compose -f compose.yaml -f compose.formal-cpu.yaml run --detach --no-deps --name aeb-policy-v2-pilot-B --env AEBRISK_COMMIT=234008ab9c7142bd248dd4ef82e84b6184013a3f --env AEBRISK_IMAGE_DIGEST=sha256:98dceab6147c42fbb7def16e375910fdeb8574605693c6be3136130fb14a605a dev uv run --frozen aeb-risk study simulate --pilot --study configs/experiments/aeb_policy_v2_study.yaml --arm B-v2-gated --protocol configs/protocols/nuplan_aeb_v2.yaml --manifest docs/evidence/nuplan_aeb_v2/cohort/smoke.json --split mini --workers 6 --output-dir artifacts/pilot/aeb_policy_v2/pilot-2/B-v2-gated
+2026-09-28T11:03:58.6628187Z command: docker wait aeb-policy-v2-pilot-B
+2026-09-28T11:06:40.9812508Z aeb-policy-v2-pilot-B stopped: docker wait printed 0; OOMKilled and Error: false
+2026-09-28T11:06:40.9837684Z command: docker inspect aeb-policy-v2-pilot-B > artifacts\pilot\aeb_policy_v2\pilot-2.aeb-policy-v2-pilot-B.inspect.json
+2026-09-28T11:06:41.1437027Z command: docker logs --timestamps aeb-policy-v2-pilot-B > artifacts\pilot\aeb_policy_v2\pilot-2.aeb-policy-v2-pilot-B.docker.log 2>&1
+2026-09-28T11:06:41.2994639Z command: docker rm aeb-policy-v2-pilot-B
+2026-09-28T11:06:41.8989806Z run.log of B-v2-gated: every token valid
+2026-09-28T11:06:42.1213931Z launch preamble passed (HEAD, clean tree, image id)
+2026-09-28T11:06:42.1219110Z command: docker compose -f compose.yaml -f compose.formal-cpu.yaml run --detach --no-deps --name aeb-policy-v2-pilot-C --env AEBRISK_COMMIT=234008ab9c7142bd248dd4ef82e84b6184013a3f --env AEBRISK_IMAGE_DIGEST=sha256:98dceab6147c42fbb7def16e375910fdeb8574605693c6be3136130fb14a605a dev uv run --frozen aeb-risk study simulate --pilot --study configs/experiments/aeb_policy_v2_study.yaml --arm C-v1-kalman --protocol configs/protocols/nuplan_aeb_v2.yaml --manifest docs/evidence/nuplan_aeb_v2/cohort/smoke.json --split mini --workers 6 --output-dir artifacts/pilot/aeb_policy_v2/pilot-2/C-v1-kalman
+2026-09-28T11:06:45.4638217Z command: docker wait aeb-policy-v2-pilot-C
+2026-09-28T11:08:49.5995159Z aeb-policy-v2-pilot-C stopped: docker wait printed 0; OOMKilled and Error: false
+2026-09-28T11:08:49.5995159Z command: docker inspect aeb-policy-v2-pilot-C > artifacts\pilot\aeb_policy_v2\pilot-2.aeb-policy-v2-pilot-C.inspect.json
+2026-09-28T11:08:49.7690308Z command: docker logs --timestamps aeb-policy-v2-pilot-C > artifacts\pilot\aeb_policy_v2\pilot-2.aeb-policy-v2-pilot-C.docker.log 2>&1
+2026-09-28T11:08:49.9409828Z command: docker rm aeb-policy-v2-pilot-C
+2026-09-28T11:08:50.5470481Z run.log of C-v1-kalman: every token valid
+2026-09-28T11:08:50.7726465Z launch preamble passed (HEAD, clean tree, image id)
+2026-09-28T11:08:50.7736469Z command: docker compose -f compose.yaml -f compose.formal-cpu.yaml run --detach --no-deps --name aeb-policy-v2-pilot-D --env AEBRISK_COMMIT=234008ab9c7142bd248dd4ef82e84b6184013a3f --env AEBRISK_IMAGE_DIGEST=sha256:98dceab6147c42fbb7def16e375910fdeb8574605693c6be3136130fb14a605a dev uv run --frozen aeb-risk study simulate --pilot --study configs/experiments/aeb_policy_v2_study.yaml --arm D-v2-kalman --protocol configs/protocols/nuplan_aeb_v2.yaml --manifest docs/evidence/nuplan_aeb_v2/cohort/smoke.json --split mini --workers 6 --output-dir artifacts/pilot/aeb_policy_v2/pilot-2/D-v2-kalman
+2026-09-28T11:08:53.0802516Z command: docker wait aeb-policy-v2-pilot-D
+2026-09-28T11:11:07.8151927Z aeb-policy-v2-pilot-D stopped: docker wait printed 0; OOMKilled and Error: false
+2026-09-28T11:11:07.8165219Z command: docker inspect aeb-policy-v2-pilot-D > artifacts\pilot\aeb_policy_v2\pilot-2.aeb-policy-v2-pilot-D.inspect.json
+2026-09-28T11:11:07.9750286Z command: docker logs --timestamps aeb-policy-v2-pilot-D > artifacts\pilot\aeb_policy_v2\pilot-2.aeb-policy-v2-pilot-D.docker.log 2>&1
+2026-09-28T11:11:08.1355730Z command: docker rm aeb-policy-v2-pilot-D
+2026-09-28T11:11:08.7549053Z run.log of D-v2-kalman: every token valid
+2026-09-28T11:11:08.9986959Z launch preamble passed (HEAD, clean tree, image id)
+2026-09-28T11:11:08.9998034Z command: docker compose -f compose.yaml -f compose.formal-cpu.yaml run --detach --no-deps --name aeb-policy-v2-pilot-E --env AEBRISK_COMMIT=234008ab9c7142bd248dd4ef82e84b6184013a3f --env AEBRISK_IMAGE_DIGEST=sha256:98dceab6147c42fbb7def16e375910fdeb8574605693c6be3136130fb14a605a dev uv run --frozen aeb-risk study simulate --pilot --study configs/experiments/aeb_policy_v2_study.yaml --arm E-v2-channel-rng --protocol configs/protocols/nuplan_aeb_v2.yaml --manifest docs/evidence/nuplan_aeb_v2/cohort/smoke.json --split mini --workers 6 --output-dir artifacts/pilot/aeb_policy_v2/pilot-2/E-v2-channel-rng
+2026-09-28T11:11:11.1909665Z command: docker wait aeb-policy-v2-pilot-E
+2026-09-28T11:12:22.4442175Z aeb-policy-v2-pilot-E stopped: docker wait printed 0; OOMKilled and Error: false
+2026-09-28T11:12:22.4452178Z command: docker inspect aeb-policy-v2-pilot-E > artifacts\pilot\aeb_policy_v2\pilot-2.aeb-policy-v2-pilot-E.inspect.json
+2026-09-28T11:12:22.6018864Z command: docker logs --timestamps aeb-policy-v2-pilot-E > artifacts\pilot\aeb_policy_v2\pilot-2.aeb-policy-v2-pilot-E.docker.log 2>&1
+2026-09-28T11:12:22.7646908Z command: docker rm aeb-policy-v2-pilot-E
+2026-09-28T11:12:23.3818834Z run.log of E-v2-channel-rng: every token valid
+2026-09-28T11:12:23.5976015Z launch preamble passed (HEAD, clean tree, image id)
+2026-09-28T11:12:23.5998203Z command: docker compose run --rm -T dev uv run --frozen aeb-risk study verify --pilot --study configs/experiments/aeb_policy_v2_study.yaml --arms-root artifacts/pilot/aeb_policy_v2/pilot-2 --manifest docs/evidence/nuplan_aeb_v2/cohort/smoke.json --output artifacts/pilot/aeb_policy_v2/pilot-2.verify.json
+2026-09-28T11:12:35.7908445Z study verify --pilot exited 0
+2026-09-28T11:12:35.7918441Z runner finished: mode pilot, pilot-2
+2026-09-28T11:13:08.7978039Z note, added after the fact: before the environment build, an ignored local directory, which holds the v1.0.0 operator records, was moved out of the host tree into an archive folder (not deleted), because verify checks the links in every Markdown file under the tree
+2026-09-28T11:13:08.8029495Z note, added after the fact: the environment build and check ran these commands in one invocation, in this order: git switch main; git pull --ff-only (fast-forward 0b050d8..234008a); docker compose build; docker image inspect perception-error-to-aeb-dev:local --format {{.Id}}; docker compose run --rm -T dev uv lock --check; docker compose run --rm -T dev uv run --frozen python -m aebrisk.dev verify; docker compose run --rm -T dev python -c "import sys, numpy; print(sys.version.split()[0], numpy.__version__)"; Get-FileHash uv.lock -Algorithm SHA256; docker compose run --rm -T dev sha256sum configs/experiments/aeb_policy_v2_study.yaml; cmd /c "docker compose -f compose.yaml -f compose.formal-cpu.yaml config > artifacts\formal\aeb_policy_v2\compose-config.yaml"; Get-FileHash of compose-config.yaml
+2026-09-28T11:13:08.8029495Z note, added after the fact: g0.json was written by docker compose run --rm -T dev uv run --frozen python artifacts/formal/aeb_policy_v2/write_g0.py 234008ab9c7142bd248dd4ef82e84b6184013a3f 36405617360 artifacts/pilot/aeb_policy_v2/pilot-1 artifacts/pilot/aeb_policy_v2/pilot-1.verify.json artifacts/formal/aeb_policy_v2/g0.json; the helper builds the record through the StudyG0V1 model from the five pilot run contexts and the pilot gate file, and reads it back through the same model
+2026-09-28T11:13:08.8029495Z note: pilot-1 ran an earlier version of run-arms.ps1 (sha256 4a8476f8c607384c69e099f7ba0089d54cb4176ce2110c809004bef1f4ed2533); the revised version (sha256 51ec6f9cbcc62fc5354ea459b995f49ba94342bf2b99cb30e91753da9dcc1473) ran pilot-2 and will launch the formal arms. Both pilots passed with every token valid; the G0 record is pilot-1's
+2026-09-28T11:13:08.8029495Z note: the host will be restarted before the formal arms; after the restart the launch preamble and the runner's own checks are repeated before any formal command
+2026-09-28T20:41:15.2601973Z note: the planned host restart did not take place; the formal arms run on the same boot as the environment build, the preflight and the pilots, after the launch preamble and the runner checks pass again
+2026-09-28T20:41:18.3568413Z runner starts: mode formal, attempt-1, process 11172, run-arms.ps1 sha256 51ec6f9cbcc62fc5354ea459b995f49ba94342bf2b99cb30e91753da9dcc1473, SHA 234008ab9c7142bd248dd4ef82e84b6184013a3f, IMAGE sha256:98dceab6147c42fbb7def16e375910fdeb8574605693c6be3136130fb14a605a
+2026-09-28T20:41:19.6265027Z Docker engine answers, server version 29.6.1
+2026-09-28T20:41:21.6070409Z launch preamble passed (HEAD, clean tree, image id)
+2026-09-28T20:41:21.6314112Z runner check only: nothing launched for attempt-1
+2026-09-28T20:41:48.0562811Z runner starts: mode formal, attempt-1, process 44392, run-arms.ps1 sha256 51ec6f9cbcc62fc5354ea459b995f49ba94342bf2b99cb30e91753da9dcc1473, SHA 234008ab9c7142bd248dd4ef82e84b6184013a3f, IMAGE sha256:98dceab6147c42fbb7def16e375910fdeb8574605693c6be3136130fb14a605a
+2026-09-28T20:41:49.5946452Z Docker engine answers, server version 29.6.1
+2026-09-28T20:41:51.7137443Z launch preamble passed (HEAD, clean tree, image id)
+2026-09-28T20:41:51.8308217Z command: docker compose -f compose.yaml -f compose.formal-cpu.yaml run --detach --no-deps --name aeb-policy-v2-A --env AEBRISK_COMMIT=234008ab9c7142bd248dd4ef82e84b6184013a3f --env AEBRISK_IMAGE_DIGEST=sha256:98dceab6147c42fbb7def16e375910fdeb8574605693c6be3136130fb14a605a dev uv run --frozen aeb-risk study simulate --study configs/experiments/aeb_policy_v2_study.yaml --arm A-v1-replication --protocol configs/protocols/nuplan_aeb_v2.yaml --manifest docs/evidence/nuplan_aeb_v2/cohort/evaluation.json --split val --workers 8 --output-dir artifacts/formal/aeb_policy_v2/attempt-1/A-v1-replication
+2026-09-28T20:41:57.3599381Z command: docker wait aeb-policy-v2-A
+2026-09-28T22:07:25.5044331Z aeb-policy-v2-A stopped: docker wait printed 0; OOMKilled and Error: false
+2026-09-28T22:07:25.5532915Z command: docker inspect aeb-policy-v2-A > artifacts\formal\aeb_policy_v2\attempt-1.aeb-policy-v2-A.inspect.json
+2026-09-28T22:07:25.7212369Z command: docker logs --timestamps aeb-policy-v2-A > artifacts\formal\aeb_policy_v2\attempt-1.aeb-policy-v2-A.docker.log 2>&1
+2026-09-28T22:07:25.8863320Z command: docker rm aeb-policy-v2-A
+2026-09-28T22:07:26.6320566Z run.log of A-v1-replication: every token valid
+2026-09-28T22:07:27.5750376Z launch preamble passed (HEAD, clean tree, image id)
+2026-09-28T22:07:27.5750376Z command: docker compose run --rm -T dev uv run --frozen aeb-risk study verify --study configs/experiments/aeb_policy_v2_study.yaml --arms-root artifacts/formal/aeb_policy_v2/attempt-1 --released-root artifacts/formal/nuplan_aeb_v2 --manifest docs/evidence/nuplan_aeb_v2/cohort/evaluation.json --arm A-v1-replication --output artifacts/formal/aeb_policy_v2/attempt-1.gates-A.json
+2026-09-28T22:09:03.9673826Z study verify --arm A-v1-replication exited 0
+2026-09-28T22:09:04.1824737Z launch preamble passed (HEAD, clean tree, image id)
+2026-09-28T22:09:04.1845176Z command: docker compose -f compose.yaml -f compose.formal-cpu.yaml run --detach --no-deps --name aeb-policy-v2-B --env AEBRISK_COMMIT=234008ab9c7142bd248dd4ef82e84b6184013a3f --env AEBRISK_IMAGE_DIGEST=sha256:98dceab6147c42fbb7def16e375910fdeb8574605693c6be3136130fb14a605a dev uv run --frozen aeb-risk study simulate --study configs/experiments/aeb_policy_v2_study.yaml --arm B-v2-gated --protocol configs/protocols/nuplan_aeb_v2.yaml --manifest docs/evidence/nuplan_aeb_v2/cohort/evaluation.json --split val --workers 8 --output-dir artifacts/formal/aeb_policy_v2/attempt-1/B-v2-gated
+2026-09-28T22:09:06.4613568Z command: docker wait aeb-policy-v2-B
+2026-09-28T23:05:04.7765852Z aeb-policy-v2-B stopped: docker wait printed 0; OOMKilled and Error: false
+2026-09-28T23:05:04.8119408Z command: docker inspect aeb-policy-v2-B > artifacts\formal\aeb_policy_v2\attempt-1.aeb-policy-v2-B.inspect.json
+2026-09-28T23:05:04.9761568Z command: docker logs --timestamps aeb-policy-v2-B > artifacts\formal\aeb_policy_v2\attempt-1.aeb-policy-v2-B.docker.log 2>&1
+2026-09-28T23:05:05.1383821Z command: docker rm aeb-policy-v2-B
+2026-09-28T23:05:05.8469575Z run.log of B-v2-gated: every token valid
+2026-09-28T23:05:06.0640495Z launch preamble passed (HEAD, clean tree, image id)
+2026-09-28T23:05:06.0640495Z command: docker compose -f compose.yaml -f compose.formal-cpu.yaml run --detach --no-deps --name aeb-policy-v2-C --env AEBRISK_COMMIT=234008ab9c7142bd248dd4ef82e84b6184013a3f --env AEBRISK_IMAGE_DIGEST=sha256:98dceab6147c42fbb7def16e375910fdeb8574605693c6be3136130fb14a605a dev uv run --frozen aeb-risk study simulate --study configs/experiments/aeb_policy_v2_study.yaml --arm C-v1-kalman --protocol configs/protocols/nuplan_aeb_v2.yaml --manifest docs/evidence/nuplan_aeb_v2/cohort/evaluation.json --split val --workers 8 --output-dir artifacts/formal/aeb_policy_v2/attempt-1/C-v1-kalman
+2026-09-28T23:05:08.5295386Z command: docker wait aeb-policy-v2-C
+2026-09-28T23:54:15.8205805Z aeb-policy-v2-C stopped: docker wait printed 0; OOMKilled and Error: false
+2026-09-28T23:54:15.8205805Z command: docker inspect aeb-policy-v2-C > artifacts\formal\aeb_policy_v2\attempt-1.aeb-policy-v2-C.inspect.json
+2026-09-28T23:54:15.9789760Z command: docker logs --timestamps aeb-policy-v2-C > artifacts\formal\aeb_policy_v2\attempt-1.aeb-policy-v2-C.docker.log 2>&1
+2026-09-28T23:54:16.1612322Z command: docker rm aeb-policy-v2-C
+2026-09-28T23:54:16.8189616Z run.log of C-v1-kalman: every token valid
+2026-09-28T23:54:17.0342766Z launch preamble passed (HEAD, clean tree, image id)
+2026-09-28T23:54:17.0388193Z command: docker compose -f compose.yaml -f compose.formal-cpu.yaml run --detach --no-deps --name aeb-policy-v2-D --env AEBRISK_COMMIT=234008ab9c7142bd248dd4ef82e84b6184013a3f --env AEBRISK_IMAGE_DIGEST=sha256:98dceab6147c42fbb7def16e375910fdeb8574605693c6be3136130fb14a605a dev uv run --frozen aeb-risk study simulate --study configs/experiments/aeb_policy_v2_study.yaml --arm D-v2-kalman --protocol configs/protocols/nuplan_aeb_v2.yaml --manifest docs/evidence/nuplan_aeb_v2/cohort/evaluation.json --split val --workers 8 --output-dir artifacts/formal/aeb_policy_v2/attempt-1/D-v2-kalman
+2026-09-28T23:54:19.2896826Z command: docker wait aeb-policy-v2-D
+2026-09-29T00:44:01.0338668Z aeb-policy-v2-D stopped: docker wait printed 0; OOMKilled and Error: false
+2026-09-29T00:44:01.0360515Z command: docker inspect aeb-policy-v2-D > artifacts\formal\aeb_policy_v2\attempt-1.aeb-policy-v2-D.inspect.json
+2026-09-29T00:44:01.1904164Z command: docker logs --timestamps aeb-policy-v2-D > artifacts\formal\aeb_policy_v2\attempt-1.aeb-policy-v2-D.docker.log 2>&1
+2026-09-29T00:44:01.3446986Z command: docker rm aeb-policy-v2-D
+2026-09-29T00:44:01.9559097Z run.log of D-v2-kalman: every token valid
+2026-09-29T00:44:02.1701140Z launch preamble passed (HEAD, clean tree, image id)
+2026-09-29T00:44:02.1741904Z command: docker compose -f compose.yaml -f compose.formal-cpu.yaml run --detach --no-deps --name aeb-policy-v2-E --env AEBRISK_COMMIT=234008ab9c7142bd248dd4ef82e84b6184013a3f --env AEBRISK_IMAGE_DIGEST=sha256:98dceab6147c42fbb7def16e375910fdeb8574605693c6be3136130fb14a605a dev uv run --frozen aeb-risk study simulate --study configs/experiments/aeb_policy_v2_study.yaml --arm E-v2-channel-rng --protocol configs/protocols/nuplan_aeb_v2.yaml --manifest docs/evidence/nuplan_aeb_v2/cohort/evaluation.json --split val --workers 8 --output-dir artifacts/formal/aeb_policy_v2/attempt-1/E-v2-channel-rng
+2026-09-29T00:44:04.5066215Z command: docker wait aeb-policy-v2-E
+2026-09-29T01:07:14.1824836Z aeb-policy-v2-E stopped: docker wait printed 0; OOMKilled and Error: false
+2026-09-29T01:07:14.1824836Z command: docker inspect aeb-policy-v2-E > artifacts\formal\aeb_policy_v2\attempt-1.aeb-policy-v2-E.inspect.json
+2026-09-29T01:07:14.3431352Z command: docker logs --timestamps aeb-policy-v2-E > artifacts\formal\aeb_policy_v2\attempt-1.aeb-policy-v2-E.docker.log 2>&1
+2026-09-29T01:07:14.5028806Z command: docker rm aeb-policy-v2-E
+2026-09-29T01:07:15.1453127Z run.log of E-v2-channel-rng: every token valid
+2026-09-29T01:07:15.3626318Z launch preamble passed (HEAD, clean tree, image id)
+2026-09-29T01:07:15.3647358Z command: docker compose run --rm -T dev uv run --frozen aeb-risk study verify --study configs/experiments/aeb_policy_v2_study.yaml --arms-root artifacts/formal/aeb_policy_v2/attempt-1 --released-root artifacts/formal/nuplan_aeb_v2 --manifest docs/evidence/nuplan_aeb_v2/cohort/evaluation.json --output artifacts/formal/aeb_policy_v2/attempt-1.gates.json
+2026-09-29T01:09:58.9250763Z study verify over all arms exited 0
+2026-09-29T01:09:59.1589018Z launch preamble passed (HEAD, clean tree, image id)
+2026-09-29T01:09:59.1589018Z command: docker compose run --rm -T dev sh -c cd artifacts/formal/aeb_policy_v2/attempt-1 && find . -type f -print0 | sort -z | xargs -0 sha256sum > ../attempt-1.sha256
+2026-09-29T01:10:19.4079317Z hash list of attempt-1 exited 0
+2026-09-29T01:10:19.4079317Z runner finished: mode formal, attempt-1
+2026-09-29T01:12:11.4834903Z the addendum analysis starts in a separate results clone on branch posthoc/v1-addendum-results at 234008a, with the same image; a compose override kept outside the repository mounts the released records, the v1 operations records and the study records read-only
+2026-09-29T01:12:11.4834903Z command: docker compose -f compose.yaml -f <override> run --rm -T dev uv run --frozen aeb-risk study addendum --released-root artifacts/formal/nuplan_aeb_v2 --released-hashes artifacts/d2-operations/d2-nuplan-aeb-v2-20260906T165808Z-a65ae17/output-hashes.json --evidence-dir docs/evidence/nuplan_aeb_v2 --manifest docs/evidence/nuplan_aeb_v2/cohort/evaluation.json --eligibility docs/evidence/nuplan_aeb_v2/cohort/evaluation-eligibility.json --output artifacts/posthoc/nuplan_aeb_v2-addendum/addendum-summary.json
+2026-09-29T01:13:57.5374527Z exited 0
+2026-09-29T01:13:57.5396834Z command: docker compose -f compose.yaml -f <override> run --rm -T dev uv run --frozen aeb-risk study evidence --part addendum --addendum artifacts/posthoc/nuplan_aeb_v2-addendum/addendum-summary.json --output-dir docs/posthoc/nuplan_aeb_v2-addendum/evidence
+2026-09-29T01:14:04.3317772Z exited 0
+2026-09-29T01:14:04.3317772Z command: docker compose -f compose.yaml -f <override> run --rm -T dev uv run --frozen aeb-risk study claims --part addendum --evidence-dir docs/posthoc/nuplan_aeb_v2-addendum/evidence --output docs/posthoc/nuplan_aeb_v2-addendum/claims.yaml
+2026-09-29T01:14:11.5975931Z exited 0
+2026-09-29T01:14:27.4987037Z the policy v2 study analysis starts in a separate results clone on branch study/aeb-policy-v2-results at 234008a, with the same image and the same read-only override; attempt-1 completed with G1, G2, G3 and G5 passed
+2026-09-29T01:14:27.5139523Z command: docker compose -f compose.yaml -f <override> run --rm -T dev uv run --frozen aeb-risk study analyse --study configs/experiments/aeb_policy_v2_study.yaml --arms-root artifacts/formal/aeb_policy_v2/attempt-1 --released-root artifacts/formal/nuplan_aeb_v2 --evidence-dir docs/evidence/nuplan_aeb_v2 --gates artifacts/formal/aeb_policy_v2/attempt-1.gates.json --manifest docs/evidence/nuplan_aeb_v2/cohort/evaluation.json --output artifacts/studies/aeb_policy_v2/summary.json
+2026-09-29T01:15:27.7002671Z exited 0
+2026-09-29T01:15:27.7002671Z command: docker compose -f compose.yaml -f <override> run --rm -T dev uv run --frozen aeb-risk study evidence --part study --summary artifacts/studies/aeb_policy_v2/summary.json --gates artifacts/formal/aeb_policy_v2/attempt-1.gates.json --arms-root artifacts/formal/aeb_policy_v2/attempt-1 --g0 artifacts/formal/aeb_policy_v2/g0.json --preregistration-pr 5 --preregistration-commit 42b36453d709c1765f6c721b260a26ad790b44fb --preregistration-merged-at 2026-09-26T06:40:03Z --output-dir docs/studies/aeb-policy-v2/evidence
+2026-09-29T01:15:34.5653131Z exited 0
+2026-09-29T01:15:34.5653131Z command: docker compose -f compose.yaml -f <override> run --rm -T dev uv run --frozen aeb-risk study claims --part study --evidence-dir docs/studies/aeb-policy-v2/evidence --output docs/studies/aeb-policy-v2/claims.yaml
+2026-09-29T01:15:44.2021830Z exited 0

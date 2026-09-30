@@ -85,6 +85,25 @@ def test_ci_builds_the_locked_container_and_runs_the_shared_gate() -> None:
     assert commands[4:] == (str(step(document, "verify", REPLAY_STATUS_STEP)["run"]),)
 
 
+@pytest.mark.parametrize(
+    ("name", "job_name", "checkout"),
+    [
+        ("ci.yml", "verify", "Check out repository"),
+        ("release.yml", "release", "Check out the tagged commit"),
+    ],
+)
+def test_the_jobs_that_run_the_contract_suite_check_out_full_history(
+    name: str, job_name: str, checkout: str
+) -> None:
+    """The study results test asks Git whether one published commit precedes another.
+
+    A shallow checkout holds only the commit it checks out, so Git could not
+    compare the pre-registration merge with the commit each arm ran.
+    """
+
+    assert step(workflow(name), job_name, checkout).get("with") == {"fetch-depth": 0}
+
+
 def test_ci_cancels_superseded_pull_request_runs_but_verifies_every_push() -> None:
     """A newer push to a pull request makes its running check moot.
 
@@ -219,6 +238,8 @@ def test_pages_audits_actual_public_text_and_skills_before_building() -> None:
     )
     assert commands[7:] == (
         "docker compose run --rm dev uv run --frozen python -m pytest tests/contract/skills",
+        "docker compose run --rm dev uv run --frozen aeb-risk audit-claims --claims docs/studies/aeb-policy-v2/claims.yaml",
+        "docker compose run --rm dev uv run --frozen python .agents/skills/auditing-aeb-error-attribution/scripts/validate_attribution.py --claims docs/studies/aeb-policy-v2/claims.yaml --repo-root . --document docs/studies/aeb-policy-v2/results.md",
         "docker compose run --rm dev uv run --frozen aeb-risk figures --evidence-dir docs/evidence/nuplan_aeb_v2 --output-dir docs/figures",
         "docker compose run --rm dev uv run --frozen aeb-risk report --claims docs/claims.yaml --artifacts-dir docs/evidence/nuplan_aeb_v2 --output-dir site",
     )

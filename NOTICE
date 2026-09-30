@@ -25,6 +25,9 @@ which paths fall under which; it does not change either licence.
    - docs/posthoc/nuplan_aeb_v2-addendum/: derived evidence JSON, claims.yaml and
      the values restated in results.md; see
      docs/posthoc/nuplan_aeb_v2-addendum/NOTICE.md
+   - docs/studies/aeb-policy-v2/: the policy v2 study's derived evidence
+     JSON, its claims.yaml and the values restated in its results.md; see
+     docs/studies/aeb-policy-v2/NOTICE.md
    - configs/nuplan_scenario_vocabulary.yaml: the scenario-type names read
      from the nuPlan mini-split log databases
    - any value restated from that evidence elsewhere in the repository,

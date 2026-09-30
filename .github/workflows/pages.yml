@@ -45,6 +45,10 @@ jobs:
         run: docker compose run --rm dev uv run --frozen python .agents/skills/auditing-aeb-error-attribution/scripts/validate_attribution.py --claims docs/posthoc/nuplan_aeb_v2-addendum/claims.yaml --repo-root . --document docs/posthoc/nuplan_aeb_v2-addendum/results.md
       - name: Exercise both data-free skill contracts
         run: docker compose run --rm dev uv run --frozen python -m pytest tests/contract/skills
+      - name: Audit the policy v2 study claims
+        run: docker compose run --rm dev uv run --frozen aeb-risk audit-claims --claims docs/studies/aeb-policy-v2/claims.yaml
+      - name: Audit the policy v2 study results page
+        run: docker compose run --rm dev uv run --frozen python .agents/skills/auditing-aeb-error-attribution/scripts/validate_attribution.py --claims docs/studies/aeb-policy-v2/claims.yaml --repo-root . --document docs/studies/aeb-policy-v2/results.md
       - name: Rebuild figures from committed evidence
         run: docker compose run --rm dev uv run --frozen aeb-risk figures --evidence-dir docs/evidence/nuplan_aeb_v2 --output-dir docs/figures
       - name: Build the report with the committed replay assets
