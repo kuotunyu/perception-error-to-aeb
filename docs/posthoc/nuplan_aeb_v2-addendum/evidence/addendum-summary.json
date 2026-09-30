@@ -1,0 +1,1523 @@
+{
+  "bootstrap": {
+    "cluster": "family-log",
+    "clusters": 198,
+    "resamples": 5000,
+    "seed": 20260831
+  },
+  "brake_activations": [
+    {
+      "brake_activations": 5322,
+      "computed_before_plan": true,
+      "configuration_id": "oracle_aeb",
+      "per_hour": 1285.6884021500612,
+      "simulated_seconds": 14901.900000000001
+    },
+    {
+      "brake_activations": 7386,
+      "computed_before_plan": false,
+      "configuration_id": "dropout-low",
+      "per_hour": 1763.680503044534,
+      "simulated_seconds": 15076.199999999999
+    },
+    {
+      "brake_activations": 7671,
+      "computed_before_plan": false,
+      "configuration_id": "dropout-medium",
+      "per_hour": 1831.4918226313491,
+      "simulated_seconds": 15078.199999999995
+    },
+    {
+      "brake_activations": 7953,
+      "computed_before_plan": false,
+      "configuration_id": "dropout-high",
+      "per_hour": 1902.922429664289,
+      "simulated_seconds": 15045.700000000004
+    },
+    {
+      "brake_activations": 7731,
+      "computed_before_plan": false,
+      "configuration_id": "localization_shape-low",
+      "per_hour": 1804.4931435796025,
+      "simulated_seconds": 15423.5
+    },
+    {
+      "brake_activations": 7293,
+      "computed_before_plan": false,
+      "configuration_id": "localization_shape-medium",
+      "per_hour": 1696.046511627907,
+      "simulated_seconds": 15480.0
+    },
+    {
+      "brake_activations": 2929,
+      "computed_before_plan": false,
+      "configuration_id": "localization_shape-high",
+      "per_hour": 681.1627906976744,
+      "simulated_seconds": 15480.0
+    },
+    {
+      "brake_activations": 6945,
+      "computed_before_plan": false,
+      "configuration_id": "latency-low",
+      "per_hour": 1673.191591880985,
+      "simulated_seconds": 14942.700000000003
+    },
+    {
+      "brake_activations": 6951,
+      "computed_before_plan": false,
+      "configuration_id": "latency-medium",
+      "per_hour": 1680.3722879187737,
+      "simulated_seconds": 14891.699999999999
+    },
+    {
+      "brake_activations": 6885,
+      "computed_before_plan": false,
+      "configuration_id": "latency-high",
+      "per_hour": 1687.0176011761362,
+      "simulated_seconds": 14692.199999999984
+    },
+    {
+      "brake_activations": 7162,
+      "computed_before_plan": false,
+      "configuration_id": "track_instability-low",
+      "per_hour": 1712.0546089589502,
+      "simulated_seconds": 15059.800000000001
+    },
+    {
+      "brake_activations": 7202,
+      "computed_before_plan": false,
+      "configuration_id": "track_instability-medium",
+      "per_hour": 1723.40170962896,
+      "simulated_seconds": 15044.2
+    },
+    {
+      "brake_activations": 7315,
+      "computed_before_plan": false,
+      "configuration_id": "track_instability-high",
+      "per_hour": 1748.8262131344593,
+      "simulated_seconds": 15058.099999999999
+    },
+    {
+      "brake_activations": 7152,
+      "computed_before_plan": false,
+      "configuration_id": "coalition-none",
+      "per_hour": 1711.5166018546213,
+      "simulated_seconds": 15043.500000000002
+    },
+    {
+      "brake_activations": 7873,
+      "computed_before_plan": false,
+      "configuration_id": "coalition-dropout+localization_shape",
+      "per_hour": 1834.259864482685,
+      "simulated_seconds": 15451.9
+    },
+    {
+      "brake_activations": 7480,
+      "computed_before_plan": false,
+      "configuration_id": "coalition-dropout+latency",
+      "per_hour": 1808.5592241356153,
+      "simulated_seconds": 14889.199999999999
+    },
+    {
+      "brake_activations": 7771,
+      "computed_before_plan": false,
+      "configuration_id": "coalition-dropout+track_instability",
+      "per_hour": 1857.5108891957937,
+      "simulated_seconds": 15060.799999999996
+    },
+    {
+      "brake_activations": 7143,
+      "computed_before_plan": false,
+      "configuration_id": "coalition-localization_shape+latency",
+      "per_hour": 1670.2260327357756,
+      "simulated_seconds": 15396.0
+    },
+    {
+      "brake_activations": 7449,
+      "computed_before_plan": false,
+      "configuration_id": "coalition-localization_shape+track_instability",
+      "per_hour": 1732.3255813953488,
+      "simulated_seconds": 15480.0
+    },
+    {
+      "brake_activations": 7035,
+      "computed_before_plan": false,
+      "configuration_id": "coalition-latency+track_instability",
+      "per_hour": 1701.3415379654575,
+      "simulated_seconds": 14885.899999999998
+    },
+    {
+      "brake_activations": 7803,
+      "computed_before_plan": false,
+      "configuration_id": "coalition-dropout+localization_shape+latency",
+      "per_hour": 1824.5755335870822,
+      "simulated_seconds": 15395.8
+    },
+    {
+      "brake_activations": 7984,
+      "computed_before_plan": false,
+      "configuration_id": "coalition-dropout+localization_shape+track_instability",
+      "per_hour": 1860.1207618480576,
+      "simulated_seconds": 15451.9
+    },
+    {
+      "brake_activations": 7514,
+      "computed_before_plan": false,
+      "configuration_id": "coalition-dropout+latency+track_instability",
+      "per_hour": 1818.8321992415479,
+      "simulated_seconds": 14872.400000000001
+    },
+    {
+      "brake_activations": 7286,
+      "computed_before_plan": false,
+      "configuration_id": "coalition-localization_shape+latency+track_instability",
+      "per_hour": 1703.6632891660172,
+      "simulated_seconds": 15396.0
+    },
+    {
+      "brake_activations": 7893,
+      "computed_before_plan": false,
+      "configuration_id": "coalition-dropout+localization_shape+latency+track_instability",
+      "per_hour": 1845.620234089817,
+      "simulated_seconds": 15395.8
+    }
+  ],
+  "cohort_manifest_sha256": "65e38df24b91786fb773b883e1cad4348c0cdc58ac976c729871c77e9478daf9",
+  "cohort_size": 344,
+  "common_valid_tokens": 344,
+  "configuration_contrasts": [
+    {
+      "computed_before_plan": true,
+      "estimate": -0.15988372093023256,
+      "intervals": [
+        {
+          "confidence": 0.95,
+          "high": -0.10031347962382445,
+          "low": -0.2212395737971722
+        }
+      ],
+      "metric": "collision_indicator",
+      "minus": "no_aeb",
+      "plus": "oracle_aeb"
+    },
+    {
+      "computed_before_plan": true,
+      "estimate": 0.6337245586133312,
+      "intervals": [
+        {
+          "confidence": 0.95,
+          "high": 0.669633881041881,
+          "low": 0.5971718327664473
+        }
+      ],
+      "metric": "braking_share",
+      "minus": "no_aeb",
+      "plus": "oracle_aeb"
+    },
+    {
+      "computed_before_plan": false,
+      "estimate": 49.63514695689085,
+      "intervals": [
+        {
+          "confidence": 0.95,
+          "high": 62.59325866235122,
+          "low": 36.6053755001438
+        }
+      ],
+      "metric": "not_at_fault_contact_rate",
+      "minus": "no_aeb",
+      "plus": "oracle_aeb"
+    },
+    {
+      "computed_before_plan": true,
+      "estimate": -0.011627906976744182,
+      "intervals": [
+        {
+          "confidence": 0.95,
+          "high": 0.0058313300257446295,
+          "low": -0.03003064539949786
+        }
+      ],
+      "metric": "collision_indicator",
+      "minus": "oracle_aeb",
+      "plus": "coalition-none"
+    },
+    {
+      "computed_before_plan": true,
+      "estimate": 0.02506495180645152,
+      "intervals": [
+        {
+          "confidence": 0.95,
+          "high": 0.03257451823982304,
+          "low": 0.018398891901278698
+        }
+      ],
+      "metric": "braking_share",
+      "minus": "oracle_aeb",
+      "plus": "coalition-none"
+    },
+    {
+      "computed_before_plan": false,
+      "estimate": 2.8979394619613714,
+      "intervals": [
+        {
+          "confidence": 0.95,
+          "high": 6.3148506134796945,
+          "low": 0.12311101517988807
+        }
+      ],
+      "metric": "not_at_fault_contact_rate",
+      "minus": "oracle_aeb",
+      "plus": "coalition-none"
+    },
+    {
+      "computed_before_plan": true,
+      "estimate": -0.02616279069767442,
+      "intervals": [
+        {
+          "confidence": 0.95,
+          "high": -0.009202453987730062,
+          "low": -0.04635809578654381
+        }
+      ],
+      "metric": "collision_indicator",
+      "minus": "coalition-none",
+      "plus": "coalition-dropout+localization_shape+latency+track_instability"
+    },
+    {
+      "computed_before_plan": true,
+      "estimate": 0.23041403860007992,
+      "intervals": [
+        {
+          "confidence": 0.95,
+          "high": 0.25649905031199166,
+          "low": 0.20460019646089922
+        }
+      ],
+      "metric": "braking_share",
+      "minus": "coalition-none",
+      "plus": "coalition-dropout+localization_shape+latency+track_instability"
+    },
+    {
+      "computed_before_plan": false,
+      "estimate": -1.6828061143630748,
+      "intervals": [
+        {
+          "confidence": 0.95,
+          "high": 3.2435314007457396,
+          "low": -6.661104425068153
+        }
+      ],
+      "metric": "not_at_fault_contact_rate",
+      "minus": "coalition-none",
+      "plus": "coalition-dropout+localization_shape+latency+track_instability"
+    },
+    {
+      "computed_before_plan": true,
+      "estimate": -0.02616279069767442,
+      "intervals": [
+        {
+          "confidence": 0.95,
+          "high": -0.009202453987730062,
+          "low": -0.04635809578654381
+        }
+      ],
+      "metric": "collision_indicator",
+      "minus": "coalition-none",
+      "plus": "localization_shape-medium"
+    },
+    {
+      "computed_before_plan": true,
+      "estimate": 0.2551510580556694,
+      "intervals": [
+        {
+          "confidence": 0.95,
+          "high": 0.28200895728850967,
+          "low": 0.22783225671842502
+        }
+      ],
+      "metric": "braking_share",
+      "minus": "coalition-none",
+      "plus": "localization_shape-medium"
+    },
+    {
+      "computed_before_plan": false,
+      "estimate": -0.926305960775764,
+      "intervals": [
+        {
+          "confidence": 0.95,
+          "high": 3.6374444308227094,
+          "low": -5.8073672442851905
+        }
+      ],
+      "metric": "not_at_fault_contact_rate",
+      "minus": "coalition-none",
+      "plus": "localization_shape-medium"
+    }
+  ],
+  "games": [
+    {
+      "caution": null,
+      "game": "intervention_duration_s",
+      "localization_shape_differences": [
+        {
+          "computed_before_plan": false,
+          "estimate": 4.170784883720929,
+          "intervals": [
+            {
+              "confidence": 0.9916666666666667,
+              "high": 4.715959458743209,
+              "low": 3.607277327674896
+            },
+            {
+              "confidence": 0.95,
+              "high": 4.591791087289797,
+              "low": 3.7572736409701317
+            }
+          ],
+          "minus": "dropout",
+          "plus": "localization_shape"
+        },
+        {
+          "computed_before_plan": false,
+          "estimate": 4.333753229974158,
+          "intervals": [
+            {
+              "confidence": 0.9916666666666667,
+              "high": 4.912807878114217,
+              "low": 3.7705667001409737
+            },
+            {
+              "confidence": 0.95,
+              "high": 4.768824275362317,
+              "low": 3.901133089185284
+            }
+          ],
+          "minus": "latency",
+          "plus": "localization_shape"
+        },
+        {
+          "computed_before_plan": false,
+          "estimate": 4.101243540051677,
+          "intervals": [
+            {
+              "confidence": 0.9916666666666667,
+              "high": 4.652728365543733,
+              "low": 3.5428027935169837
+            },
+            {
+              "confidence": 0.95,
+              "high": 4.522337021000319,
+              "low": 3.6830174474743265
+            }
+          ],
+          "minus": "track_instability",
+          "plus": "localization_shape"
+        }
+      ],
+      "other_differences": [
+        {
+          "computed_before_plan": false,
+          "estimate": 0.16296834625322976,
+          "intervals": [
+            {
+              "confidence": 0.95,
+              "high": 0.30583815246881146,
+              "low": 0.05356729378207189
+            }
+          ],
+          "minus": "latency",
+          "plus": "dropout"
+        },
+        {
+          "computed_before_plan": false,
+          "estimate": -0.06954134366925062,
+          "intervals": [
+            {
+              "confidence": 0.95,
+              "high": -0.0482251815812819,
+              "low": -0.09231654804529443
+            }
+          ],
+          "minus": "track_instability",
+          "plus": "dropout"
+        },
+        {
+          "computed_before_plan": false,
+          "estimate": -0.23250968992248036,
+          "intervals": [
+            {
+              "confidence": 0.95,
+              "high": -0.11979690724974172,
+              "low": -0.3833879341890445
+            }
+          ],
+          "minus": "track_instability",
+          "plus": "latency"
+        }
+      ],
+      "shapley_values": {
+        "dropout": {
+          "computed_before_plan": true,
+          "estimate": -0.10376291989664084,
+          "intervals": [
+            {
+              "confidence": 0.95,
+              "high": -0.08296497818992118,
+              "low": -0.12680099600408182
+            }
+          ]
+        },
+        "latency": {
+          "computed_before_plan": true,
+          "estimate": -0.2667312661498706,
+          "intervals": [
+            {
+              "confidence": 0.95,
+              "high": -0.15396702778827237,
+              "low": -0.4169982650627297
+            }
+          ]
+        },
+        "localization_shape": {
+          "computed_before_plan": true,
+          "estimate": 4.0670219638242875,
+          "intervals": [
+            {
+              "confidence": 0.95,
+              "high": 4.485194410641246,
+              "low": 3.6522176727475757
+            }
+          ]
+        },
+        "track_instability": {
+          "computed_before_plan": true,
+          "estimate": -0.03422157622739022,
+          "intervals": [
+            {
+              "confidence": 0.95,
+              "high": -0.027240549236936203,
+              "low": -0.041484616919393494
+            }
+          ]
+        }
+      }
+    },
+    {
+      "caution": "Under v1, the lower collision indicator of the configurations with localization error coincides with braking for most of their measured exposure; it should not be read as a safety benefit.",
+      "game": "collision_indicator",
+      "localization_shape_differences": [
+        {
+          "computed_before_plan": false,
+          "estimate": -0.0251937984496124,
+          "intervals": [
+            {
+              "confidence": 0.9916666666666667,
+              "high": -0.008950870108277985,
+              "low": -0.04683476134865024
+            },
+            {
+              "confidence": 0.95,
+              "high": -0.012675770937682839,
+              "low": -0.0406819475022069
+            }
+          ],
+          "minus": "dropout",
+          "plus": "localization_shape"
+        },
+        {
+          "computed_before_plan": false,
+          "estimate": -0.03003875968992248,
+          "intervals": [
+            {
+              "confidence": 0.9916666666666667,
+              "high": -0.009308827093178321,
+              "low": -0.05866133952786555
+            },
+            {
+              "confidence": 0.95,
+              "high": -0.014075524732953983,
+              "low": -0.04952563717390215
+            }
+          ],
+          "minus": "latency",
+          "plus": "localization_shape"
+        },
+        {
+          "computed_before_plan": false,
+          "estimate": -0.028100775193798447,
+          "intervals": [
+            {
+              "confidence": 0.9916666666666667,
+              "high": -0.009710556291978478,
+              "low": -0.05258799074768695
+            },
+            {
+              "confidence": 0.95,
+              "high": -0.014148025245540544,
+              "low": -0.04545530837071622
+            }
+          ],
+          "minus": "track_instability",
+          "plus": "localization_shape"
+        }
+      ],
+      "other_differences": [
+        {
+          "computed_before_plan": false,
+          "estimate": -0.0048449612403100775,
+          "intervals": [
+            {
+              "confidence": 0.95,
+              "high": 0.002409241167797686,
+              "low": -0.012989105573612615
+            }
+          ],
+          "minus": "latency",
+          "plus": "dropout"
+        },
+        {
+          "computed_before_plan": false,
+          "estimate": -0.0029069767441860473,
+          "intervals": [
+            {
+              "confidence": 0.95,
+              "high": 0.00030697940113225494,
+              "low": -0.006790171833275282
+            }
+          ],
+          "minus": "track_instability",
+          "plus": "dropout"
+        },
+        {
+          "computed_before_plan": false,
+          "estimate": 0.0019379844961240308,
+          "intervals": [
+            {
+              "confidence": 0.95,
+              "high": 0.009533325610132835,
+              "low": -0.005181389111282313
+            }
+          ],
+          "minus": "track_instability",
+          "plus": "latency"
+        }
+      ],
+      "shapley_values": {
+        "dropout": {
+          "computed_before_plan": true,
+          "estimate": -0.0021802325581395357,
+          "intervals": [
+            {
+              "confidence": 0.95,
+              "high": 0.0010688997821350684,
+              "low": -0.005819424930399909
+            }
+          ]
+        },
+        "latency": {
+          "computed_before_plan": true,
+          "estimate": 0.002664728682170542,
+          "intervals": [
+            {
+              "confidence": 0.95,
+              "high": 0.010388623160183694,
+              "low": -0.004568725379048144
+            }
+          ]
+        },
+        "localization_shape": {
+          "computed_before_plan": true,
+          "estimate": -0.027374031007751935,
+          "intervals": [
+            {
+              "confidence": 0.95,
+              "high": -0.013619328753648206,
+              "low": -0.044167229768387516
+            }
+          ]
+        },
+        "track_instability": {
+          "computed_before_plan": true,
+          "estimate": 0.0007267441860465114,
+          "intervals": [
+            {
+              "confidence": 0.95,
+              "high": 0.002642088179059877,
+              "low": -0.0008560002948547837
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "matched_onset_delays": [
+    {
+      "computed_before_plan": true,
+      "configuration_id": "coalition-none",
+      "matched_onset_delays_s": {
+        "count": 4575,
+        "lower_quartile": -0.09999999999999964,
+        "median": 0.0,
+        "upper_quartile": 0.09999999999999964
+      }
+    },
+    {
+      "computed_before_plan": true,
+      "configuration_id": "latency-low",
+      "matched_onset_delays_s": {
+        "count": 4485,
+        "lower_quartile": -0.10000000000000053,
+        "median": 0.1,
+        "upper_quartile": 0.2
+      }
+    },
+    {
+      "computed_before_plan": true,
+      "configuration_id": "latency-medium",
+      "matched_onset_delays_s": {
+        "count": 4479,
+        "lower_quartile": -0.10000000000000053,
+        "median": 0.1999999999999993,
+        "upper_quartile": 0.30000000000000004
+      }
+    },
+    {
+      "computed_before_plan": true,
+      "configuration_id": "latency-high",
+      "matched_onset_delays_s": {
+        "count": 4311,
+        "lower_quartile": -0.10000000000000142,
+        "median": 0.1999999999999993,
+        "upper_quartile": 0.40000000000000036
+      }
+    }
+  ],
+  "oracle_collisions": {
+    "avoided": {
+      "confidence": 0.95,
+      "events": 66,
+      "high": 0.23751284646309412,
+      "low": 0.15160561327247093,
+      "tokens": 344
+    },
+    "computed_before_plan": true,
+    "induced": {
+      "confidence": 0.95,
+      "events": 11,
+      "high": 0.05649392266896556,
+      "low": 0.016068640083264873,
+      "tokens": 344
+    },
+    "oracle_aeb_contacts_not_at_fault": 1095
+  },
+  "protocol_sha256": "bbf0b6d31943a0f99160afe1d4c18f9a181850367494004037bab98d8f2e59f9",
+  "released_output_hashes_sha256": "47439aad52f112ff2d3e1142cc8530ddd678c5ae5e58a77416beccfe8c730db0",
+  "reproduction_gate": {
+    "counts": {
+      "evaluation_differing": 0,
+      "evaluation_values": 104,
+      "intervals_differing": 0,
+      "intervals_values": 624,
+      "released_extra_files": 0,
+      "released_hash_mismatches": 0,
+      "released_listed_files": 8947,
+      "released_missing_files": 0,
+      "released_size_mismatches": 0,
+      "shapley_differing": 0,
+      "shapley_values": 10
+    },
+    "gate": "reproduction",
+    "passed": true
+  },
+  "schema_version": "aeb-attribution-addendum/v1",
+  "stops_and_collision_speeds": [
+    {
+      "computed_before_plan": false,
+      "configuration_id": "no_aeb",
+      "ego_speed_at_collision_mps": {
+        "count": 204,
+        "lower_quartile": 2.223526222052364,
+        "median": 2.774413118307285,
+        "upper_quartile": 3.6937500097698064
+      },
+      "first_stop_distance_m": {
+        "count": 0,
+        "lower_quartile": null,
+        "median": null,
+        "upper_quartile": null
+      }
+    },
+    {
+      "computed_before_plan": false,
+      "configuration_id": "oracle_aeb",
+      "ego_speed_at_collision_mps": {
+        "count": 39,
+        "lower_quartile": 0.5378652003286096,
+        "median": 0.9136056669217735,
+        "upper_quartile": 1.0999999999999996
+      },
+      "first_stop_distance_m": {
+        "count": 1023,
+        "lower_quartile": 1.4473912868878476,
+        "median": 2.4910836092732755,
+        "upper_quartile": 5.273186915797167
+      }
+    },
+    {
+      "computed_before_plan": false,
+      "configuration_id": "dropout-low",
+      "ego_speed_at_collision_mps": {
+        "count": 26,
+        "lower_quartile": 0.4287046893687336,
+        "median": 0.741272498912428,
+        "upper_quartile": 1.6216472017969943
+      },
+      "first_stop_distance_m": {
+        "count": 1025,
+        "lower_quartile": 1.4477082175916343,
+        "median": 2.4910836092732755,
+        "upper_quartile": 5.092347581846981
+      }
+    },
+    {
+      "computed_before_plan": false,
+      "configuration_id": "dropout-medium",
+      "ego_speed_at_collision_mps": {
+        "count": 19,
+        "lower_quartile": 0.34999999999999987,
+        "median": 0.9136056669217735,
+        "upper_quartile": 1.4182944035939882
+      },
+      "first_stop_distance_m": {
+        "count": 1025,
+        "lower_quartile": 1.4477082175916343,
+        "median": 2.477920606353974,
+        "upper_quartile": 5.057298852744963
+      }
+    },
+    {
+      "computed_before_plan": false,
+      "configuration_id": "dropout-high",
+      "ego_speed_at_collision_mps": {
+        "count": 19,
+        "lower_quartile": 0.4541159722556478,
+        "median": 0.7740497256102463,
+        "upper_quartile": 1.380382487191862
+      },
+      "first_stop_distance_m": {
+        "count": 1026,
+        "lower_quartile": 1.4898275813079298,
+        "median": 2.514117748545263,
+        "upper_quartile": 5.130907626968351
+      }
+    },
+    {
+      "computed_before_plan": false,
+      "configuration_id": "localization_shape-low",
+      "ego_speed_at_collision_mps": {
+        "count": 4,
+        "lower_quartile": 1.552346609723178,
+        "median": 1.9346932194463555,
+        "upper_quartile": 2.337193219446356
+      },
+      "first_stop_distance_m": {
+        "count": 1030,
+        "lower_quartile": 1.4206785759675844,
+        "median": 2.446266706624428,
+        "upper_quartile": 4.7460021372205325
+      }
+    },
+    {
+      "computed_before_plan": false,
+      "configuration_id": "localization_shape-medium",
+      "ego_speed_at_collision_mps": {
+        "count": 0,
+        "lower_quartile": null,
+        "median": null,
+        "upper_quartile": null
+      },
+      "first_stop_distance_m": {
+        "count": 1032,
+        "lower_quartile": 1.4127325174208847,
+        "median": 2.406529522783069,
+        "upper_quartile": 4.631294793543352
+      }
+    },
+    {
+      "computed_before_plan": false,
+      "configuration_id": "localization_shape-high",
+      "ego_speed_at_collision_mps": {
+        "count": 0,
+        "lower_quartile": null,
+        "median": null,
+        "upper_quartile": null
+      },
+      "first_stop_distance_m": {
+        "count": 1032,
+        "lower_quartile": 1.4039238697289784,
+        "median": 2.3586478534794106,
+        "upper_quartile": 4.615209818990736
+      }
+    },
+    {
+      "computed_before_plan": false,
+      "configuration_id": "latency-low",
+      "ego_speed_at_collision_mps": {
+        "count": 30,
+        "lower_quartile": 0.5181762043081499,
+        "median": 0.7521418460844821,
+        "upper_quartile": 1.9499999999999997
+      },
+      "first_stop_distance_m": {
+        "count": 1023,
+        "lower_quartile": 1.8726534920568063,
+        "median": 2.9961157086400108,
+        "upper_quartile": 5.837668219208382
+      }
+    },
+    {
+      "computed_before_plan": false,
+      "configuration_id": "latency-medium",
+      "ego_speed_at_collision_mps": {
+        "count": 30,
+        "lower_quartile": 0.4999999999999999,
+        "median": 0.6749999999999999,
+        "upper_quartile": 0.7769967334013883
+      },
+      "first_stop_distance_m": {
+        "count": 1023,
+        "lower_quartile": 2.131566705857831,
+        "median": 3.383253699053137,
+        "upper_quartile": 6.3972406475208405
+      }
+    },
+    {
+      "computed_before_plan": false,
+      "configuration_id": "latency-high",
+      "ego_speed_at_collision_mps": {
+        "count": 30,
+        "lower_quartile": 0.5,
+        "median": 0.665341903034804,
+        "upper_quartile": 0.9413317470150577
+      },
+      "first_stop_distance_m": {
+        "count": 1005,
+        "lower_quartile": 2.569444805750927,
+        "median": 3.985542522522082,
+        "upper_quartile": 7.433860043370723
+      }
+    },
+    {
+      "computed_before_plan": false,
+      "configuration_id": "track_instability-low",
+      "ego_speed_at_collision_mps": {
+        "count": 23,
+        "lower_quartile": 0.4287046893687336,
+        "median": 0.7788317063246846,
+        "upper_quartile": 1.4932944035939881
+      },
+      "first_stop_distance_m": {
+        "count": 1023,
+        "lower_quartile": 1.4450466743238104,
+        "median": 2.477780082210036,
+        "upper_quartile": 5.092347581846981
+      }
+    },
+    {
+      "computed_before_plan": false,
+      "configuration_id": "track_instability-medium",
+      "ego_speed_at_collision_mps": {
+        "count": 27,
+        "lower_quartile": 0.30000000000000016,
+        "median": 0.616272498912428,
+        "upper_quartile": 1.1999999999999997
+      },
+      "first_stop_distance_m": {
+        "count": 1023,
+        "lower_quartile": 1.4473912868878476,
+        "median": 2.477780082210036,
+        "upper_quartile": 5.092347581846981
+      }
+    },
+    {
+      "computed_before_plan": false,
+      "configuration_id": "track_instability-high",
+      "ego_speed_at_collision_mps": {
+        "count": 23,
+        "lower_quartile": 0.404228557009104,
+        "median": 0.6499999999999999,
+        "upper_quartile": 1.4932944035939881
+      },
+      "first_stop_distance_m": {
+        "count": 1023,
+        "lower_quartile": 1.4473912868878476,
+        "median": 2.477920606353974,
+        "upper_quartile": 5.092347581846981
+      }
+    },
+    {
+      "computed_before_plan": false,
+      "configuration_id": "coalition-none",
+      "ego_speed_at_collision_mps": {
+        "count": 27,
+        "lower_quartile": 0.4287046893687336,
+        "median": 0.7788317063246846,
+        "upper_quartile": 1.4499999999999997
+      },
+      "first_stop_distance_m": {
+        "count": 1023,
+        "lower_quartile": 1.4473912868878476,
+        "median": 2.477780082210036,
+        "upper_quartile": 5.092347581846981
+      }
+    },
+    {
+      "computed_before_plan": false,
+      "configuration_id": "coalition-dropout+localization_shape",
+      "ego_speed_at_collision_mps": {
+        "count": 0,
+        "lower_quartile": null,
+        "median": null,
+        "upper_quartile": null
+      },
+      "first_stop_distance_m": {
+        "count": 1030,
+        "lower_quartile": 1.4102833563233528,
+        "median": 2.4156396502160353,
+        "upper_quartile": 4.627453665979209
+      }
+    },
+    {
+      "computed_before_plan": false,
+      "configuration_id": "coalition-dropout+latency",
+      "ego_speed_at_collision_mps": {
+        "count": 29,
+        "lower_quartile": 0.4999999999999999,
+        "median": 0.7442483788333062,
+        "upper_quartile": 1.15
+      },
+      "first_stop_distance_m": {
+        "count": 1023,
+        "lower_quartile": 2.122745227140686,
+        "median": 3.441957224920406,
+        "upper_quartile": 6.409924101201711
+      }
+    },
+    {
+      "computed_before_plan": false,
+      "configuration_id": "coalition-dropout+track_instability",
+      "ego_speed_at_collision_mps": {
+        "count": 23,
+        "lower_quartile": 0.34999999999999987,
+        "median": 0.85,
+        "upper_quartile": 1.1970465522668894
+      },
+      "first_stop_distance_m": {
+        "count": 1025,
+        "lower_quartile": 1.4477082175916343,
+        "median": 2.485188371581749,
+        "upper_quartile": 5.057298852744963
+      }
+    },
+    {
+      "computed_before_plan": false,
+      "configuration_id": "coalition-localization_shape+latency",
+      "ego_speed_at_collision_mps": {
+        "count": 0,
+        "lower_quartile": null,
+        "median": null,
+        "upper_quartile": null
+      },
+      "first_stop_distance_m": {
+        "count": 1026,
+        "lower_quartile": 2.055955732699783,
+        "median": 3.161586257323885,
+        "upper_quartile": 6.150122485218594
+      }
+    },
+    {
+      "computed_before_plan": false,
+      "configuration_id": "coalition-localization_shape+track_instability",
+      "ego_speed_at_collision_mps": {
+        "count": 0,
+        "lower_quartile": null,
+        "median": null,
+        "upper_quartile": null
+      },
+      "first_stop_distance_m": {
+        "count": 1032,
+        "lower_quartile": 1.4127325174208847,
+        "median": 2.406529522783069,
+        "upper_quartile": 4.631294793543352
+      }
+    },
+    {
+      "computed_before_plan": false,
+      "configuration_id": "coalition-latency+track_instability",
+      "ego_speed_at_collision_mps": {
+        "count": 31,
+        "lower_quartile": 0.4999999999999999,
+        "median": 0.7,
+        "upper_quartile": 0.7769967334013883
+      },
+      "first_stop_distance_m": {
+        "count": 1022,
+        "lower_quartile": 2.134279739708995,
+        "median": 3.383253699053137,
+        "upper_quartile": 6.3972406475208405
+      }
+    },
+    {
+      "computed_before_plan": false,
+      "configuration_id": "coalition-dropout+localization_shape+latency",
+      "ego_speed_at_collision_mps": {
+        "count": 0,
+        "lower_quartile": null,
+        "median": null,
+        "upper_quartile": null
+      },
+      "first_stop_distance_m": {
+        "count": 1026,
+        "lower_quartile": 2.071793719713199,
+        "median": 3.188776109554051,
+        "upper_quartile": 6.175411366119695
+      }
+    },
+    {
+      "computed_before_plan": false,
+      "configuration_id": "coalition-dropout+localization_shape+track_instability",
+      "ego_speed_at_collision_mps": {
+        "count": 0,
+        "lower_quartile": null,
+        "median": null,
+        "upper_quartile": null
+      },
+      "first_stop_distance_m": {
+        "count": 1030,
+        "lower_quartile": 1.4119860868492216,
+        "median": 2.4156396502160353,
+        "upper_quartile": 4.627453665979209
+      }
+    },
+    {
+      "computed_before_plan": false,
+      "configuration_id": "coalition-dropout+latency+track_instability",
+      "ego_speed_at_collision_mps": {
+        "count": 33,
+        "lower_quartile": 0.4999999999999999,
+        "median": 0.7,
+        "upper_quartile": 0.8999999999999999
+      },
+      "first_stop_distance_m": {
+        "count": 1022,
+        "lower_quartile": 2.1221559664992586,
+        "median": 3.4126054619867716,
+        "upper_quartile": 6.4228607671482365
+      }
+    },
+    {
+      "computed_before_plan": false,
+      "configuration_id": "coalition-localization_shape+latency+track_instability",
+      "ego_speed_at_collision_mps": {
+        "count": 0,
+        "lower_quartile": null,
+        "median": null,
+        "upper_quartile": null
+      },
+      "first_stop_distance_m": {
+        "count": 1026,
+        "lower_quartile": 2.0562472552895006,
+        "median": 3.161586257323885,
+        "upper_quartile": 6.150122485218594
+      }
+    },
+    {
+      "computed_before_plan": false,
+      "configuration_id": "coalition-dropout+localization_shape+latency+track_instability",
+      "ego_speed_at_collision_mps": {
+        "count": 0,
+        "lower_quartile": null,
+        "median": null,
+        "upper_quartile": null
+      },
+      "first_stop_distance_m": {
+        "count": 1026,
+        "lower_quartile": 2.071793719713199,
+        "median": 3.188776109554051,
+        "upper_quartile": 6.1769129745656715
+      }
+    }
+  ],
+  "zero_event_configurations": [
+    {
+      "by_family": {
+        "bicycle_or_vru": {
+          "confidence": 0.95,
+          "events": 0,
+          "high": 0.08041993976357587,
+          "low": 0.0,
+          "tokens": 44
+        },
+        "cut_in_or_crossing": {
+          "confidence": 0.95,
+          "events": 0,
+          "high": 0.03621669264517641,
+          "low": 0.0,
+          "tokens": 100
+        },
+        "lead_or_stopping": {
+          "confidence": 0.95,
+          "events": 0,
+          "high": 0.03621669264517641,
+          "low": 0.0,
+          "tokens": 100
+        },
+        "pedestrian_or_crosswalk": {
+          "confidence": 0.95,
+          "events": 0,
+          "high": 0.03621669264517641,
+          "low": 0.0,
+          "tokens": 100
+        }
+      },
+      "computed_before_plan": true,
+      "configuration_id": "localization_shape-medium",
+      "overall": {
+        "confidence": 0.95,
+        "events": 0,
+        "high": 0.010666195172289682,
+        "low": 0.0,
+        "tokens": 344
+      }
+    },
+    {
+      "by_family": {
+        "bicycle_or_vru": {
+          "confidence": 0.95,
+          "events": 0,
+          "high": 0.08041993976357587,
+          "low": 0.0,
+          "tokens": 44
+        },
+        "cut_in_or_crossing": {
+          "confidence": 0.95,
+          "events": 0,
+          "high": 0.03621669264517641,
+          "low": 0.0,
+          "tokens": 100
+        },
+        "lead_or_stopping": {
+          "confidence": 0.95,
+          "events": 0,
+          "high": 0.03621669264517641,
+          "low": 0.0,
+          "tokens": 100
+        },
+        "pedestrian_or_crosswalk": {
+          "confidence": 0.95,
+          "events": 0,
+          "high": 0.03621669264517641,
+          "low": 0.0,
+          "tokens": 100
+        }
+      },
+      "computed_before_plan": true,
+      "configuration_id": "localization_shape-high",
+      "overall": {
+        "confidence": 0.95,
+        "events": 0,
+        "high": 0.010666195172289682,
+        "low": 0.0,
+        "tokens": 344
+      }
+    },
+    {
+      "by_family": {
+        "bicycle_or_vru": {
+          "confidence": 0.95,
+          "events": 0,
+          "high": 0.08041993976357587,
+          "low": 0.0,
+          "tokens": 44
+        },
+        "cut_in_or_crossing": {
+          "confidence": 0.95,
+          "events": 0,
+          "high": 0.03621669264517641,
+          "low": 0.0,
+          "tokens": 100
+        },
+        "lead_or_stopping": {
+          "confidence": 0.95,
+          "events": 0,
+          "high": 0.03621669264517641,
+          "low": 0.0,
+          "tokens": 100
+        },
+        "pedestrian_or_crosswalk": {
+          "confidence": 0.95,
+          "events": 0,
+          "high": 0.03621669264517641,
+          "low": 0.0,
+          "tokens": 100
+        }
+      },
+      "computed_before_plan": true,
+      "configuration_id": "coalition-dropout+localization_shape",
+      "overall": {
+        "confidence": 0.95,
+        "events": 0,
+        "high": 0.010666195172289682,
+        "low": 0.0,
+        "tokens": 344
+      }
+    },
+    {
+      "by_family": {
+        "bicycle_or_vru": {
+          "confidence": 0.95,
+          "events": 0,
+          "high": 0.08041993976357587,
+          "low": 0.0,
+          "tokens": 44
+        },
+        "cut_in_or_crossing": {
+          "confidence": 0.95,
+          "events": 0,
+          "high": 0.03621669264517641,
+          "low": 0.0,
+          "tokens": 100
+        },
+        "lead_or_stopping": {
+          "confidence": 0.95,
+          "events": 0,
+          "high": 0.03621669264517641,
+          "low": 0.0,
+          "tokens": 100
+        },
+        "pedestrian_or_crosswalk": {
+          "confidence": 0.95,
+          "events": 0,
+          "high": 0.03621669264517641,
+          "low": 0.0,
+          "tokens": 100
+        }
+      },
+      "computed_before_plan": true,
+      "configuration_id": "coalition-localization_shape+latency",
+      "overall": {
+        "confidence": 0.95,
+        "events": 0,
+        "high": 0.010666195172289682,
+        "low": 0.0,
+        "tokens": 344
+      }
+    },
+    {
+      "by_family": {
+        "bicycle_or_vru": {
+          "confidence": 0.95,
+          "events": 0,
+          "high": 0.08041993976357587,
+          "low": 0.0,
+          "tokens": 44
+        },
+        "cut_in_or_crossing": {
+          "confidence": 0.95,
+          "events": 0,
+          "high": 0.03621669264517641,
+          "low": 0.0,
+          "tokens": 100
+        },
+        "lead_or_stopping": {
+          "confidence": 0.95,
+          "events": 0,
+          "high": 0.03621669264517641,
+          "low": 0.0,
+          "tokens": 100
+        },
+        "pedestrian_or_crosswalk": {
+          "confidence": 0.95,
+          "events": 0,
+          "high": 0.03621669264517641,
+          "low": 0.0,
+          "tokens": 100
+        }
+      },
+      "computed_before_plan": true,
+      "configuration_id": "coalition-localization_shape+track_instability",
+      "overall": {
+        "confidence": 0.95,
+        "events": 0,
+        "high": 0.010666195172289682,
+        "low": 0.0,
+        "tokens": 344
+      }
+    },
+    {
+      "by_family": {
+        "bicycle_or_vru": {
+          "confidence": 0.95,
+          "events": 0,
+          "high": 0.08041993976357587,
+          "low": 0.0,
+          "tokens": 44
+        },
+        "cut_in_or_crossing": {
+          "confidence": 0.95,
+          "events": 0,
+          "high": 0.03621669264517641,
+          "low": 0.0,
+          "tokens": 100
+        },
+        "lead_or_stopping": {
+          "confidence": 0.95,
+          "events": 0,
+          "high": 0.03621669264517641,
+          "low": 0.0,
+          "tokens": 100
+        },
+        "pedestrian_or_crosswalk": {
+          "confidence": 0.95,
+          "events": 0,
+          "high": 0.03621669264517641,
+          "low": 0.0,
+          "tokens": 100
+        }
+      },
+      "computed_before_plan": true,
+      "configuration_id": "coalition-dropout+localization_shape+latency",
+      "overall": {
+        "confidence": 0.95,
+        "events": 0,
+        "high": 0.010666195172289682,
+        "low": 0.0,
+        "tokens": 344
+      }
+    },
+    {
+      "by_family": {
+        "bicycle_or_vru": {
+          "confidence": 0.95,
+          "events": 0,
+          "high": 0.08041993976357587,
+          "low": 0.0,
+          "tokens": 44
+        },
+        "cut_in_or_crossing": {
+          "confidence": 0.95,
+          "events": 0,
+          "high": 0.03621669264517641,
+          "low": 0.0,
+          "tokens": 100
+        },
+        "lead_or_stopping": {
+          "confidence": 0.95,
+          "events": 0,
+          "high": 0.03621669264517641,
+          "low": 0.0,
+          "tokens": 100
+        },
+        "pedestrian_or_crosswalk": {
+          "confidence": 0.95,
+          "events": 0,
+          "high": 0.03621669264517641,
+          "low": 0.0,
+          "tokens": 100
+        }
+      },
+      "computed_before_plan": true,
+      "configuration_id": "coalition-dropout+localization_shape+track_instability",
+      "overall": {
+        "confidence": 0.95,
+        "events": 0,
+        "high": 0.010666195172289682,
+        "low": 0.0,
+        "tokens": 344
+      }
+    },
+    {
+      "by_family": {
+        "bicycle_or_vru": {
+          "confidence": 0.95,
+          "events": 0,
+          "high": 0.08041993976357587,
+          "low": 0.0,
+          "tokens": 44
+        },
+        "cut_in_or_crossing": {
+          "confidence": 0.95,
+          "events": 0,
+          "high": 0.03621669264517641,
+          "low": 0.0,
+          "tokens": 100
+        },
+        "lead_or_stopping": {
+          "confidence": 0.95,
+          "events": 0,
+          "high": 0.03621669264517641,
+          "low": 0.0,
+          "tokens": 100
+        },
+        "pedestrian_or_crosswalk": {
+          "confidence": 0.95,
+          "events": 0,
+          "high": 0.03621669264517641,
+          "low": 0.0,
+          "tokens": 100
+        }
+      },
+      "computed_before_plan": true,
+      "configuration_id": "coalition-localization_shape+latency+track_instability",
+      "overall": {
+        "confidence": 0.95,
+        "events": 0,
+        "high": 0.010666195172289682,
+        "low": 0.0,
+        "tokens": 344
+      }
+    },
+    {
+      "by_family": {
+        "bicycle_or_vru": {
+          "confidence": 0.95,
+          "events": 0,
+          "high": 0.08041993976357587,
+          "low": 0.0,
+          "tokens": 44
+        },
+        "cut_in_or_crossing": {
+          "confidence": 0.95,
+          "events": 0,
+          "high": 0.03621669264517641,
+          "low": 0.0,
+          "tokens": 100
+        },
+        "lead_or_stopping": {
+          "confidence": 0.95,
+          "events": 0,
+          "high": 0.03621669264517641,
+          "low": 0.0,
+          "tokens": 100
+        },
+        "pedestrian_or_crosswalk": {
+          "confidence": 0.95,
+          "events": 0,
+          "high": 0.03621669264517641,
+          "low": 0.0,
+          "tokens": 100
+        }
+      },
+      "computed_before_plan": true,
+      "configuration_id": "coalition-dropout+localization_shape+latency+track_instability",
+      "overall": {
+        "confidence": 0.95,
+        "events": 0,
+        "high": 0.010666195172289682,
+        "low": 0.0,
+        "tokens": 344
+      }
+    }
+  ]
+}
